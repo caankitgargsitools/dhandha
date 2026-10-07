@@ -16,6 +16,8 @@ export default async function Tenders({ searchParams }) {
   const { data: all } = await supabase.from("tender_matches")
     .select("id, score, eligible, reasons, status, tenders(*)").eq("company_id", company.id).order("score", { ascending: false });
   const rows = (all || []).filter((m) => m.tenders);
+  const { data: pref } = await supabase.from("tender_preferences").select("services, custom_keywords").eq("company_id", company.id).maybeSingle();
+  const noPrefs = !pref || (!(pref.services || []).length && !(pref.custom_keywords || []).length);
   const live = (m) => daysLeft(m.tenders.due_at) >= 0;
   const list = rows.filter((m) =>
     tab === "open" ? live(m) && m.eligible && !["skipped", "won", "lost"].includes(m.status)
@@ -41,6 +43,7 @@ export default async function Tenders({ searchParams }) {
           <form action={rescore}><button className="gold">Re-score now</button></form>
         </div>
       </div>
+      {noPrefs && <div className="notice bad"><Icon name="briefcase" /><span><strong>Tell Dhandha what you do</strong> — pick your industry, sub-industry and services so only relevant tenders reach you. <Link href="/app/tenders/preferences">Choose services</Link></span></div>}
       <PreviewNote>Tenders shown are samples until the crawler server is switched on. Scoring, shortlisting and bid packs are live.</PreviewNote>
 
       <div className="grid-3">

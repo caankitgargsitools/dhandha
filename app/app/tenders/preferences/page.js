@@ -2,31 +2,27 @@ import Link from "next/link";
 import { getContext } from "@/lib/session";
 import FormState from "../../FormState";
 import { savePreferences } from "../bidActions";
+import ServicePicker from "@/components/ServicePicker";
 
-const PACKS = [["construction", "Construction / civil works"], ["it_services", "IT, manpower and services"], ["ca_audit", "CA, audit and consultancy"], ["goods_supply", "Goods supply (GeM)"]];
 const STATES = ["Andhra Pradesh","Assam","Bihar","Chandigarh","Chhattisgarh","Delhi","Goa","Gujarat","Haryana","Himachal Pradesh","Jammu and Kashmir","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Odisha","Punjab","Rajasthan","Tamil Nadu","Telangana","Uttar Pradesh","Uttarakhand","West Bengal"];
 
-export default async function Preferences() {
+export default async function Preferences({ searchParams }) {
+  const params = await searchParams;
   const { supabase, company, role } = await getContext();
   const { data: p } = await supabase.from("tender_preferences").select("*").eq("company_id", company.id).maybeSingle();
   const lakhs = (v) => (v ? String(v / 1e5) : "");
   return (
     <div className="stack">
       <Link href="/app/tenders" className="small">Tenders</Link>
-      <div className="page-head"><div><h1>What tenders to look for</h1><p>Set once for {company.legal_name}. Every new tender from the crawler is checked against this and your Vault, then scored.</p></div></div>
+      <div className="page-head"><div><h1>What {company.legal_name} does</h1><p>Pick your industries and the exact services you offer. Dhandha uses this to find tenders (and later, leads) for you, then scores each one against your Vault.</p></div></div>
+      {params?.welcome && <div className="notice small"><span><strong>Welcome!</strong> Start by telling Dhandha what you do — it takes a minute. Next, fill in your <Link href="/app/vault/profile">company profile</Link>.</span></div>}
       <FormState action={savePreferences} submit="Save and re-score">
         <fieldset disabled={role === "viewer"} style={{ border: 0, padding: 0, margin: 0 }} className="stack">
           <div className="panel stack-sm">
-            <h3>Industries</h3>
-            <div className="row" style={{ gap: 18 }}>
-              {PACKS.map(([k, l]) => (
-                <label key={k} className="row" style={{ gap: 8, margin: 0, color: "var(--ink)", fontWeight: 600 }}>
-                  <input type="checkbox" name="packs" value={k} defaultChecked={(p?.packs || ["construction"]).includes(k)} style={{ width: 18, height: 18 }} />{l}
-                </label>
-              ))}
-            </div>
+            <h3>Industry, sub-industry and services</h3>
+            <ServicePicker initial={p?.services || []} />
             <div className="form-grid">
-              <div><label htmlFor="keywords">Also match these words (comma separated)</label><input id="keywords" name="keywords" defaultValue={(p?.keywords || []).join(", ")} placeholder="road, drain, footpath" /></div>
+              <div><label htmlFor="keywords">Also match these words (comma separated)</label><input id="keywords" name="keywords" defaultValue={(p?.custom_keywords || []).join(", ")} placeholder="Anything specific to you, e.g. dredging, kiosk" /></div>
               <div><label htmlFor="exclude_keywords">Never show tenders with</label><input id="exclude_keywords" name="exclude_keywords" defaultValue={(p?.exclude_keywords || []).join(", ")} placeholder="bridge, dredging" /></div>
             </div>
           </div>

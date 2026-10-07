@@ -14,5 +14,5 @@ export async function createWorkspace(prev, formData) {
     p_company_name: company,
   });
   if (error) return { error: error.message };
-  redirect("/app/vault/profile?welcome=1");
+  redirect("/app/tenders/preferences?welcome=1");
 }

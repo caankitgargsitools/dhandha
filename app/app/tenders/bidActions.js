@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { getContext } from "@/lib/session";
 import { buildBidPack } from "@/lib/bidpack";
+import { keywordsFor, SERVICE_INDEX } from "@/lib/taxonomy";
 
 async function download(supabase, path) {
   const { data, error } = await supabase.storage.from("brand").download(path);
@@ -79,14 +80,19 @@ export async function savePreferences(prev, formData) {
   const { supabase, tenant, company } = await getContext();
   const list = (k) => String(formData.get(k) || "").split(",").map((s) => s.trim()).filter(Boolean);
   const num = (k) => { const v = String(formData.get(k) || "").replace(/,/g, "").trim(); return v ? Number(v) * (formData.get(`${k}_unit`) === "cr" ? 1e7 : 1e5) : null; };
+  const services = formData.getAll("services").map(String).filter((id) => SERVICE_INDEX[id]);
+  const custom = list("keywords");
   const row = {
     company_id: company.id, tenant_id: tenant.id,
-    packs: formData.getAll("packs").map(String),
-    keywords: list("keywords"), exclude_keywords: list("exclude_keywords"), states: formData.getAll("states").map(String),
+    services, custom_keywords: custom,
+    // matching is by the chosen services' own words, so "roads" does not pull in every construction tender
+    packs: [],
+    allowed_packs: [...new Set(services.map((id) => SERVICE_INDEX[id].pack || "any"))],
+    keywords: [...new Set([...keywordsFor(services), ...custom])], exclude_keywords: list("exclude_keywords"), states: formData.getAll("states").map(String),
     min_value: num("min_value"), max_value: num("max_value"), max_emd: num("max_emd"),
     min_days_left: Number(formData.get("min_days_left") || 5), updated_at: new Date().toISOString(),
   };
-  if (!row.packs.length && !row.keywords.length) return { error: "Choose at least one industry or keyword." };
+  if (!row.keywords.length) return { error: "Choose at least one service, or type a few words to match." };
   const { error } = await supabase.from("tender_preferences").upsert(row, { onConflict: "company_id" });
   if (error) return { error: error.message };
   const { data: n, error: re } = await supabase.rpc("rescore_company", { p_company: company.id });
