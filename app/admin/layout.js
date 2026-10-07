@@ -17,6 +17,7 @@ export default async function AdminLayout({ children }) {
     ] },
     { title: "Platform", items: [
       { href: "/admin/crawler", label: "Crawler", icon: "tender" },
+      { href: "/admin/ai", label: "AI engines", icon: "sparkle" },
       { href: "/admin/pricing", label: "Pricing", icon: "rupee" },
       { href: "/admin/audit", label: "Audit log", icon: "log" },
     ] },

@@ -6,6 +6,10 @@ import { ScoreRing } from "@/components/Charts";
 import Icon from "@/components/Icon";
 import BidPackForm from "../BidPackForm";
 import { ago } from "@/lib/tickets";
+import { UploadTenderFiles, ReadButtons } from "../TenderDocs";
+import { aiTiers } from "@/lib/ai";
+
+export const maxDuration = 60;
 
 const PROFILE_NEEDED = [["legal_name", "Legal name"], ["pan", "PAN"], ["gstin", "GSTIN"], ["registered_address", "Registered address"], ["signatory_name", "Signatory name"], ["signatory_designation", "Signatory designation"], ["bank_account", "Bank account"], ["bank_ifsc", "IFSC"]];
 
@@ -25,9 +29,16 @@ export default async function TenderDetail({ params }) {
     supabase.from("tender_changes").select("*").eq("tender_id", t.id).order("seen_at", { ascending: false }),
     supabase.from("wallets").select("balance").eq("tenant_id", m.tenant_id).maybeSingle(),
   ]);
+  const [{ data: files }, { data: reads }] = await Promise.all([
+    supabase.from("tender_files").select("*").eq("tender_id", t.id).order("created_at"),
+    supabase.from("tender_reads").select("*").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
+  ]);
+  const read = reads?.[0];
+  const fileLinks = await Promise.all((files || []).map(async (f) => ({ ...f, url: (await supabase.storage.from("tender-docs").createSignedUrl(f.storage_path, 3600)).data?.signedUrl })));
+  const ENGINE = { rules: "Free reader (no AI)", "gemini-free": "Gemini Flash (free tier)", "claude-haiku": "Claude Haiku", "claude-sonnet": "Claude Sonnet" };
   const msme = ["micro", "small"].includes(c.msme_category) && c.udyam_no;
   const due = new Date(t.due_at);
-  const checklist = requiredDocs(t.industry_pack, msme).map((code) => {
+  const checklist = requiredDocs(t.industry_pack, msme, t.req_docs).map((code) => {
     const d = (docs || []).filter((x) => x.type_code === code).sort((a, b) => new Date(b.valid_until || "2999-01-01") - new Date(a.valid_until || "2999-01-01"))[0];
     const name = (types || []).find((x) => x.code === code)?.name || code;
     const state = !d ? "missing" : d.valid_until && new Date(d.valid_until) < due ? "expiring" : "ok";
@@ -69,6 +80,49 @@ export default async function TenderDetail({ params }) {
 
       <div className="grid-2" style={{ alignItems: "start" }}>
         <div className="stack">
+          <div className="panel stack-sm">
+            <div className="panel-head" style={{ marginBottom: 0 }}><h3>Tender documents</h3><span className="small faint">{fileLinks.length} file{fileLinks.length === 1 ? "" : "s"}</span></div>
+            {fileLinks.map((f) => (
+              <div key={f.id} className="row between small" style={{ flexWrap: "nowrap" }}>
+                <a href={f.url} target="_blank" rel="noreferrer" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.file_name}</a>
+                <span className="faint tiny" style={{ flex: "none" }}>{f.pages ? `${f.pages} pages` : ""}{f.scanned ? " · scanned" : ""}</span>
+              </div>
+            ))}
+            {role !== "viewer" && <UploadTenderFiles tenderId={t.id} />}
+            {role !== "viewer" && <ReadButtons matchId={m.id} aiReady={aiTiers().length > 0} hasFiles={fileLinks.length > 0} />}
+          </div>
+          {read && (
+            <div className="panel stack-sm">
+              <div className="panel-head" style={{ marginBottom: 0 }}><h3>What the tender says</h3><span className="tiny faint">{ENGINE[read.engine] || read.engine} · {ago(read.created_at)}</span></div>
+              {read.summary && <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>{read.summary.split("\n").map((l, i) => <li key={i}>{l}</li>)}</ul>}
+              <table>
+                <tbody>
+                  {[["Estimated value", read.fields.value_inr && lakh(read.fields.value_inr), "value_inr"], ["EMD", read.fields.emd_inr && lakh(read.fields.emd_inr), "emd_inr"],
+                    ["MSE exempt from EMD", read.fields.mse_emd_exempt === true ? "Yes" : read.fields.mse_emd_exempt === false ? "No" : null, "mse_emd_exempt"],
+                    ["Average turnover needed", read.fields.req_avg_turnover && lakh(read.fields.req_avg_turnover), "req_avg_turnover"],
+                    ["Similar work (one / two / three)", [read.fields.req_similar_one, read.fields.req_similar_two, read.fields.req_similar_three].some(Boolean) ? [read.fields.req_similar_one, read.fields.req_similar_two, read.fields.req_similar_three].map((v) => (v ? lakh(v) : "—")).join(" / ") : null, "req_similar_one"],
+                    ["Experience window", read.fields.req_similar_years && `${read.fields.req_similar_years} years`, "req_similar_years"],
+                    ["Completion period", read.fields.completion_period, "completion_period"], ["Bid validity", read.fields.bid_validity_days && `${read.fields.bid_validity_days} days`, "bid_validity_days"],
+                    ["Performance security", read.fields.performance_security_pct && `${read.fields.performance_security_pct}%`, "performance_security_pct"]]
+                    .filter(([, v]) => v).map(([l, v, k]) => (
+                      <tr key={l}><td className="small muted">{l}</td><td><strong>{v}</strong></td><td className="tiny faint">{read.fields._evidence?.[k]?.page ? `p. ${read.fields._evidence[k].page}` : ""}</td></tr>
+                    ))}
+                </tbody>
+              </table>
+              {!!read.fields.other_eligibility?.length && <div className="small"><strong>Also required:</strong> {read.fields.other_eligibility.join("; ")}</div>}
+              {!!read.formats?.length && (
+                <div className="small"><strong>Formats to fill ({read.formats.length}):</strong>
+                  <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>{read.formats.map((f, i) => <li key={i}>{f.title}{f.page ? <span className="faint"> · p. {f.page}</span> : null}</li>)}</ul>
+                </div>
+              )}
+              {!!read.risks?.length && (
+                <div className="small"><strong>Clauses to watch:</strong>
+                  <ul className="reasons">{read.risks.map((r, i) => <li key={i}><Icon name="alert" size={14} style={{ color: "var(--rust)" }} /><span><strong>{r.label}</strong>{r.page ? ` (p. ${r.page})` : ""}: {r.text}</span></li>)}</ul>
+                </div>
+              )}
+              {read.fields._note && <p className="tiny faint" style={{ margin: 0 }}>{read.fields._note}</p>}
+            </div>
+          )}
           <div className="panel">
             <div className="panel-head"><h3>Why this score</h3><span className="tiny faint">{t.eligibility_source === "norms" ? "Using standard CPWD / PWD norms until the tender is read in full" : "From the tender document"}</span></div>
             <ul className="reasons" style={{ fontSize: 14 }}>

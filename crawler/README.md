@@ -7,8 +7,12 @@ them to Dhandha, which scores them for every company and records corrigenda and 
 It never solves or bypasses captchas. Tender documents behind a captcha are downloaded later in the user's own
 browser session by the Desktop Agent.
 
-## Run on a server in India
-1. Create a small Linux server in India (DigitalOcean Bangalore or AWS Lightsail Mumbai, 2 CPU / 4 GB to start).
+## Run on a server in India (cheapest option first)
+1. Create a small Linux server in India, in this order of preference:
+   - **Free:** Oracle Cloud "Always Free" Ampere A1 VM (up to 2 OCPU / 12 GB) with home region Mumbai or Hyderabad.
+     Free capacity is sometimes unavailable; retry later or try the other region.
+   - **Cheap:** AWS Lightsail Mumbai or DigitalOcean Bangalore, 2 CPU / 4 GB (about $24 a month).
+   The image runs on both ARM (Oracle) and x86.
 2. In Dhandha → Admin panel → Crawler, create an ingest key (shown once).
 3. On the server:
    ```
