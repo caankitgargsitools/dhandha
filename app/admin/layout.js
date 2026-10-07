@@ -16,6 +16,7 @@ export default async function AdminLayout({ children }) {
       { href: "/admin/tickets", label: "Ticket queue", icon: "ticket", tag: open?.length ? String(open.length) : undefined },
     ] },
     { title: "Platform", items: [
+      { href: "/admin/crawler", label: "Crawler", icon: "tender" },
       { href: "/admin/pricing", label: "Pricing", icon: "rupee" },
       { href: "/admin/audit", label: "Audit log", icon: "log" },
     ] },
