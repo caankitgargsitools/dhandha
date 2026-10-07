@@ -78,7 +78,14 @@ export async function readTender(prev, formData) {
     if (typeof d.mse_emd_exempt === "boolean") fields.mse_emd_exempt = d.mse_emd_exempt;
     if (Array.isArray(d.other_eligibility)) fields.other_eligibility = d.other_eligibility.slice(0, 15);
     if (Array.isArray(d.required_docs) && d.required_docs.length) docs = [...new Set([...docs, ...d.required_docs])];
-    if (Array.isArray(d.formats) && d.formats.length) formats = d.formats.slice(0, 40);
+    if (Array.isArray(d.formats) && d.formats.length) {
+      // keep the wording the free reader captured, matched by identifier ("Annexure C") or title
+      const idOf = (t) => (String(t).match(/^(annexure|annex|appendix|form|format|schedule|proforma)\s*[-.]?\s*([A-Z0-9IVX]{1,5})\b/i) || []).slice(1).join(" ").toLowerCase();
+      formats = d.formats.slice(0, 40).map((f) => {
+        const hit = rules.formats.find((r) => (idOf(r.title) && idOf(r.title) === idOf(f.title)) || r.title.toLowerCase() === String(f.title).toLowerCase());
+        return { title: f.title, page: f.page || hit?.page || null, text: hit?.text || "" };
+      });
+    }
     if (Array.isArray(d.risks) && d.risks.length) risks = d.risks.slice(0, 15);
     summary = d.summary.join("\n");
     engine = ai.engine;

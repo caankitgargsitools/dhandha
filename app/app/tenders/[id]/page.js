@@ -7,6 +7,7 @@ import Icon from "@/components/Icon";
 import BidPackForm from "../BidPackForm";
 import { ago } from "@/lib/tickets";
 import { UploadTenderFiles, ReadButtons } from "../TenderDocs";
+import FormatsPanel from "../FormatsPanel";
 import { aiTiers } from "@/lib/ai";
 
 export const maxDuration = 60;
@@ -153,8 +154,12 @@ export default async function TenderDetail({ params }) {
 
         <div className="stack">
           <div className="panel stack-sm">
+            <div className="panel-head" style={{ marginBottom: 0 }}><h3>The tender's formats</h3><span className="small faint">{(m.filled_formats || []).length || ""}</span></div>
+            <FormatsPanel matchId={m.id} plan={m.filled_formats || []} gaps={m.gaps || []} canEdit={canMake} paidAi={aiTiers().some((t) => !t.free)} hasFormats={!!read?.formats?.length} />
+          </div>
+          <div className="panel stack-sm">
             <h3>Bid pack</h3>
-            <p className="small muted" style={{ margin: 0 }}>Covering letter and Annexures A–G filled from your Vault: bidder information, turnover, similar works, key people, non-blacklisting{msme ? ", MSE declaration" : ""} and the document checklist{kinds.has("letterhead") ? ", printed on your letterhead" : " (add your letterhead to print on it)"}.</p>
+            <p className="small muted" style={{ margin: 0 }}>{(m.filled_formats || []).length ? "The tender's own formats, in its order and with its titles, filled from your Vault, plus a covering letter and the document checklist" : <>Covering letter and Annexures A–G filled from your Vault: bidder information, turnover, similar works, key people, non-blacklisting{msme ? ", MSE declaration" : ""} and the document checklist</>}{kinds.has("letterhead") ? ", printed on your letterhead" : " (add your letterhead to print on it)"}.</p>
             {gaps.length > 0 && (
               <div className="notice small" style={{ display: "block" }}>
                 <strong>Fill these once and every bid uses them:</strong>

@@ -15,7 +15,7 @@ export async function generateBidPack(prev, formData) {
   const kind = formData.get("kind") === "final" ? "final" : "draft";
   if (!["admin", "manager", "bid_preparer"].includes(role)) return { error: "Only admins, managers and bid preparers can make bid packs." };
 
-  const { data: match } = await supabase.from("tender_matches").select("id, tender_id, company_id, tenders(*)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
+  const { data: match } = await supabase.from("tender_matches").select("id, tender_id, company_id, filled_formats, tenders(*)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
   if (!match) return { error: "Tender not found for this company." };
 
   if (kind === "final") {
@@ -40,7 +40,7 @@ export async function generateBidPack(prev, formData) {
   ]);
   const asset = (k) => (brand || []).find((b) => b.kind === k);
   const lh = asset("letterhead");
-  const ctx = { tender: match.tenders, company: c, facts: facts || [], works: works || [], people: people || [], docs: docs || [], docTypes: docTypes || [], draft: kind === "draft" };
+  const ctx = { formats: match.filled_formats || [], tender: match.tenders, company: c, facts: facts || [], works: works || [], people: people || [], docs: docs || [], docTypes: docTypes || [], draft: kind === "draft" };
   if (lh) {
     ctx.letterheadBytes = await download(supabase, lh.storage_path);
     ctx.letterheadType = lh.storage_path.endsWith(".pdf") ? "pdf" : lh.storage_path.endsWith(".png") ? "png" : "jpg";
