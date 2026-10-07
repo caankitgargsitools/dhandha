@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import AuthShell from "@/components/AuthShell";
 import OnboardingForm from "./OnboardingForm";
 
 export default async function Onboarding() {
@@ -9,17 +10,12 @@ export default async function Onboarding() {
   const { data: m } = await supabase.from("tenant_members").select("tenant_id").limit(1);
   if (m && m.length) redirect("/app");
   return (
-    <div className="center">
-      <div className="auth stack" style={{ maxWidth: 480 }}>
-        <div className="logo">Dhan<span>dha</span></div>
-        <div className="panel stack">
-          <div>
-            <h1>Set up your workspace</h1>
-            <p className="muted small" style={{ margin: 0 }}>Your 7-day trial with 500 credits starts now.</p>
-          </div>
-          <OnboardingForm />
-        </div>
+    <AuthShell title="Set up your khata." lines="Tell us whose business this is. Your 7-day trial with 500 credits starts now.">
+      <div>
+        <h1>Set up your workspace</h1>
+        <p className="muted">You can add more companies later.</p>
       </div>
-    </div>
+      <div className="panel"><OnboardingForm /></div>
+    </AuthShell>
   );
 }

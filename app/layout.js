@@ -1,3 +1,6 @@
+import "@fontsource-variable/bricolage-grotesque";
+import "@fontsource-variable/manrope";
+import "@fontsource/tiro-devanagari-hindi/devanagari-400.css";
 import "./globals.css";
 
 export const metadata = {

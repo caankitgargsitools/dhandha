@@ -1,18 +1,14 @@
+import AuthShell from "@/components/AuthShell";
 import MfaChallenge from "./MfaChallenge";
 
 export default function MfaPage() {
   return (
-    <div className="center">
-      <div className="auth stack">
-        <div className="logo">Dhan<span>dha</span></div>
-        <div className="panel stack">
-          <div>
-            <h1>Two-factor check</h1>
-            <p className="muted small" style={{ margin: 0 }}>Enter the 6-digit code from your authenticator app.</p>
-          </div>
-          <MfaChallenge />
-        </div>
+    <AuthShell title="One more check." lines="Two-factor login keeps your signature and documents safe.">
+      <div>
+        <h1>Enter your 6-digit code</h1>
+        <p className="muted">Open your authenticator app and type the current code for Dhandha.</p>
       </div>
-    </div>
+      <div className="panel"><MfaChallenge /></div>
+    </AuthShell>
   );
 }

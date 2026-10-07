@@ -1,57 +1,71 @@
 import Link from "next/link";
-import { getContext, daysLeft } from "@/lib/session";
+import { getContext, daysLeft, initials } from "@/lib/session";
+import SideNav from "@/components/SideNav";
+import Icon from "@/components/Icon";
 import { switchCompany } from "./actions";
 import { signOut } from "../login/actions";
 
 export default async function AppLayout({ children }) {
-  const { tenant, companies, company, user, role, isAdmin, has2fa } = await getContext();
+  const { tenant, companies, company, user, role, isAdmin, has2fa, isPlatformAdmin } = await getContext();
   const trialLeft = daysLeft(tenant.trial_ends_at);
+  const sections = [
+    { items: [{ href: "/app", label: "Dashboard", icon: "home" }] },
+    { title: "Find business", items: [
+      { href: "/app/tenders", label: "Tenders", icon: "tender", tag: "Preview" },
+      { href: "/app/leads", label: "Leads", icon: "leads", tag: "Preview" },
+      { href: "/app/crm", label: "CRM pipeline", icon: "crm", tag: "Preview" },
+    ] },
+    { title: "Business Vault", items: [
+      { href: "/app/vault/profile", label: "Company profile", icon: "building" },
+      { href: "/app/vault/documents", label: "Documents", icon: "doc" },
+      { href: "/app/vault/facts", label: "Facts", icon: "facts" },
+      { href: "/app/vault/experience", label: "Experience", icon: "briefcase" },
+      { href: "/app/vault/people", label: "Key people", icon: "people" },
+      { href: "/app/brand", label: "Letterhead & signature", icon: "pen" },
+    ] },
+    { title: "Account", items: [
+      { href: "/app/wallet", label: "Credits & plan", icon: "wallet" },
+      { href: "/app/support", label: "Help & tickets", icon: "ticket" },
+      { href: "/app/settings/security", label: "Security", icon: "shield" },
+      ...(tenant.kind === "firm" || companies.length > 1 ? [{ href: "/app/settings/companies", label: "Companies", icon: "building" }] : []),
+      ...(isAdmin ? [{ href: "/app/settings/audit", label: "Audit log", icon: "log" }] : []),
+      ...(isPlatformAdmin ? [{ href: "/admin", label: "Admin panel", icon: "admin" }] : []),
+    ] },
+  ];
   return (
     <div className="shell">
-      <nav className="side">
-        <Link href="/app" className="logo" style={{ padding: "4px 10px 10px" }}>Dhan<span>dha</span></Link>
-        <Link href="/app">Dashboard</Link>
-        <div className="group">Business Vault</div>
-        <Link href="/app/vault/profile">Company profile</Link>
-        <Link href="/app/vault/documents">Documents</Link>
-        <Link href="/app/vault/facts">Facts</Link>
-        <Link href="/app/vault/experience">Experience</Link>
-        <Link href="/app/vault/people">Key people</Link>
-        <Link href="/app/brand">Letterhead & signature</Link>
-        <div className="group">Coming next</div>
-        <span className="muted small" style={{ padding: "4px 10px" }}>Tenders · Leads · CRM · Content</span>
-        <div className="group">Account</div>
-        <Link href="/app/wallet">Credits & plan</Link>
-        <Link href="/app/settings/security">Security</Link>
-        {tenant.kind === "firm" || companies.length > 1 ? <Link href="/app/settings/companies">Companies</Link> : null}
-        {isAdmin && <Link href="/app/settings/audit">Audit log</Link>}
-      </nav>
+      <SideNav sections={sections} foot={<>{tenant.name}<br />Data stored in India</>} />
       <div className="main">
-        <div className="topbar">
-          <div>
-            {companies.length > 1 ? (
-              <form action={switchCompany} className="row">
-                <select name="company_id" defaultValue={company.id} style={{ width: "auto", minWidth: 220 }}>
-                  {companies.map((c) => <option key={c.id} value={c.id}>{c.legal_name}</option>)}
-                </select>
-                <button className="ghost">Switch</button>
-              </form>
-            ) : (
-              <strong>{company.legal_name}</strong>
-            )}
-            <div className="muted small">{tenant.name} · {role}</div>
+        <header className="topbar">
+          <div className="co-switch">
+            <div className="co-avatar" aria-hidden="true">{initials(company.legal_name)}</div>
+            <div>
+              {companies.length > 1 ? (
+                <form action={switchCompany} className="row" style={{ gap: 8 }}>
+                  <select name="company_id" defaultValue={company.id} aria-label="Company" style={{ width: "auto", minWidth: 220, padding: "6px 10px", fontWeight: 700 }}>
+                    {companies.map((c) => <option key={c.id} value={c.id}>{c.legal_name}</option>)}
+                  </select>
+                  <button className="ghost sm">Switch</button>
+                </form>
+              ) : (
+                <strong style={{ fontFamily: "var(--display)", fontSize: 18 }}>{company.legal_name}</strong>
+              )}
+              <div className="faint tiny">{tenant.kind === "firm" ? "Firm workspace" : "Business workspace"} · your role: {role}</div>
+            </div>
           </div>
           <div className="row">
-            {trialLeft !== null && trialLeft >= 0 && <span className="chip info">Trial: {trialLeft} day{trialLeft === 1 ? "" : "s"} left</span>}
-            <span className="muted small">{user.email}</span>
-            <form action={signOut}><button className="ghost">Sign out</button></form>
+            {trialLeft !== null && trialLeft >= 0 && <span className="chip warn">Trial · {trialLeft} day{trialLeft === 1 ? "" : "s"} left</span>}
+            <div className="user-pill">
+              <span className="small muted">{user.email}</span>
+              <form action={signOut}><button className="ghost sm" title="Sign out" aria-label="Sign out" style={{ borderRadius: 99, padding: 6 }}><Icon name="logout" size={16} /></button></form>
+            </div>
           </div>
-        </div>
+        </header>
         {isAdmin && !has2fa && (
-          <p className="notice bad small" style={{ marginBottom: 20 }}>
-            Two-factor login is required for admins and must be on before a signature or seal can be stored.{" "}
-            <Link href="/app/settings/security">Turn it on now</Link>
-          </p>
+          <div className="notice bad small" style={{ marginBottom: 22 }}>
+            <Icon name="shield" />
+            <span>Two-factor login is required for admins and must be on before a signature or seal can be stored. <Link href="/app/settings/security">Turn it on now</Link></span>
+          </div>
         )}
         {children}
       </div>

@@ -1,4 +1,5 @@
 import { getContext, inr, daysLeft } from "@/lib/session";
+import { Sparkline } from "@/components/Charts";
 
 export default async function Wallet() {
   const { supabase, tenant } = await getContext();
@@ -15,10 +16,11 @@ export default async function Wallet() {
 
   return (
     <div className="stack">
-      <h1>Credits & plan</h1>
+      <div className="page-head"><div><h1>Credits & plan</h1><p>A small monthly fee per module, and credits for the work you run.</p></div></div>
       <div className="grid">
-        <div className="panel"><div className="muted small">Balance (1 credit = ₹1)</div><div className="stat">{inr(wallet?.balance)}</div></div>
-        <div className="panel"><div className="muted small">Plan</div><div className="stat" style={{ fontSize: 20 }}>{trialLeft > 0 ? `Trial — ${trialLeft} days left` : "Trial ended"}</div>
+        <div className="panel ledger"><div className="kpi-label">Balance (1 credit = ₹1)</div><div className="kpi">{inr(wallet?.balance)}</div>
+          <Sparkline points={[...(ledger || [])].reverse().map((l) => Number(l.balance_after))} height={40} label="Balance over time" /></div>
+        <div className="panel ledger"><div className="kpi-label">Plan</div><div className="kpi" style={{ fontSize: 22 }}>{trialLeft > 0 ? `Trial — ${trialLeft} days left` : "Trial ended"}</div>
           <div className="muted small">Choose modules before the trial ends. Online payment (Razorpay) is being switched on.</div></div>
       </div>
 
