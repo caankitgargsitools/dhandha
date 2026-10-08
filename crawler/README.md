@@ -4,6 +4,10 @@ Dhandha's own tender crawler (no third-party tender data). It reads public tende
 (CPPP, Defence and most states) and GeM, opens each tender's public detail page for value / EMD / dates, and posts
 them to Dhandha, which scores them for every company and records corrigenda and date extensions.
 
+It also reads each GePNIC portal's public "Results of Tenders" (award of contract) pages and posts the winning
+bidders to Dhandha (`ingest_awards`), where they become tender-winner leads. Set `CRAWL_RESULTS=0` to turn this off.
+If a results page asks for a captcha, that portal's results are skipped and logged.
+
 It never solves or bypasses captchas. Tender documents behind a captcha are downloaded later in the user's own
 browser session by the Desktop Agent.
 

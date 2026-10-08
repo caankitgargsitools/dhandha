@@ -45,6 +45,7 @@ export default async function Leads({ searchParams }) {
     <div className="stack">
       <div className="page-head">
         <div><h1>Leads</h1><p>Prospects for {company.legal_name}, scored on how well they fit your ideal client. {["telecaller", "field"].includes(role) ? "You see the leads given to you." : ""}</p></div>
+        <Link href="/app/leads/winners" className="btn gold"><Icon name="tender" size={16} /> Tender winners</Link>
       </div>
       {!ideal && isLead && <div className="notice"><Icon name="sparkle" /><span><strong>Tell Dhandha who your ideal client is</strong> (industries, cities, states) so leads are scored on fit. Use the panel on the right.</span></div>}
 

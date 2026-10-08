@@ -14,3 +14,19 @@ export async function sendTenders(source, rows, env = process.env) {
   }
   return totals;
 }
+
+// Sends award-of-contract results (tender winners) to Dhandha (RPC ingest_awards) in batches of 200.
+export async function sendAwards(source, rows, env = process.env) {
+  const totals = { received: 0, inserted: 0 };
+  for (let i = 0; i < rows.length; i += 200) {
+    const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/ingest_awards`, {
+      method: "POST",
+      headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, "content-type": "application/json" },
+      body: JSON.stringify({ p_key: env.INGEST_KEY, p_source: source, p_rows: rows.slice(i, i + 200) }),
+    });
+    if (!r.ok) throw new Error(`ingest awards ${r.status}: ${await r.text()}`);
+    const res = await r.json();
+    for (const k of Object.keys(totals)) totals[k] += res[k] || 0;
+  }
+  return totals;
+}

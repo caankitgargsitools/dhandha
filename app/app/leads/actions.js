@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getContext } from "@/lib/session";
-import { leadsFromCsv, scoreLead, listField, SOURCES, LEAD_STATUS, ACTIVITY, OUTCOMES } from "@/lib/leads";
+import { leadsFromCsv, scoreLead, listField, SOURCES, LEAD_STATUS, ACTIVITY, OUTCOMES, PACKS } from "@/lib/leads";
 
 const str = (f, k, max = 200) => String(f.get(k) || "").trim().slice(0, max);
 const istDate = (d, hh = "10:00") => (d ? new Date(`${d}T${hh}:00+05:30`).toISOString() : null);
@@ -143,4 +143,38 @@ export async function createDealFromLead(prev, formData) {
   if (error) return { error: error.message };
   revalidatePath("/app/crm");
   redirect(`/app/crm/${data.id}`);
+}
+
+export async function saveWinnerPrefs(prev, formData) {
+  const { supabase, tenant, company, role } = await getContext();
+  if (!["admin", "manager"].includes(role)) return { error: "Only admins and managers can change this." };
+  const packs = formData.getAll("packs").map(String).filter((p) => PACKS[p]);
+  const days = Math.min(730, Math.max(7, Number(formData.get("days")) || 180));
+  const { error } = await supabase.from("lead_preferences").upsert({
+    company_id: company.id, tenant_id: tenant.id, winner_packs: packs, winner_days: days,
+    winner_min_value: Number(String(formData.get("min_value") || "").replace(/[^\d.]/g, "")) || null, updated_at: new Date().toISOString(),
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/app/leads/winners");
+  return { message: "Saved." };
+}
+
+// Adds chosen tender winners as leads. Charged per lead added (price book: lead_found); duplicates are free.
+export async function addWinners(prev, formData) {
+  const ctx = await getContext();
+  if (ctx.role === "viewer") return { error: "Viewers cannot add leads." };
+  const ids = new Set(formData.getAll("award").map(String));
+  if (!ids.size) return { error: "Tick the firms you want to add." };
+  if (ids.size > 100) return { error: "Add at most 100 at a time." };
+  const { data: found, error: e1 } = await ctx.supabase.rpc("winner_prospects", { p_company: ctx.company.id });
+  if (e1) return { error: e1.message };
+  const rows = (found || []).filter((a) => ids.has(a.award_id)).map((a) => ({
+    name: a.bidder_name, city: a.bidder_city, state: a.state, industry: PACKS[a.industry_pack] || null, award_id: a.award_id,
+    notes: `Won "${a.title}" from ${a.authority || a.portal}${a.awarded_value ? ` for ₹${Number(a.awarded_value).toLocaleString("en-IN")}` : ""}${a.contract_date ? ` on ${a.contract_date}` : ""} (${a.portal}).${a.wins > 1 ? ` ${a.wins} wins in this period.` : ""}${a.bidder_address ? `\nAddress: ${a.bidder_address}` : ""}`,
+  }));
+  if (!rows.length) return { error: "Those firms are already in your leads." };
+  const { data, error } = await runImport(ctx, "tender_winner", String(formData.get("owner_id") || "") || null, rows);
+  if (error) return { error: /insufficient credits/i.test(error.message) ? "Not enough credits. Top up in Credits & plan." : error.message };
+  revalidatePath("/app/leads", "layout");
+  return { message: `${data.added} firms added to your leads.${data.duplicates?.length ? ` ${data.duplicates.length} were already there.` : ""}` };
 }

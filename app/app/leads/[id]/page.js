@@ -16,12 +16,17 @@ export default async function LeadDetail({ params }) {
   const { supabase, tenant, company, user, role } = await getContext();
   const { data: l } = await supabase.from("leads").select("*").eq("id", id).eq("company_id", company.id).maybeSingle();
   if (!l) notFound();
-  const [{ data: acts }, { data: deals }, { data: members }, { data: ideal }] = await Promise.all([
+  const [{ data: acts }, { data: deals }, { data: members }, { data: ideal }, { data: wins }] = await Promise.all([
     supabase.from("crm_activities").select("*").eq("lead_id", l.id).order("created_at", { ascending: false }).limit(100),
     supabase.from("deals").select("id, title, stage, value_inr").eq("lead_id", l.id).order("created_at", { ascending: false }),
     supabase.from("tenant_members").select("user_id, role, profiles(full_name, email)").eq("tenant_id", tenant.id).neq("role", "disabled"),
     supabase.from("lead_preferences").select("wa_template").eq("company_id", company.id).maybeSingle(),
+    // every award this firm won, matched on the normalised firm name
+    l.source === "tender_winner" || l.award_id
+      ? supabase.from("tender_awards").select("id, title, authority, portal, awarded_value, contract_date").eq("bidder_norm", l.name_norm).order("contract_date", { ascending: false }).limit(20)
+      : Promise.resolve({ data: [] }),
   ]);
+  const findContact = `https://www.google.com/search?q=${encodeURIComponent(`${l.name} ${l.city || l.state || ""} contact number`)}`;
   const name = (uid) => { const m = (members || []).find((x) => x.user_id === uid); return m ? (uid === user.id ? "You" : m.profiles?.full_name || m.profiles?.email) : "Former member"; };
   const sellers = (members || []).filter((m) => ["admin", "manager", "telecaller", "field"].includes(m.role));
   const canWrite = role !== "viewer";
@@ -49,6 +54,7 @@ export default async function LeadDetail({ params }) {
           </div>
         </div>
         <div className="row">
+          {!tel && !l.email && <a className="btn ghost" href={findContact} target="_blank" rel="noreferrer">Find contact</a>}
           {l.dnd ? <span className="chip bad">Do not disturb: no calls or messages</span> : <>
             {tel && <a className="btn" href={tel}><Icon name="phone" size={15} /> Call</a>}
             {wa && <a className="btn gold" href={wa} target="_blank" rel="noreferrer">WhatsApp</a>}
@@ -95,6 +101,18 @@ export default async function LeadDetail({ params }) {
               </details>
             )}
           </div>
+
+          {(wins || []).length > 0 && (
+            <div className="panel">
+              <div className="panel-head"><h3>Tenders won</h3><span className="faint small">{wins.length} · {lakh(wins.reduce((t, w) => t + Number(w.awarded_value || 0), 0))}</span></div>
+              {wins.map((w) => (
+                <div key={w.id} className="small" style={{ padding: "6px 0", borderTop: "1px solid var(--line-soft)" }}>
+                  {w.title}
+                  <div className="row between tiny faint"><span>{w.authority} · {w.portal} · {fmtDate(w.contract_date)}</span><strong className="num">{w.awarded_value ? lakh(w.awarded_value) : ""}</strong></div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {l.score_reasons?.length > 0 && (
             <div className="panel">

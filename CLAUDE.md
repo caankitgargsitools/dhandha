@@ -46,6 +46,7 @@ It covers:
 - Tender pages: `app/app/tenders/*`. Actions are in `bidActions.js`, `readActions.js`, `formatActions.js`.
 - Leads and CRM: `lib/leads.js` (CSV import, phone clean-up, free fit score, WhatsApp/tel links; tested in `tests/leads.test.mjs`).
   - Pages: `app/app/leads/*`, `app/app/crm/*`. Actions in `leads/actions.js` and `crm/actions.js`. Timeline and log form in `components/CrmTimeline.js`.
+  - Tender winners (`/app/leads/winners`): award results from our crawler (`crawler/src/adapters/gepnicResults.js` → `ingest_awards` → `tender_awards`), filtered per company by `winner_prospects`. Adding a winner as a lead costs `lead_found` credits.
   - Outreach is click-to-call / click-to-WhatsApp from the user's own phone. Nothing is sent automatically. DND leads hide the buttons.
 - Admin panel: `app/admin/*`. Covers tenants, people, credits, tickets, pricing, audit, crawler keys and AI spend.
 - Database logic lives mostly in SQL. The migrations list is in `supabase/README.md`.
@@ -66,12 +67,14 @@ It covers:
   - Add a lead or import a CSV, with duplicate checks and an ideal-client score.
   - Owners and follow-ups; telecallers see only their own leads.
   - Call/WhatsApp/email links, an activity timeline, a deal pipeline with stage moves, and escalation of overdue steps to a manager.
+- **Phase 3, part 2:** tender-winner leads from GePNIC award results. When a Dhandha company itself wins, its tender match is marked won.
 
 ## Still to do
 - Desktop helper for DSC-assisted submission.
 - Crawler hosting on Oracle Always Free (the owner sets up the server).
+- Tender winners: verify the GePNIC results adapter against the live portals on the first crawler run (it was written without network access to them). GeM award results are not crawled yet.
 - Phase 3, rest:
-  - Lead sources: tender-winner leads from our own crawler (award results), MCA new companies.
+  - Lead sources: MCA new companies.
   - Paid WhatsApp Business API / email sequences (credits).
   - AI calling.
 - Phase 4: social content and AI video.
