@@ -44,9 +44,12 @@ It covers:
   - `lib/formatLibrary.js` and `lib/formatAi.js`: tender format filling.
   - Gap questions save their answers to `company_facts`.
 - Tender pages: `app/app/tenders/*`. Actions are in `bidActions.js`, `readActions.js`, `formatActions.js`.
+- Leads and CRM: `lib/leads.js` (CSV import, phone clean-up, free fit score, WhatsApp/tel links; tested in `tests/leads.test.mjs`).
+  - Pages: `app/app/leads/*`, `app/app/crm/*`. Actions in `leads/actions.js` and `crm/actions.js`. Timeline and log form in `components/CrmTimeline.js`.
+  - Outreach is click-to-call / click-to-WhatsApp from the user's own phone. Nothing is sent automatically. DND leads hide the buttons.
 - Admin panel: `app/admin/*`. Covers tenants, people, credits, tickets, pricing, audit, crawler keys and AI spend.
 - Database logic lives mostly in SQL. The migrations list is in `supabase/README.md`.
-  - Key functions: `score_tender` (CPWD norms), `tender_fits`, `kw_rx` (whole-word matching, plurals allowed), `allowed_packs`, `rescore_company`, `ingest_tenders`, `spend_credits`, `add_team_member`, `claim_invites`.
+  - Key functions: `score_tender` (CPWD norms), `tender_fits`, `kw_rx` (whole-word matching, plurals allowed), `allowed_packs`, `rescore_company`, `ingest_tenders`, `spend_credits`, `add_team_member`, `claim_invites`, `import_leads`, `escalate_overdue_deals` (pg_cron, hourly), `sees_all_leads`.
 - Roles: admin, manager, bid_preparer, telecaller, field, viewer, disabled.
 - Design system ("bahi-khata" ledger look):
   - Colours: madder #8c1d2f, marigold #f0a202, ink #1b2240.
@@ -59,11 +62,18 @@ It covers:
 - **Phase 1:** tender engine.
   - Preferences, eligibility scoring, the crawler intake (`ingest_tenders`), reading, format filling, the gap window and bid packs.
 - Industry and services picker.
+- **Phase 3, part 1:** working Leads and CRM.
+  - Add a lead or import a CSV, with duplicate checks and an ideal-client score.
+  - Owners and follow-ups; telecallers see only their own leads.
+  - Call/WhatsApp/email links, an activity timeline, a deal pipeline with stage moves, and escalation of overdue steps to a manager.
 
 ## Still to do
 - Desktop helper for DSC-assisted submission.
 - Crawler hosting on Oracle Always Free (the owner sets up the server).
-- Phase 3: lead engine and CRM outreach.
+- Phase 3, rest:
+  - Lead sources: tender-winner leads from our own crawler (award results), MCA new companies.
+  - Paid WhatsApp Business API / email sequences (credits).
+  - AI calling.
 - Phase 4: social content and AI video.
 - Google Drive OAuth for document storage.
 - Razorpay billing.

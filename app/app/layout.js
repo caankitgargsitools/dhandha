@@ -12,8 +12,8 @@ export default async function AppLayout({ children }) {
     { items: [{ href: "/app", label: "Dashboard", icon: "home" }, { href: "/app/tasks", label: "Tasks", icon: "check" }] },
     { title: "Find business", items: [
       { href: "/app/tenders", label: "Tenders", icon: "tender" },
-      { href: "/app/leads", label: "Leads", icon: "leads", tag: "Preview" },
-      { href: "/app/crm", label: "CRM pipeline", icon: "crm", tag: "Preview" },
+      { href: "/app/leads", label: "Leads", icon: "leads" },
+      { href: "/app/crm", label: "CRM pipeline", icon: "crm" },
     ] },
     { title: "Business Vault", items: [
       { href: "/app/tenders/preferences", label: "What we do", icon: "briefcase" },

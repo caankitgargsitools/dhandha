@@ -16,7 +16,7 @@ export default async function Dashboard() {
     supabase.from("brand_assets").select("kind").eq("company_id", company.id),
     supabase.from("credit_ledger").select("delta, balance_after, created_at, reason").eq("tenant_id", tenant.id).order("created_at"),
     supabase.from("tender_matches").select("score, status, eligible, tenders(title, authority, value_inr, due_at)").eq("company_id", company.id).order("score", { ascending: false }),
-    supabase.from("deals").select("stage, value_inr, title, next_action, next_action_at").eq("company_id", company.id),
+    supabase.from("deals").select("id, stage, value_inr, title, next_action, next_action_at").eq("company_id", company.id),
   ]);
   const fieldsDone = CORE_FIELDS.filter((f) => c?.[f]).length;
   const docCodes = new Set((docs || []).map((d) => d.type_code));
@@ -28,7 +28,7 @@ export default async function Dashboard() {
   const openTenders = (matches || []).filter((m) => m.eligible && m.tenders && daysLeft(m.tenders.due_at) >= 0 && !["skipped", "won", "lost"].includes(m.status));
   const pipeline = STAGES.map(([k, label]) => ({ label, value: (deals || []).filter((d) => d.stage === k).reduce((s, d) => s + Number(d.value_inr || 0), 0), color: k === "won" ? "var(--leaf)" : undefined }));
   const openValue = (deals || []).filter((d) => !["won", "lost"].includes(d.stage)).reduce((s, d) => s + Number(d.value_inr || 0), 0);
-  const followUps = (deals || []).filter((d) => d.next_action_at).sort((a, b) => new Date(a.next_action_at) - new Date(b.next_action_at)).slice(0, 4);
+  const followUps = (deals || []).filter((d) => d.next_action_at && !["won", "lost"].includes(d.stage)).sort((a, b) => new Date(a.next_action_at) - new Date(b.next_action_at)).slice(0, 4);
   const firstName = (user.user_metadata?.full_name || "").split(" ")[0];
 
   return (
@@ -106,7 +106,7 @@ export default async function Dashboard() {
             {followUps.map((d, i) => (
               <div key={i} className="row" style={{ flexWrap: "nowrap" }}>
                 <Icon name="clock" style={{ color: "var(--sky)" }} />
-                <div style={{ flex: 1 }}><strong>{d.next_action}</strong><div className="tiny faint">{d.title}</div></div>
+                <div style={{ flex: 1 }}><Link href={`/app/crm/${d.id}`}><strong>{d.next_action}</strong></Link><div className="tiny faint">{d.title}</div></div>
                 <span className="chip info">{daysLeft(d.next_action_at) <= 0 ? "Today" : daysLeft(d.next_action_at) === 1 ? "Tomorrow" : fmtDate(d.next_action_at).replace(/ \d{4}$/, "")}</span>
               </div>
             ))}

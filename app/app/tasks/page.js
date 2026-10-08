@@ -58,7 +58,7 @@ export default async function Tasks({ searchParams }) {
                         <span className={`chip ${PRI[t.priority][0]}`}>{PRI[t.priority][1]}</span>
                         <span>To: <strong>{name(t.assigned_to)}</strong></span>
                         <span>From: {t.created_by === user.id ? "you" : name(t.created_by)}</span>
-                        {t.link_type && <Link href={LINK_HREF[t.link_type]}>{t.link_label || t.link_type}</Link>}
+                        {t.link_type && <Link href={["deal", "lead"].includes(t.link_type) && t.link_id ? `${LINK_HREF[t.link_type]}/${t.link_id}` : LINK_HREF[t.link_type]}>{t.link_label || t.link_type}</Link>}
                       </div>
                     </div>
                     <div style={{ textAlign: "right", flex: "none" }}>
