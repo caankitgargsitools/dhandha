@@ -48,7 +48,10 @@ It covers:
   - Pages: `app/app/leads/*`, `app/app/crm/*`. Actions in `leads/actions.js` and `crm/actions.js`. Timeline and log form in `components/CrmTimeline.js`.
   - Tender winners (`/app/leads/winners`): award results from our crawler (`crawler/src/adapters/gepnicResults.js` → `ingest_awards` → `tender_awards`), filtered per company by `winner_prospects`. Adding a winner as a lead costs `lead_found` credits.
   - Outreach is click-to-call / click-to-WhatsApp from the user's own phone. Nothing is sent automatically. DND leads hide the buttons.
-- Admin panel: `app/admin/*`. Covers tenants, people, credits, tickets, pricing, audit, crawler keys and AI spend.
+- Billing (Razorpay): `lib/billing.js` (GST quote, amount in words; tested), `lib/razorpay.js` (Orders API), `app/app/wallet/*` (top-up, plan, invoices), `components/BillingForms.js` + `PayButton.js`, webhook at `app/api/razorpay/webhook/route.js`.
+  - Credits are added only by the signed webhook. The HMAC is checked in SQL (`razorpay_webhook`) against the Vault secret `razorpay_webhook_secret`; the route just passes the raw body through.
+  - Plans are prepaid 30-day periods (no auto-debit mandate yet). Only the workspace admin can pay.
+- Admin panel: `app/admin/*`. Covers tenants, people, credits, tickets, pricing, billing (seller GSTIN, switch-on checklist, payments, webhook log), audit, crawler keys and AI spend.
 - Database logic lives mostly in SQL. The migrations list is in `supabase/README.md`.
   - Key functions: `score_tender` (CPWD norms), `tender_fits`, `kw_rx` (whole-word matching, plurals allowed), `allowed_packs`, `rescore_company`, `ingest_tenders`, `spend_credits`, `add_team_member`, `claim_invites`, `import_leads`, `escalate_overdue_deals` (pg_cron, hourly), `sees_all_leads`.
 - Roles: admin, manager, bid_preparer, telecaller, field, viewer, disabled.
@@ -67,6 +70,7 @@ It covers:
   - Add a lead or import a CSV, with duplicate checks and an ideal-client score.
   - Owners and follow-ups; telecallers see only their own leads.
   - Call/WhatsApp/email links, an activity timeline, a deal pipeline with stage moves, and escalation of overdue steps to a manager.
+- **Billing:** Razorpay checkout for credit top-ups and 30-day plans, verified webhook, GST invoices.
 - **Phase 3, part 2:** tender-winner leads from GePNIC award results. When a Dhandha company itself wins, its tender match is marked won.
 
 ## Still to do
@@ -79,7 +83,7 @@ It covers:
   - AI calling.
 - Phase 4: social content and AI video.
 - Google Drive OAuth for document storage.
-- Razorpay billing.
+- Razorpay: switch on (owner adds keys in Vercel, webhook in Razorpay, secret in Supabase Vault, seller GSTIN in Admin → Billing). Later: auto-renewing subscriptions (Razorpay mandates), credit notes/refunds.
 - Before launch:
   - Remove dummy data using `demo_seed`.
   - Enable leaked-password protection in Supabase.

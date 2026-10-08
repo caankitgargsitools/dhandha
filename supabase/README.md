@@ -14,3 +14,8 @@ Phase 3 (leads and CRM):
 7. `phase3_leads_crm_policies` — role-aware read/write on leads and deals
 8. `phase3_escalation_cron`, `phase3_escalation_demo_seed` — pg_cron runs `escalate_overdue_deals` hourly at :17; tasks raised from demo deals are registered in `demo_seed`
 9. `phase3_tender_winner_leads` — shared `tender_awards` (award-of-contract results from our crawler), `norm_firm` (firm-name matching that ignores M/s, Pvt Ltd, LLP…), `ingest_awards` (crawler intake; marks a company's own tender match won when it is the winner), `winner_prospects` (one row per winning firm matching the ideal client and winner settings, minus existing leads), `import_leads` now takes contactless tender winners, de-duplicates them by firm name and charges `lead_found` credits per lead added
+
+Billing:
+
+10. `billing_razorpay` — `billing_settings` (seller GSTIN/state/address, SAC, invoice prefix, suite price, minimum top-up), `billing_orders`, `billing_events`, invoice snapshot columns, `billing_create_order` (prices in SQL, admin only), `billing_attach_order`, `billing_fulfil` (credits, 30-day plan period, GST invoice numbered per financial year), `razorpay_webhook` (verifies the HMAC with the Vault secret `razorpay_webhook_secret`, checks the amount, idempotent per event and payment)
+11. `billing_webhook_ready` — admin panel check that the Vault secret exists

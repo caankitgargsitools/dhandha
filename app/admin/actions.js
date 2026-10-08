@@ -54,3 +54,15 @@ export async function saveModule(prev, formData) {
   revalidatePath("/admin/pricing");
   return { message: "Saved." };
 }
+
+export async function saveBilling(prev, formData) {
+  const { supabase } = await getAdminContext();
+  const gstin = String(formData.get("seller_gstin") || "").trim().toUpperCase();
+  if (gstin && !/^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(gstin)) return { error: "That GSTIN does not look right (15 characters, e.g. 06ABCDE1234F1Z5)." };
+  const keys = ["seller_name", "seller_gstin", "seller_state", "seller_address", "sac_code", "invoice_prefix", "suite_fee_inr", "suite_credits", "min_topup_inr"];
+  const p = Object.fromEntries(keys.map((k) => [k, String(formData.get(k) || "").trim()]));
+  const { error } = await supabase.rpc("admin_set_billing", { p });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/billing");
+  return { message: "Saved." };
+}
