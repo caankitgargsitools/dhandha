@@ -4,6 +4,7 @@ import { GEPNIC, GEM } from "./sources.js";
 import { crawlGepnic } from "./adapters/gepnic.js";
 import { crawlGem } from "./adapters/gem.js";
 import { crawlGepnicResults } from "./adapters/gepnicResults.js";
+import { crawlGemResults } from "./adapters/gemResults.js";
 import { sendTenders, sendAwards } from "./ingest.js";
 
 const env = process.env;
@@ -30,6 +31,12 @@ async function runOnce() {
       const rows = await crawlGem(browser, { maxPages, log, base: GEM.base });
       log("GeM", rows.length ? await sendTenders("GeM", rows, env) : "NO BIDS — check the adapter");
     } catch (e) { log("GeM FAILED", e.message); }
+    if (env.CRAWL_RESULTS !== "0") {
+      try {
+        const awards = await crawlGemResults(browser, { maxPages: Math.min(maxPages, 5), log, base: GEM.base });
+        log("GeM results", awards.length ? await sendAwards("Results: GeM", awards, env) : "NO RESULTS — check GEM_RESULT_STATUS or the adapter");
+      } catch (e) { log("GeM results FAILED", e.message); }
+    }
   } finally {
     await browser.close();
   }

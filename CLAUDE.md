@@ -46,7 +46,7 @@ It covers:
 - Tender pages: `app/app/tenders/*`. Actions are in `bidActions.js`, `readActions.js`, `formatActions.js`.
 - Leads and CRM: `lib/leads.js` (CSV import, phone clean-up, free fit score, WhatsApp/tel links; tested in `tests/leads.test.mjs`).
   - Pages: `app/app/leads/*`, `app/app/crm/*`. Actions in `leads/actions.js` and `crm/actions.js`. Timeline and log form in `components/CrmTimeline.js`.
-  - Tender winners (`/app/leads/winners`): award results from our crawler (`crawler/src/adapters/gepnicResults.js` → `ingest_awards` → `tender_awards`), filtered per company by `winner_prospects`. Adding a winner as a lead costs `lead_found` credits.
+  - Tender winners (`/app/leads/winners`): award results from our crawler (`crawler/src/adapters/gepnicResults.js` and `gemResults.js` → `ingest_awards` → `tender_awards`), filtered per company by `winner_prospects`. Adding a winner as a lead costs `lead_found` credits.
   - New companies (`/app/leads/new-companies`): MCA's monthly registrations, uploaded by the platform admin at Admin → New companies (`lib/mca.js` parses .xlsx/.csv; `lib/xlsx.js` is a dependency-free Excel reader, also used by lead import). Filtered per company by `mca_prospects`; adding costs `lead_found` credits.
   - Click-to-call / click-to-WhatsApp from the user's own phone. DND leads hide the buttons.
 - Outreach (`app/app/outreach/*`, `lib/outreach.js`): email + WhatsApp sequences and one-off sends, paid in credits (`email_send`, `whatsapp_send`).
@@ -76,6 +76,7 @@ It covers:
   - Owners and follow-ups; telecallers see only their own leads.
   - Call/WhatsApp/email links, an activity timeline, a deal pipeline with stage moves, and escalation of overdue steps to a manager.
 - **Billing:** Razorpay checkout for credit top-ups and 30-day plans, verified webhook, GST invoices.
+- **Phase 3, part 5:** GeM award results (L1/awarded seller) feed tender-winner leads too.
 - **Phase 3, part 4:** paid outreach — email/WhatsApp sequences, one-off sends, unsubscribe, credits.
 - **Phase 3, part 3:** new-company leads from MCA registration data; Excel (.xlsx) lead import.
 - **Phase 3, part 2:** tender-winner leads from GePNIC award results. When a Dhandha company itself wins, its tender match is marked won.
@@ -83,7 +84,7 @@ It covers:
 ## Still to do
 - Desktop helper for DSC-assisted submission.
 - Crawler hosting on Oracle Always Free (the owner sets up the server).
-- Tender winners: verify the GePNIC results adapter against the live portals on the first crawler run (it was written without network access to them). GeM award results are not crawled yet.
+- Tender winners: verify the GePNIC and GeM results adapters against the live portals on the first crawler run (both were written without network access to them; GeM's listing filter is `GEM_RESULT_STATUS`).
 - Phase 3, rest:
   - AI calling.
 - Phase 4: social content and AI video.
