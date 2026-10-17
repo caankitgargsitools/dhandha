@@ -19,3 +19,7 @@ Billing:
 
 10. `billing_razorpay` — `billing_settings` (seller GSTIN/state/address, SAC, invoice prefix, suite price, minimum top-up), `billing_orders`, `billing_events`, invoice snapshot columns, `billing_create_order` (prices in SQL, admin only), `billing_attach_order`, `billing_fulfil` (credits, 30-day plan period, GST invoice numbered per financial year), `razorpay_webhook` (verifies the HMAC with the Vault secret `razorpay_webhook_secret`, checks the amount, idempotent per event and payment)
 11. `billing_webhook_ready` — admin panel check that the Vault secret exists
+
+New companies (MCA):
+
+12. `phase3_mca_new_companies`, `phase3_mca_add_leads_fix` — shared `mca_companies` (CIN/LLPIN, registration date, state, class, capital, activity, registered office, email), readable only by platform admins; `upsert_mca`, `admin_ingest_mca` (admin upload), `ingest_mca` (ingest-key feeds), `mca_prospects` (per company: registered in the last N days, ideal-client places and industries, minimum paid-up capital, minus existing leads), `add_mca_leads`; `leads.cin`; `import_leads` charges `lead_found` for MCA leads too

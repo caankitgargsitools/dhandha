@@ -2,7 +2,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getContext } from "@/lib/session";
-import { leadsFromCsv, scoreLead, listField, SOURCES, LEAD_STATUS, ACTIVITY, OUTCOMES, PACKS } from "@/lib/leads";
+import { readXlsx } from "@/lib/xlsx";
+import { leadsFromRows, parseCsv, scoreLead, listField, SOURCES, LEAD_STATUS, ACTIVITY, OUTCOMES, PACKS } from "@/lib/leads";
 
 const str = (f, k, max = 200) => String(f.get(k) || "").trim().slice(0, max);
 const istDate = (d, hh = "10:00") => (d ? new Date(`${d}T${hh}:00+05:30`).toISOString() : null);
@@ -42,9 +43,15 @@ export async function importLeads(prev, formData) {
   const ctx = await getContext();
   if (ctx.role === "viewer") return { error: "Viewers cannot import leads." };
   const file = formData.get("file");
-  if (!file || typeof file === "string" || !file.size) return { error: "Choose a CSV file. In Excel use File → Save As → CSV." };
+  if (!file || typeof file === "string" || !file.size) return { error: "Choose an Excel (.xlsx) or CSV file." };
   if (file.size > 950_000) return { error: "Keep the file under 1 MB. Split bigger sheets into parts." };
-  const { leads, skipped, truncated, error: parseError } = leadsFromCsv(await file.text());
+  let rows;
+  try {
+    rows = /\.xlsx$/i.test(file.name) ? readXlsx(Buffer.from(await file.arrayBuffer()), { maxRows: 2001 }) : parseCsv(await file.text());
+  } catch (e) {
+    return { error: `Could not read the file: ${e.message}. Old .xls files: save as .xlsx or CSV first.` };
+  }
+  const { leads, skipped, truncated, error: parseError } = leadsFromRows(rows);
   if (parseError) return { error: parseError };
   if (!leads.length) return { error: `No usable rows: each lead needs a name and a 10-digit phone or an email. ${skipped} rows skipped.` };
   const source = SOURCES[formData.get("source")] ? String(formData.get("source")) : "upload";
@@ -177,4 +184,36 @@ export async function addWinners(prev, formData) {
   if (error) return { error: /insufficient credits/i.test(error.message) ? "Not enough credits. Top up in Credits & plan." : error.message };
   revalidatePath("/app/leads", "layout");
   return { message: `${data.added} firms added to your leads.${data.duplicates?.length ? ` ${data.duplicates.length} were already there.` : ""}` };
+}
+
+export async function saveMcaPrefs(prev, formData) {
+  const { supabase, tenant, company, role } = await getContext();
+  if (!["admin", "manager"].includes(role)) return { error: "Only admins and managers can change this." };
+  const { error } = await supabase.from("lead_preferences").upsert({
+    company_id: company.id, tenant_id: tenant.id, mca_days: Math.min(365, Math.max(7, Number(formData.get("days")) || 60)),
+    mca_min_capital: Number(String(formData.get("min_capital") || "").replace(/[^\d.]/g, "")) || null, updated_at: new Date().toISOString(),
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/app/leads/new-companies");
+  return { message: "Saved." };
+}
+
+// Adds chosen newly registered companies as leads. Charged per lead added (lead_found); duplicates are free.
+export async function addMcaCompanies(prev, formData) {
+  const ctx = await getContext();
+  if (ctx.role === "viewer") return { error: "Viewers cannot add leads." };
+  const cins = [...new Set(formData.getAll("cin").map(String))];
+  if (!cins.length) return { error: "Tick the companies you want to add." };
+  if (cins.length > 100) return { error: "Add at most 100 at a time." };
+  const [{ data: found, error: e1 }, ideal] = await Promise.all([ctx.supabase.rpc("mca_prospects", { p_company: ctx.company.id }), loadIdeal(ctx.supabase, ctx.company.id)]);
+  if (e1) return { error: e1.message };
+  const scores = Object.fromEntries((found || []).filter((m) => cins.includes(m.cin)).map((m) => {
+    const s = scoreLead({ name: m.name, email: m.has_email ? "on@file.in" : null, industry: m.activity, state: m.state, source: "mca" }, ideal);
+    return [m.cin, { score: s.score, reasons: s.reasons }];
+  }));
+  const { data, error } = await ctx.supabase.rpc("add_mca_leads", { p_company: ctx.company.id, p_owner: String(formData.get("owner_id") || "") || null, p_cins: cins, p_scores: scores });
+  if (error) return { error: /insufficient credits/i.test(error.message) ? "Not enough credits. Top up in Credits & plan." : error.message };
+  revalidatePath("/app/leads", "layout");
+  if (!data.added) return { error: "Those companies are already in your leads." };
+  return { message: `${data.added} companies added to your leads.${data.duplicates?.length ? ` ${data.duplicates.length} were already there.` : ""}` };
 }

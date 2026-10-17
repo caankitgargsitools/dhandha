@@ -45,7 +45,10 @@ export default async function Leads({ searchParams }) {
     <div className="stack">
       <div className="page-head">
         <div><h1>Leads</h1><p>Prospects for {company.legal_name}, scored on how well they fit your ideal client. {["telecaller", "field"].includes(role) ? "You see the leads given to you." : ""}</p></div>
-        <Link href="/app/leads/winners" className="btn gold"><Icon name="tender" size={16} /> Tender winners</Link>
+        <div className="row">
+          <Link href="/app/leads/new-companies" className="btn ghost"><Icon name="building" size={16} /> New companies</Link>
+          <Link href="/app/leads/winners" className="btn gold"><Icon name="tender" size={16} /> Tender winners</Link>
+        </div>
       </div>
       {!ideal && isLead && <div className="notice"><Icon name="sparkle" /><span><strong>Tell Dhandha who your ideal client is</strong> (industries, cities, states) so leads are scored on fit. Use the panel on the right.</span></div>}
 
@@ -130,9 +133,9 @@ export default async function Leads({ searchParams }) {
           {canWrite && (
             <details className="panel">
               <summary><strong>Import from Excel / CSV</strong></summary>
-              <p className="small muted">Save your sheet as CSV. We read columns like Name / Company, Contact Person, Mobile, Email, City, State, Industry. Duplicates (same mobile or email) are skipped.</p>
+              <p className="small muted">Upload your Excel (.xlsx) or CSV sheet. We read columns like Name / Company, Contact Person, Mobile, Email, City, State, Industry. Duplicates (same mobile or email) are skipped.</p>
               <FormState action={importLeads} submit="Import">
-                <input type="file" name="file" accept=".csv,text/csv" required aria-label="CSV file" />
+                <input type="file" name="file" accept=".xlsx,.csv,text/csv" required aria-label="CSV file" />
                 <div className="form-grid">
                   <div><label htmlFor="isource">These leads came from</label><select id="isource" name="source" defaultValue="upload">{Object.entries(SOURCES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
                   {isLead && <OwnerSelect members={sellers} me={user.id} id="iowner" blank="Leave unassigned" />}
