@@ -3,6 +3,7 @@ import { getAdminContext } from "@/lib/admin";
 import { inr, daysLeft, fmtDate } from "@/lib/session";
 import { DayBars, Donut } from "@/components/Charts";
 import { STAFF_STATUS, PRIORITY, ago } from "@/lib/tickets";
+import GoLive from "./GoLive";
 
 export default async function AdminOverview() {
   const { supabase } = await getAdminContext();
@@ -30,6 +31,7 @@ export default async function AdminOverview() {
   return (
     <div className="stack">
       <div className="page-head"><div><h1>Overview</h1><p>How Dhandha is doing across all customers.</p></div></div>
+      <GoLive supabase={supabase} />
       <div className="grid">
         <div className="panel ledger"><div className="kpi-label">Workspaces</div><div className="kpi">{tenants?.length || 0}</div><div className="faint small">{paying.size} paying · {(tenants?.length || 0) - paying.size} on trial</div></div>
         <div className="panel ledger"><div className="kpi-label">Users</div><div className="kpi">{profiles?.length || 0}</div><div className="faint small">across all workspaces</div></div>
