@@ -48,7 +48,11 @@ It covers:
   - Pages: `app/app/leads/*`, `app/app/crm/*`. Actions in `leads/actions.js` and `crm/actions.js`. Timeline and log form in `components/CrmTimeline.js`.
   - Tender winners (`/app/leads/winners`): award results from our crawler (`crawler/src/adapters/gepnicResults.js` → `ingest_awards` → `tender_awards`), filtered per company by `winner_prospects`. Adding a winner as a lead costs `lead_found` credits.
   - New companies (`/app/leads/new-companies`): MCA's monthly registrations, uploaded by the platform admin at Admin → New companies (`lib/mca.js` parses .xlsx/.csv; `lib/xlsx.js` is a dependency-free Excel reader, also used by lead import). Filtered per company by `mca_prospects`; adding costs `lead_found` credits.
-  - Outreach is click-to-call / click-to-WhatsApp from the user's own phone. Nothing is sent automatically. DND leads hide the buttons.
+  - Click-to-call / click-to-WhatsApp from the user's own phone. DND leads hide the buttons.
+- Outreach (`app/app/outreach/*`, `lib/outreach.js`): email + WhatsApp sequences and one-off sends, paid in credits (`email_send`, `whatsapp_send`).
+  - Email: Dhandha's Resend account (`RESEND_API_KEY`, `OUTREACH_FROM_EMAIL` in Vercel), sender name and reply-to per workspace, unsubscribe page `/u/[token]` + one-click `/api/unsubscribe`.
+  - WhatsApp: each workspace's own Cloud API number and approved templates ({{1}} = first name, {{2}} = company); token kept in Vault; only to leads with `wa_opt_in`.
+  - Worker: pg_cron → pg_net → `POST /api/outreach/run` with the Vault worker key; the route claims, sends, reports. Logging a real conversation stops sequences.
 - Billing (Razorpay): `lib/billing.js` (GST quote, amount in words; tested), `lib/razorpay.js` (Orders API), `app/app/wallet/*` (top-up, plan, invoices), `components/BillingForms.js` + `PayButton.js`, webhook at `app/api/razorpay/webhook/route.js`.
   - Credits are added only by the signed webhook. The HMAC is checked in SQL (`razorpay_webhook`) against the Vault secret `razorpay_webhook_secret`; the route just passes the raw body through.
   - Plans are prepaid 30-day periods (no auto-debit mandate yet). Only the workspace admin can pay.
@@ -72,6 +76,7 @@ It covers:
   - Owners and follow-ups; telecallers see only their own leads.
   - Call/WhatsApp/email links, an activity timeline, a deal pipeline with stage moves, and escalation of overdue steps to a manager.
 - **Billing:** Razorpay checkout for credit top-ups and 30-day plans, verified webhook, GST invoices.
+- **Phase 3, part 4:** paid outreach — email/WhatsApp sequences, one-off sends, unsubscribe, credits.
 - **Phase 3, part 3:** new-company leads from MCA registration data; Excel (.xlsx) lead import.
 - **Phase 3, part 2:** tender-winner leads from GePNIC award results. When a Dhandha company itself wins, its tender match is marked won.
 
@@ -80,11 +85,11 @@ It covers:
 - Crawler hosting on Oracle Always Free (the owner sets up the server).
 - Tender winners: verify the GePNIC results adapter against the live portals on the first crawler run (it was written without network access to them). GeM award results are not crawled yet.
 - Phase 3, rest:
-  - Paid WhatsApp Business API / email sequences (credits).
   - AI calling.
 - Phase 4: social content and AI video.
 - Google Drive OAuth for document storage.
 - Razorpay: switch on (owner adds keys in Vercel, webhook in Razorpay, secret in Supabase Vault, seller GSTIN in Admin → Billing). Later: auto-renewing subscriptions (Razorpay mandates), credit notes/refunds.
+- Outreach switch-on: Admin → Outreach site address; Resend account + `RESEND_API_KEY` / `OUTREACH_FROM_EMAIL` in Vercel. Later: delivery/bounce webhooks, inbound reply detection.
 - MCA: the owner uploads each month's file at Admin → New companies (MCA's portal sits behind bot protection; no captcha is bypassed). An automated feed can post to `ingest_mca` later.
 - Before launch:
   - Remove dummy data using `demo_seed`.

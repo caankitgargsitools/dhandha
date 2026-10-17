@@ -23,3 +23,8 @@ Billing:
 New companies (MCA):
 
 12. `phase3_mca_new_companies`, `phase3_mca_add_leads_fix` — shared `mca_companies` (CIN/LLPIN, registration date, state, class, capital, activity, registered office, email), readable only by platform admins; `upsert_mca`, `admin_ingest_mca` (admin upload), `ingest_mca` (ingest-key feeds), `mca_prospects` (per company: registered in the last N days, ideal-client places and industries, minimum paid-up capital, minus existing leads), `add_mca_leads`; `leads.cin`; `import_leads` charges `lead_found` for MCA leads too
+
+Outreach:
+
+13. `phase3_outreach_tables` — `whatsapp_send` price, lead flags (`email_opt_out`, `wa_opt_in`, `unsub_token`), `outreach_settings` (sender name, reply-to, WhatsApp number id; the token is a Vault secret), `sequences`, `sequence_steps`, `enrollments`, `outreach_messages`; `save_outreach_settings`, `set_whatsapp_token`, `enroll_leads`, `queue_message`, `outreach_unsubscribe`, `outreach_render`
+14. `phase3_outreach_worker` — pg_net; Vault secret `outreach_worker_key` (generated in SQL, never shown); `outreach_claim` (due steps → messages, credits charged up front), `outreach_report` (sent → timeline, failed → refund), `outreach_kick` / `outreach_kick_if_due` (pg_cron every 5 minutes → POST /api/outreach/run), `admin_set_app_url`; a logged conversation stops the lead's sequences

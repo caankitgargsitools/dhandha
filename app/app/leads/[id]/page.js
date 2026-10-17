@@ -8,6 +8,7 @@ import OwnerSelect from "@/components/OwnerSelect";
 import { Timeline, LogActivity } from "@/components/CrmTimeline";
 import { SOURCES, LEAD_STATUS, STAGES, telLink, waLink, fillTemplate, DEFAULT_TEMPLATE } from "@/lib/leads";
 import { updateLead, createDealFromLead } from "../actions";
+import { sendOne, enrollOne } from "../../outreach/actions";
 
 const toDate = (d) => (d ? new Date(new Date(d).getTime() + 330 * 60000).toISOString().slice(0, 10) : "");
 
@@ -16,7 +17,7 @@ export default async function LeadDetail({ params }) {
   const { supabase, tenant, company, user, role } = await getContext();
   const { data: l } = await supabase.from("leads").select("*").eq("id", id).eq("company_id", company.id).maybeSingle();
   if (!l) notFound();
-  const [{ data: acts }, { data: deals }, { data: members }, { data: ideal }, { data: wins }] = await Promise.all([
+  const [{ data: acts }, { data: deals }, { data: members }, { data: ideal }, { data: wins }, { data: seqs }, { data: msgs }] = await Promise.all([
     supabase.from("crm_activities").select("*").eq("lead_id", l.id).order("created_at", { ascending: false }).limit(100),
     supabase.from("deals").select("id, title, stage, value_inr").eq("lead_id", l.id).order("created_at", { ascending: false }),
     supabase.from("tenant_members").select("user_id, role, profiles(full_name, email)").eq("tenant_id", tenant.id).neq("role", "disabled"),
@@ -25,6 +26,8 @@ export default async function LeadDetail({ params }) {
     l.source === "tender_winner" || l.award_id
       ? supabase.from("tender_awards").select("id, title, authority, portal, awarded_value, contract_date").eq("bidder_norm", l.name_norm).order("contract_date", { ascending: false }).limit(20)
       : Promise.resolve({ data: [] }),
+    supabase.from("sequences").select("id, name").eq("company_id", company.id).eq("active", true).order("name"),
+    supabase.from("outreach_messages").select("id, channel, subject, wa_template, status, error, created_at").eq("lead_id", l.id).order("created_at", { ascending: false }).limit(10),
   ]);
   const findContact = `https://www.google.com/search?q=${encodeURIComponent(`${l.name} ${l.city || l.state || ""} contact number`)}`;
   const name = (uid) => { const m = (members || []).find((x) => x.user_id === uid); return m ? (uid === user.id ? "You" : m.profiles?.full_name || m.profiles?.email) : "Former member"; };
@@ -70,6 +73,51 @@ export default async function LeadDetail({ params }) {
               <h3>Log a call or message</h3>
               <p className="small muted" style={{ marginTop: 0 }}>Call or WhatsApp with the buttons above, then note how it went here.</p>
               <LogActivity leadId={l.id} />
+            </div>
+          )}
+          {canWrite && !l.dnd && (l.email || l.wa_opt_in) && (
+            <details className="panel">
+              <summary><strong>Send an email or WhatsApp</strong></summary>
+              <div className="stack-sm" style={{ marginTop: 10 }}>
+                {l.email && !l.email_opt_out && (
+                  <FormState action={sendOne} submit="Send email">
+                    <input type="hidden" name="lead_id" value={l.id} /><input type="hidden" name="channel" value="email" />
+                    <div><label htmlFor="msubject">Subject</label><input id="msubject" name="subject" maxLength={200} required /></div>
+                    <div><label htmlFor="mbody">Message</label><textarea id="mbody" name="body" rows={5} required defaultValue={"Dear {name},\n\n"} /></div>
+                  </FormState>
+                )}
+                {l.email_opt_out && <p className="small muted" style={{ margin: 0 }}>This lead unsubscribed from emails.</p>}
+                {l.wa_opt_in && (
+                  <FormState action={sendOne} submit="Send WhatsApp">
+                    <input type="hidden" name="lead_id" value={l.id} /><input type="hidden" name="channel" value="whatsapp" />
+                    <div className="form-grid">
+                      <div><label htmlFor="wtpl">Approved template</label><input id="wtpl" name="wa_template" required placeholder="intro_offer" /></div>
+                      <div><label htmlFor="wlang">Language</label><input id="wlang" name="wa_lang" defaultValue="en" /></div>
+                    </div>
+                  </FormState>
+                )}
+                <p className="tiny faint" style={{ margin: 0 }}>Charged per message (Credits &amp; plan). Goes out within a few minutes.</p>
+              </div>
+            </details>
+          )}
+          {canWrite && !l.dnd && (seqs || []).length > 0 && (
+            <div className="panel">
+              <h3>Add to a sequence</h3>
+              <FormState action={enrollOne} submit="Add" className="row">
+                <input type="hidden" name="lead_id" value={l.id} />
+                <select name="sequence_id" aria-label="Sequence" style={{ width: "auto", flex: 1 }}>{seqs.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}</select>
+              </FormState>
+            </div>
+          )}
+          {(msgs || []).length > 0 && (
+            <div className="panel">
+              <h3>Messages</h3>
+              {msgs.map((m) => (
+                <div key={m.id} className="row between small" style={{ padding: "5px 0", borderTop: "1px solid var(--line-soft)" }}>
+                  <span>{m.channel === "email" ? m.subject : `WhatsApp: ${m.wa_template}`}<div className="tiny faint">{fmtDate(m.created_at)}{m.error ? ` · ${m.error}` : ""}</div></span>
+                  <span className={`chip ${m.status === "sent" ? "ok" : m.status === "failed" ? "bad" : "info"}`}>{m.status}</span>
+                </div>
+              ))}
             </div>
           )}
           <div className="panel">
@@ -142,6 +190,8 @@ export default async function LeadDetail({ params }) {
                 </div>
                 <div><label htmlFor="lnotes">Notes</label><textarea id="lnotes" name="notes" rows={3} defaultValue={l.notes || ""} /></div>
                 <label className="row small" style={{ gap: 8 }}><input type="checkbox" name="dnd" defaultChecked={l.dnd} style={{ width: "auto" }} /> Do not disturb (registered on NCPR or asked not to be contacted)</label>
+                <label className="row small" style={{ gap: 8 }}><input type="checkbox" name="wa_opt_in" defaultChecked={l.wa_opt_in} style={{ width: "auto" }} /> WhatsApp opt-in (they agreed to get WhatsApp messages from us)</label>
+                <label className="row small" style={{ gap: 8 }}><input type="checkbox" name="email_opt_out" defaultChecked={l.email_opt_out} disabled={l.email_opt_out} style={{ width: "auto" }} /> Unsubscribed from email{l.email_opt_out ? " (they unsubscribed; this stays on)" : ""}</label>
               </FormState>
             ) : (
               <dl className="small">{[["Phone", l.phone], ["Email", l.email], ["Website", l.website], ["Notes", l.notes]].map(([k, v]) => <div key={k}><dt className="faint tiny">{k}</dt><dd style={{ margin: "0 0 8px" }}>{v || "—"}</dd></div>)}</dl>

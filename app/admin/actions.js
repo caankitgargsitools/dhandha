@@ -94,3 +94,11 @@ export async function uploadMca(prev, formData) {
   revalidatePath("/admin/mca");
   return { message: `${t.inserted} new companies, ${t.updated} updated${skipped ? `, ${skipped} rows skipped (no valid CIN)` : ""}.` };
 }
+
+export async function saveAppUrl(prev, formData) {
+  const { supabase } = await getAdminContext();
+  const { error } = await supabase.rpc("admin_set_app_url", { p_url: String(formData.get("url") || "").trim().toLowerCase() });
+  if (error) return { error: error.message.replace(/^.*?ERROR:\s*/, "") };
+  revalidatePath("/admin/outreach");
+  return { message: "Saved. Background sending can now reach the site." };
+}

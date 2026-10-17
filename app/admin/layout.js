@@ -21,6 +21,7 @@ export default async function AdminLayout({ children }) {
       { href: "/admin/ai", label: "AI engines", icon: "sparkle" },
       { href: "/admin/pricing", label: "Pricing", icon: "rupee" },
       { href: "/admin/billing", label: "Billing", icon: "wallet" },
+      { href: "/admin/outreach", label: "Outreach", icon: "mail" },
       { href: "/admin/audit", label: "Audit log", icon: "log" },
     ] },
     { title: "", items: [{ href: "/app", label: "Back to my workspace", icon: "arrow" }] },

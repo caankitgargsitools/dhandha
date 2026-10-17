@@ -95,9 +95,12 @@ export async function updateLead(prev, formData) {
     email: str(formData, "email", 200).toLowerCase() || null, city: str(formData, "city", 80) || null, state: str(formData, "state", 80) || null,
     industry: str(formData, "industry", 120) || null, website: str(formData, "website") || null, notes: str(formData, "notes", 4000) || null,
     dnd: formData.get("dnd") === "on",
+    wa_opt_in: formData.get("wa_opt_in") === "on",
     next_follow_up_at: istDate(str(formData, "follow_up", 10)),
   };
   if (LEAD_STATUS[formData.get("status")]) patch.status = String(formData.get("status"));
+  // an unsubscribe is only ever switched on here, never off
+  if (formData.get("email_opt_out") === "on") patch.email_opt_out = true;
   const owner = String(formData.get("owner_id") || "");
   if (canSeeAll(role)) patch.owner_id = owner || null;
   else if (owner === user.id) patch.owner_id = user.id;
