@@ -56,6 +56,7 @@ It covers:
 - Billing (Razorpay): `lib/billing.js` (GST quote, amount in words; tested), `lib/razorpay.js` (Orders API), `app/app/wallet/*` (top-up, plan, invoices), `components/BillingForms.js` + `PayButton.js`, webhook at `app/api/razorpay/webhook/route.js`.
   - Credits are added only by the signed webhook. The HMAC is checked in SQL (`razorpay_webhook`) against the Vault secret `razorpay_webhook_secret`; the route just passes the raw body through.
   - Plans are prepaid 30-day periods (no auto-debit mandate yet). Only the workspace admin can pay.
+- Google Drive (`lib/google.js`, `lib/drive.js`, `/api/google/start|callback`, `/app/settings/drive`, `components/DriveUpload.js`): one Drive per workspace, `drive.file` scope only, refresh token AES-GCM encrypted with a key derived from `GOOGLE_CLIENT_SECRET`. Vault document uploads go browser → Google (resumable session) into "Dhandha – <workspace>/<company>"; pasted Drive links still work.
 - Admin panel: `app/admin/*`. Covers tenants, people, credits, tickets, pricing, billing (seller GSTIN, switch-on checklist, payments, webhook log), audit, crawler keys and AI spend.
 - Database logic lives mostly in SQL. The migrations list is in `supabase/README.md`.
   - Key functions: `score_tender` (CPWD norms), `tender_fits`, `kw_rx` (whole-word matching, plurals allowed), `allowed_packs`, `rescore_company`, `ingest_tenders`, `spend_credits`, `add_team_member`, `claim_invites`, `import_leads`, `escalate_overdue_deals` (pg_cron, hourly), `sees_all_leads`.
@@ -76,6 +77,7 @@ It covers:
   - Owners and follow-ups; telecallers see only their own leads.
   - Call/WhatsApp/email links, an activity timeline, a deal pipeline with stage moves, and escalation of overdue steps to a manager.
 - **Billing:** Razorpay checkout for credit top-ups and 30-day plans, verified webhook, GST invoices.
+- **Google Drive:** per-workspace connection; Vault uploads go straight into the customer's Drive.
 - **Phase 3, part 5:** GeM award results (L1/awarded seller) feed tender-winner leads too.
 - **Phase 3, part 4:** paid outreach — email/WhatsApp sequences, one-off sends, unsubscribe, credits.
 - **Phase 3, part 3:** new-company leads from MCA registration data; Excel (.xlsx) lead import.
@@ -88,10 +90,11 @@ It covers:
 - Phase 3, rest:
   - AI calling.
 - Phase 4: social content and AI video.
-- Google Drive OAuth for document storage.
+- Google Drive switch-on: owner creates a Google Cloud OAuth client (Web; redirect `https://<domain>/api/google/callback`; consent screen with the `drive.file` scope) and adds `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` in Vercel. Later: save signed bid packs to Drive too.
 - Razorpay: switch on (owner adds keys in Vercel, webhook in Razorpay, secret in Supabase Vault, seller GSTIN in Admin → Billing). Later: auto-renewing subscriptions (Razorpay mandates), credit notes/refunds.
 - Outreach switch-on: Admin → Outreach site address; Resend account + `RESEND_API_KEY` / `OUTREACH_FROM_EMAIL` in Vercel. Later: delivery/bounce webhooks, inbound reply detection.
 - MCA: the owner uploads each month's file at Admin → New companies (MCA's portal sits behind bot protection; no captcha is bypassed). An automated feed can post to `ingest_mca` later.
 - Before launch:
   - Remove dummy data using `demo_seed`.
   - Enable leaked-password protection in Supabase.
+  - Optional tidy-up: move `pg_net` out of the `public` schema (Supabase lint WARN; needs a drop/re-create of the extension).

@@ -93,9 +93,11 @@ export async function addDocument(prev, formData) {
   const { supabase, tenant, company } = await getContext();
   const type_code = s(formData.get("type_code"));
   if (!type_code) return { error: "Choose the document type." };
-  const drive_url = s(formData.get("drive_url"));
+  // an uploaded file (DriveUpload fills drive_url + drive_file_id) wins over a pasted link
+  const drive_url = s(formData.get("drive_url")) || s(formData.get("drive_link"));
   if (drive_url && !/^https:\/\/(drive|docs)\.google\.com\//.test(drive_url)) return { error: "Drive link should start with https://drive.google.com/ or https://docs.google.com/" };
-  const idMatch = drive_url?.match(/\/d\/([a-zA-Z0-9_-]{10,})/) || drive_url?.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
+  const uploadedId = s(formData.get("drive_file_id"));
+  const idMatch = uploadedId ? [null, uploadedId] : drive_url?.match(/\/d\/([a-zA-Z0-9_-]{10,})/) || drive_url?.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
   const { error } = await supabase.from("documents").insert({
     tenant_id: tenant.id,
     company_id: company.id,
@@ -161,4 +163,11 @@ export async function recordBrandAsset({ kind, path, meta }) {
   if (old?.storage_path && old.storage_path !== path) await supabase.storage.from("brand").remove([old.storage_path]);
   revalidatePath("/app/brand");
   return { ok: true };
+}
+
+export async function disconnectDrive() {
+  const { supabase, tenant, isAdmin } = await getContext();
+  if (!isAdmin) return;
+  await supabase.rpc("disconnect_drive", { p_tenant: tenant.id });
+  revalidatePath("/app/settings/drive");
 }

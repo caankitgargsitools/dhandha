@@ -2,6 +2,8 @@ import { getContext, daysLeft } from "@/lib/session";
 import FormState from "../../FormState";
 import DeleteButton from "../../DeleteButton";
 import { addDocument } from "../../actions";
+import DriveUpload from "@/components/DriveUpload";
+import Link from "next/link";
 
 function expiryChip(d, tracks) {
   if (!d.valid_until) return tracks ? <span className="chip warn">Add expiry date</span> : <span className="muted small">—</span>;
@@ -14,11 +16,13 @@ function expiryChip(d, tracks) {
 }
 
 export default async function Documents() {
-  const { supabase, company, isAdmin, role } = await getContext();
-  const [{ data: types }, { data: docs }] = await Promise.all([
+  const { supabase, tenant, company, isAdmin, role } = await getContext();
+  const [{ data: types }, { data: docs }, { data: drive }] = await Promise.all([
     supabase.from("document_types").select("*").order("sort"),
     supabase.from("documents").select("*").eq("company_id", company.id).order("created_at", { ascending: false }),
+    supabase.from("drive_connections").select("google_email, revoked_at, token_enc").eq("tenant_id", tenant.id).maybeSingle(),
   ]);
+  const driveOn = !!(drive?.token_enc && !drive.revoked_at);
   const byType = Object.fromEntries((types || []).map((t) => [t.code, t]));
   const categories = [...new Set((types || []).map((t) => t.category))];
   const present = new Set((docs || []).map((d) => d.type_code));
@@ -32,10 +36,13 @@ export default async function Documents() {
           60, 30, 15 and 7 days before anything lapses.
         </p>
       </div>
-      <p className="notice small">
-        Automatic Google Drive connection (pick files, read them with AI) switches on once the Google sign-in app is
-        approved. Until then, paste each file's Drive link below.
-      </p>
+      {driveOn ? (
+        <p className="notice info small">Files you upload here go straight into your Google Drive ({drive.google_email}), in a folder for {company.legal_name}. Dhandha can only see files it put there.</p>
+      ) : (
+        <p className="notice small">
+          {isAdmin ? <><Link href="/app/settings/drive">Connect Google Drive</Link> to upload files straight into your own Drive.</> : "Your admin can connect Google Drive so files upload straight into it."} Until then, paste each file&apos;s Drive link below.
+        </p>
+      )}
 
       {role !== "viewer" && (
         <div className="panel">
@@ -60,9 +67,10 @@ export default async function Documents() {
               <div><label htmlFor="period">Year / period</label><input id="period" name="period" placeholder="FY 2024-25" /></div>
               <div><label htmlFor="issued_on">Issued on</label><input id="issued_on" name="issued_on" type="date" /></div>
               <div><label htmlFor="valid_until">Valid until</label><input id="valid_until" name="valid_until" type="date" /></div>
+              {driveOn && <div style={{ gridColumn: "1 / -1" }}><DriveUpload /></div>}
               <div style={{ gridColumn: "1 / -1" }}>
-                <label htmlFor="drive_url">Google Drive link</label>
-                <input id="drive_url" name="drive_url" type="url" placeholder="https://drive.google.com/file/d/…" />
+                <label htmlFor="drive_link">{driveOn ? "…or paste a Google Drive link" : "Google Drive link"}</label>
+                <input id="drive_link" name="drive_link" type="url" placeholder="https://drive.google.com/file/d/…" />
               </div>
             </div>
           </FormState>

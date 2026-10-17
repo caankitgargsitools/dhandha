@@ -28,3 +28,7 @@ Outreach:
 
 13. `phase3_outreach_tables` — `whatsapp_send` price, lead flags (`email_opt_out`, `wa_opt_in`, `unsub_token`), `outreach_settings` (sender name, reply-to, WhatsApp number id; the token is a Vault secret), `sequences`, `sequence_steps`, `enrollments`, `outreach_messages`; `save_outreach_settings`, `set_whatsapp_token`, `enroll_leads`, `queue_message`, `outreach_unsubscribe`, `outreach_render`
 14. `phase3_outreach_worker` — pg_net; Vault secret `outreach_worker_key` (generated in SQL, never shown); `outreach_claim` (due steps → messages, credits charged up front), `outreach_report` (sent → timeline, failed → refund), `outreach_kick` / `outreach_kick_if_due` (pg_cron every 5 minutes → POST /api/outreach/run), `admin_set_app_url`; a logged conversation stops the lead's sequences
+
+Google Drive:
+
+15. `google_drive_connections` — `drive_connections` (Google email, AES-GCM-encrypted refresh token, root folder; readable by writers), `company_drive_folders` (one folder per company, tied to the root), `save_drive_connection`, `disconnect_drive` (clears the token, keeps the row)
