@@ -39,6 +39,15 @@ export async function crawlGepnic(browser, site, { maxPages = 20, log = console.
     // the page opens on "Closing Today"; widen it to the next 14 days (later ones show up on later runs)
     const tab = await page.$("a:has-text('Closing within 14 days')");
     if (tab) await Promise.all([page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 45000 }).catch(() => {}), tab.click()]);
+    // the list is sorted soonest-closing first, so the first pages are tenders closing today; start from the
+    // last page (most time left to bid) and walk backwards
+    const go = async (a) => {
+      const href = a && (await a.getAttribute("href"));
+      if (!href || href.startsWith("javascript")) return false;
+      await page.goto(new URL(href, page.url()).toString(), { waitUntil: "domcontentloaded", timeout: 60000 });
+      return true;
+    };
+    const backwards = await go(await page.$("a#linkLast")).catch(() => false);
     const seen = new Set();
     for (let p = 0; p < maxPages; p++) {
       progress({ phase: "listing", page: p + 1, of: maxPages });
@@ -61,11 +70,10 @@ export async function crawlGepnic(browser, site, { maxPages = 20, log = console.
         });
       }
       if (p === 0 && rows.length === 0) await dumpPage(page, `${site.portal} tenders`, log);
-      const next = await page.$("a#linkFwd, a:has-text('Next >')");
-      const href = next && (await next.getAttribute("href"));
-      if (!href || href.startsWith("javascript") || rows.length === 0) break;
+      if (rows.length === 0) break;
+      const next = await page.$(backwards ? "a#linkBwd, a:text-is('<')" : "a#linkFwd, a:has-text('Next >')");
       // a slow portal on a later page keeps what was read so far
-      try { await page.goto(new URL(href, page.url()).toString(), { waitUntil: "domcontentloaded", timeout: 60000 }); }
+      try { if (!(await go(next))) break; }
       catch (e) { log(`  ${site.portal} page ${p + 2} did not load (${e.message.split("\n")[0]}) — keeping ${out.length}`); break; }
       await new Promise((r) => setTimeout(r, 1000)); // polite pace
     }
