@@ -43,8 +43,17 @@ export async function crawlGepnic(browser, site, { maxPages = 20, log = console.
     const js = tab && (await tab.getAttribute("href"));
     if (js) {
       const nav = page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 45000 }).catch(() => null);
-      if (js.startsWith("javascript:")) await page.evaluate((code) => { (0, eval)(code); }, js.slice(11));
-      else await tab.click();
+      const m = js.match(/submit\('([^']+)',\s*'([^']+)'\)/);
+      if (m) {
+        // what tapestry.form.submit(form, name) does: name the pressed control, then submit the form
+        await page.evaluate(([formName, name]) => {
+          const f = document.forms[formName] || document.getElementById(formName);
+          let i = f.querySelector("input[name=submitname]");
+          if (!i) { i = document.createElement("input"); i.type = "hidden"; i.name = "submitname"; f.appendChild(i); }
+          i.value = name;
+          HTMLFormElement.prototype.submit.call(f);
+        }, [m[1], m[2]]);
+      } else await tab.click();
       if (!(await nav)) log(`  ${site.portal}: the 14-day tab did not load; reading the default list`);
     }
     // the list is sorted soonest-closing first, so the first pages are tenders closing today; start from the
