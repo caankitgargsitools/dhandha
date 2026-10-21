@@ -32,3 +32,8 @@ Outreach:
 Google Drive:
 
 15. `google_drive_connections` — `drive_connections` (Google email, AES-GCM-encrypted refresh token, root folder; readable by writers), `company_drive_folders` (one folder per company, tied to the root), `save_drive_connection`, `disconnect_drive` (clears the token, keeps the row)
+
+Social lead sources:
+
+16. `lead_sources_social` — lead sources `linkedin`, `facebook`, `instagram`; `leads.linkedin_url`
+17. `social_leads_linkedin_meta` — `import_leads` takes LinkedIn connections without phone/email (matched on profile URL, free); `meta_pages` (Facebook Pages per workspace, token in Vault), `meta_lead_jobs`, `save_meta_pages`, `disconnect_meta_page`, `meta_webhook` (verifies X-Hub-Signature-256 with Vault `meta_app_secret`, queues lead ids), `meta_claim` / `meta_report` (worker, same Vault key as outreach), `worker_kick(path)`; the 5-minute cron also wakes the Meta worker

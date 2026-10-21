@@ -171,3 +171,10 @@ export async function disconnectDrive() {
   await supabase.rpc("disconnect_drive", { p_tenant: tenant.id });
   revalidatePath("/app/settings/drive");
 }
+
+export async function disconnectMetaPage(formData) {
+  const { supabase, isAdmin } = await getContext();
+  if (!isAdmin) return;
+  await supabase.rpc("disconnect_meta_page", { p_page: String(formData.get("page_id")) });
+  revalidatePath("/app/settings/facebook");
+}

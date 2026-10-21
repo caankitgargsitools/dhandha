@@ -48,6 +48,9 @@ It covers:
   - Pages: `app/app/leads/*`, `app/app/crm/*`. Actions in `leads/actions.js` and `crm/actions.js`. Timeline and log form in `components/CrmTimeline.js`.
   - Tender winners (`/app/leads/winners`): award results from our crawler (`crawler/src/adapters/gepnicResults.js` and `gemResults.js` → `ingest_awards` → `tender_awards`), filtered per company by `winner_prospects`. Adding a winner as a lead costs `lead_found` credits.
   - New companies (`/app/leads/new-companies`): MCA's monthly registrations, uploaded by the platform admin at Admin → New companies (`lib/mca.js` parses .xlsx/.csv; `lib/xlsx.js` is a dependency-free Excel reader, also used by lead import). Filtered per company by `mca_prospects`; adding costs `lead_found` credits.
+  - Social (`lib/social.js`, permitted routes only — no scraping of LinkedIn/Facebook/Instagram):
+    - LinkedIn: the user's own Connections.csv export, recognised automatically by Leads → Import (free, matched on profile URL).
+    - Facebook/Instagram Lead Ads (`lib/meta.js`, `/api/meta/start|callback|webhook|run`, `/app/settings/facebook`): admin connects Pages; Meta's webhook → `meta_webhook` (signature checked in SQL) → worker fetches the lead → Leads with a timeline note.
   - Click-to-call / click-to-WhatsApp from the user's own phone. DND leads hide the buttons.
 - Outreach (`app/app/outreach/*`, `lib/outreach.js`): email + WhatsApp sequences and one-off sends, paid in credits (`email_send`, `whatsapp_send`).
   - Email: Dhandha's Resend account (`RESEND_API_KEY`, `OUTREACH_FROM_EMAIL` in Vercel), sender name and reply-to per workspace, unsubscribe page `/u/[token]` + one-click `/api/unsubscribe`.
@@ -77,6 +80,7 @@ It covers:
   - Owners and follow-ups; telecallers see only their own leads.
   - Call/WhatsApp/email links, an activity timeline, a deal pipeline with stage moves, and escalation of overdue steps to a manager.
 - **Billing:** Razorpay checkout for credit top-ups and 30-day plans, verified webhook, GST invoices.
+- **Social leads:** LinkedIn connections import; Facebook/Instagram Lead Ads arrive in Leads automatically. Crawler deploy: published image + one-paste Oracle setup.
 - **Google Drive:** per-workspace connection; Vault uploads go straight into the customer's Drive.
 - **Phase 3, part 5:** GeM award results (L1/awarded seller) feed tender-winner leads too.
 - **Phase 3, part 4:** paid outreach — email/WhatsApp sequences, one-off sends, unsubscribe, credits.
@@ -85,11 +89,12 @@ It covers:
 
 ## Still to do
 - Desktop helper for DSC-assisted submission.
-- Crawler hosting on Oracle Always Free (the owner sets up the server).
+- Crawler hosting: Admin → Crawler → Create key shows a cloud-init script; paste it into a new Oracle Always Free Ubuntu VM (Mumbai). The image is published to GHCR by `.github/workflows/crawler-image.yml` (make the package public once).
 - Tender winners: verify the GePNIC and GeM results adapters against the live portals on the first crawler run (both were written without network access to them; GeM's listing filter is `GEM_RESULT_STATUS`).
 - Phase 3, rest:
   - AI calling.
 - Phase 4: social content and AI video.
+- Facebook/Instagram switch-on: owner creates a Meta app (Business type, Facebook Login for Business + Webhooks), adds `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN` in Vercel and the app secret in Supabase Vault as `meta_app_secret`; webhook URL `https://<domain>/api/meta/webhook` (Page → leadgen); App Review for leads_retrieval and page permissions.
 - Google Drive switch-on: owner creates a Google Cloud OAuth client (Web; redirect `https://<domain>/api/google/callback`; consent screen with the `drive.file` scope) and adds `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` in Vercel. Later: save signed bid packs to Drive too.
 - Razorpay: switch on (owner adds keys in Vercel, webhook in Razorpay, secret in Supabase Vault, seller GSTIN in Admin → Billing). Later: auto-renewing subscriptions (Razorpay mandates), credit notes/refunds.
 - Outreach switch-on: Admin → Outreach site address; Resend account + `RESEND_API_KEY` / `OUTREACH_FROM_EMAIL` in Vercel. Later: delivery/bounce webhooks, inbound reply detection.

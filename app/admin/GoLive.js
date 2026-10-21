@@ -3,6 +3,7 @@ import Icon from "@/components/Icon";
 import { razorpayReady } from "@/lib/razorpay";
 import { emailReady } from "@/lib/outreach";
 import { driveReady } from "@/lib/google";
+import { metaReady } from "@/lib/meta";
 
 // Everything the owner has to switch on outside the code, in one list.
 export default async function GoLive({ supabase }) {
@@ -19,6 +20,7 @@ export default async function GoLive({ supabase }) {
     [!!appUrl, "Site address for background sending", "/admin/outreach"],
     [emailReady(), "Email service (Resend keys in Vercel)", "/admin/outreach"],
     [driveReady(), "Google Drive sign-in (Google keys in Vercel)", null],
+    [metaReady() && Boolean(process.env.META_VERIFY_TOKEN), "Facebook / Instagram lead ads (Meta app keys in Vercel + meta_app_secret in Vault)", null],
     [Boolean(process.env.GEMINI_API_KEY || process.env.ANTHROPIC_API_KEY), "AI keys for tender reading", "/admin/ai"],
     [(runs || 0) > 0, "Crawler server running", "/admin/crawler"],
     [(mca || 0) > 0, "First MCA new-companies file uploaded", "/admin/mca"],

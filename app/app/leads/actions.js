@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getContext } from "@/lib/session";
 import { readXlsx } from "@/lib/xlsx";
+import { isLinkedInExport, leadsFromLinkedIn } from "@/lib/social";
 import { leadsFromRows, parseCsv, scoreLead, listField, SOURCES, LEAD_STATUS, ACTIVITY, OUTCOMES, PACKS } from "@/lib/leads";
 
 const str = (f, k, max = 200) => String(f.get(k) || "").trim().slice(0, max);
@@ -51,10 +52,12 @@ export async function importLeads(prev, formData) {
   } catch (e) {
     return { error: `Could not read the file: ${e.message}. Old .xls files: save as .xlsx or CSV first.` };
   }
-  const { leads, skipped, truncated, error: parseError } = leadsFromRows(rows);
+  // LinkedIn's own Connections.csv export is recognised by its header and kept as LinkedIn leads
+  const linkedin = isLinkedInExport(rows);
+  const { leads, skipped, truncated, error: parseError } = linkedin ? leadsFromLinkedIn(rows) : leadsFromRows(rows);
   if (parseError) return { error: parseError };
   if (!leads.length) return { error: `No usable rows: each lead needs a name and a 10-digit phone or an email. ${skipped} rows skipped.` };
-  const source = SOURCES[formData.get("source")] ? String(formData.get("source")) : "upload";
+  const source = linkedin ? "linkedin" : SOURCES[formData.get("source")] ? String(formData.get("source")) : "upload";
   const { data, error } = await runImport(ctx, source, String(formData.get("owner_id") || "") || null, leads);
   if (error) return { error: error.message };
   revalidatePath("/app/leads");

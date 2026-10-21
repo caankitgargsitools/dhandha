@@ -133,7 +133,7 @@ export default async function Leads({ searchParams }) {
           {canWrite && (
             <details className="panel">
               <summary><strong>Import from Excel / CSV</strong></summary>
-              <p className="small muted">Upload your Excel (.xlsx) or CSV sheet. We read columns like Name / Company, Contact Person, Mobile, Email, City, State, Industry. Duplicates (same mobile or email) are skipped.</p>
+              <p className="small muted">Upload your Excel (.xlsx) or CSV sheet. We read columns like Name / Company, Contact Person, Mobile, Email, City, State, Industry. Duplicates (same mobile or email) are skipped. LinkedIn: download your connections (LinkedIn → Settings → Data privacy → Get a copy of your data → Connections) and upload Connections.csv as it is.</p>
               <FormState action={importLeads} submit="Import">
                 <input type="file" name="file" accept=".xlsx,.csv,text/csv" required aria-label="CSV file" />
                 <div className="form-grid">

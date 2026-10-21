@@ -57,7 +57,8 @@ export default async function LeadDetail({ params }) {
           </div>
         </div>
         <div className="row">
-          {!tel && !l.email && <a className="btn ghost" href={findContact} target="_blank" rel="noreferrer">Find contact</a>}
+          {l.linkedin_url && <a className="btn ghost" href={l.linkedin_url} target="_blank" rel="noreferrer">LinkedIn</a>}
+          {!tel && !l.email && !l.linkedin_url && <a className="btn ghost" href={findContact} target="_blank" rel="noreferrer">Find contact</a>}
           {l.dnd ? <span className="chip bad">Do not disturb: no calls or messages</span> : <>
             {tel && <a className="btn" href={tel}><Icon name="phone" size={15} /> Call</a>}
             {wa && <a className="btn gold" href={wa} target="_blank" rel="noreferrer">WhatsApp</a>}
