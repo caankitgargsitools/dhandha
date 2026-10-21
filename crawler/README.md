@@ -12,6 +12,13 @@ If a results page asks for a captcha, that portal's results are skipped and logg
 It never solves or bypasses captchas. Tender documents behind a captcha are downloaded later in the user's own
 browser session by the Desktop Agent.
 
+## Run on GitHub Actions (no server)
+`.github/workflows/crawler-run.yml` runs the crawler three times a day and on demand (Actions → crawler run →
+Run workflow). It needs the repository secret `INGEST_KEY` (Admin → Crawler → Create key). Each run starts new
+portals for 17 minutes, three at a time, and the starting portal rotates so all are covered over the day.
+Progress shows live in Admin → Crawler. GitHub's machines are in the US; any state portal that refuses them can
+be crawled from an Indian server instead.
+
 ## Run on a server in India (free: Oracle Cloud Always Free, Mumbai)
 GitHub Actions builds the crawler image for x86 and ARM on every change to `crawler/` on `main` and publishes
 `ghcr.io/caankitgargsitools/dhandha-crawler:latest` (`.github/workflows/crawler-image.yml`).

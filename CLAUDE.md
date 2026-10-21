@@ -89,7 +89,8 @@ It covers:
 
 ## Still to do
 - Desktop helper for DSC-assisted submission.
-- Crawler hosting: Admin → Crawler → Create key shows a cloud-init script; paste it into a new Oracle Always Free Ubuntu VM (Mumbai). The image is published to GHCR by `.github/workflows/crawler-image.yml` (make the package public once).
+- Crawler runs on GitHub Actions (`.github/workflows/crawler-run.yml`, 3×/day + Run workflow; secret `INGEST_KEY`; 17-min budget, 3 portals at a time, portals rotate). Live progress: crawler → `crawler_progress` → `crawler_live` / `crawler_step_stats` → Admin → Crawler "Live crawler" window (`app/admin/crawler/LiveCrawler.js`, estimates in `lib/crawlerEta.js`). If some state portals refuse GitHub's US machines, move them to an Indian server.
+- Optional Indian server: Admin → Crawler → Create key shows a cloud-init script; paste it into a new Oracle Always Free Ubuntu VM (Mumbai). The image is published to GHCR by `.github/workflows/crawler-image.yml` (make the package public once).
 - Tender winners: verify the GePNIC and GeM results adapters against the live portals on the first crawler run (both were written without network access to them; GeM's listing filter is `GEM_RESULT_STATUS`).
 - Phase 3, rest:
   - AI calling.

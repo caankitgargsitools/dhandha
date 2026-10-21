@@ -41,7 +41,7 @@ export function parseGemResult(tables) {
   return [];
 }
 
-export async function crawlGemResults(browser, { maxPages = 5, maxBids = 200, log = console.log, base = "https://bidplus.gem.gov.in", status = process.env.GEM_RESULT_STATUS || "bidrastatus" } = {}) {
+export async function crawlGemResults(browser, { maxPages = 5, maxBids = 200, log = console.log, base = "https://bidplus.gem.gov.in", status = process.env.GEM_RESULT_STATUS || "bidrastatus", progress = () => {} } = {}) {
   const ctx = await browser.newContext({ locale: "en-IN" });
   const page = await ctx.newPage();
   const bids = [];
@@ -49,6 +49,7 @@ export async function crawlGemResults(browser, { maxPages = 5, maxBids = 200, lo
   try {
     await page.goto(`${base}/all-bids`, { waitUntil: "domcontentloaded", timeout: 60000 });
     for (let p = 1; p <= maxPages && bids.length < maxBids; p++) {
+      progress({ phase: "listing", page: p, of: maxPages });
       const res = await page.evaluate(async ({ p, base, status }) => {
         const csrf = document.querySelector("input[name=csrf_bd_gem_nk]")?.value
           || document.cookie.split("; ").find((c) => c.startsWith("csrf_gem_cookie="))?.split("=")[1] || "";
@@ -64,7 +65,9 @@ export async function crawlGemResults(browser, { maxPages = 5, maxBids = 200, lo
       if (!docs.length) break;
       await new Promise((r) => setTimeout(r, 1200));
     }
-    for (const b of bids.slice(0, maxBids)) {
+    const todo = bids.slice(0, maxBids);
+    for (const [i, b] of todo.entries()) {
+      progress({ phase: "details", done: i, total: todo.length });
       try {
         const d = await ctx.newPage();
         await d.goto(b.resultUrl, { waitUntil: "domcontentloaded", timeout: 45000 });

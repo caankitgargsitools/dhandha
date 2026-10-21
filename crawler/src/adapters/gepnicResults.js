@@ -83,7 +83,7 @@ export function cityFrom(address) {
   return null;
 }
 
-export async function crawlGepnicResults(browser, site, { maxPages = 10, maxAwards = 300, log = console.log } = {}) {
+export async function crawlGepnicResults(browser, site, { maxPages = 10, maxAwards = 300, log = console.log, progress = () => {} } = {}) {
   const ctx = await browser.newContext({ locale: "en-IN", userAgent: "Mozilla/5.0 (DhandhaBot; tender alerts for registered businesses)" });
   const page = await ctx.newPage();
   const list = [];
@@ -92,6 +92,7 @@ export async function crawlGepnicResults(browser, site, { maxPages = 10, maxAwar
     await page.goto(site.base + LIST, { waitUntil: "domcontentloaded", timeout: 60000 });
     if (await page.$("img#captchaImage, input[name*=captcha i]")) { log(`  ${site.portal} results page asks for a captcha — skipped`); return []; }
     for (let p = 0; p < maxPages && list.length < maxAwards; p++) {
+      progress({ phase: "listing", page: p + 1, of: maxPages });
       const { header, rows } = await page.$$eval("table.list_table tr, table#table tr", (trs) => {
         const all = trs.map((tr) => ({ cells: [...tr.querySelectorAll("td, th")].map((td) => td.innerText.trim()), href: tr.querySelector("td a")?.getAttribute("href") || null }));
         const hi = all.findIndex((r) => r.cells.some((c) => /tender id|title/i.test(c)) && r.cells.length >= 4);
@@ -102,7 +103,9 @@ export async function crawlGepnicResults(browser, site, { maxPages = 10, maxAwar
       if (!next || rows.length === 0) break;
       await Promise.all([page.waitForLoadState("domcontentloaded"), next.click()]);
     }
-    for (const a of list.slice(0, maxAwards)) {
+    const todo = list.slice(0, maxAwards);
+    for (const [i, a] of todo.entries()) {
+      progress({ phase: "details", done: i, total: todo.length });
       if (!a._detail) continue;
       try {
         const href = a._detail.startsWith("http") ? a._detail : new URL(a._detail, site.base + "/").toString();
