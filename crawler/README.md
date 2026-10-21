@@ -12,22 +12,21 @@ If a results page asks for a captcha, that portal's results are skipped and logg
 It never solves or bypasses captchas. Tender documents behind a captcha are downloaded later in the user's own
 browser session by the Desktop Agent.
 
-## Run on a server in India (cheapest option first)
-1. Create a small Linux server in India, in this order of preference:
-   - **Free:** Oracle Cloud "Always Free" Ampere A1 VM (up to 2 OCPU / 12 GB) with home region Mumbai or Hyderabad.
-     Free capacity is sometimes unavailable; retry later or try the other region.
-   - **Cheap:** AWS Lightsail Mumbai or DigitalOcean Bangalore, 2 CPU / 4 GB (about $24 a month).
-   The image runs on both ARM (Oracle) and x86.
-2. In Dhandha → Admin panel → Crawler, create an ingest key (shown once).
-3. On the server:
-   ```
-   git clone https://github.com/caankitgargsitools/dhandha && cd dhandha/crawler
-   cp .env.example .env   # paste the ingest key
-   docker build -t dhandha-crawler .
-   docker run -d --restart unless-stopped --env-file .env --name crawler dhandha-crawler
-   docker logs -f crawler
-   ```
-4. Each run's counts appear in Admin panel → Crawler.
+## Run on a server in India (free: Oracle Cloud Always Free, Mumbai)
+GitHub Actions builds the crawler image for x86 and ARM on every change to `crawler/` on `main` and publishes
+`ghcr.io/caankitgargsitools/dhandha-crawler:latest` (`.github/workflows/crawler-image.yml`).
+
+1. Once: GitHub → your profile → Packages → `dhandha-crawler` → Package settings → Change visibility → Public
+   (the image holds only crawler code, no keys). Otherwise the server would need a GitHub login to pull it.
+2. Dhandha → Admin panel → Crawler → Create key. It shows a ready-made server setup script with the key inside.
+3. Oracle Cloud → Compute → Create instance: Mumbai or Hyderabad, Ubuntu 24.04, shape VM.Standard.A1.Flex
+   (2 OCPU / 12 GB is within Always Free). Advanced options → Initialization script → paste the script → Create.
+   Free capacity is sometimes unavailable; retry later or try the other region.
+4. Within about 10 minutes the first run shows under Admin → Crawler → Recent runs. Watchtower on the server
+   updates the crawler by itself whenever a new image is published.
+
+Any other Linux server works too: save the script as `setup.sh` and run `sudo bash setup.sh`.
+Logs: `sudo docker logs -f crawler`.
 
 `npm test` checks the parsers. Portal layouts change: a source that returns no tenders is logged as
 "NO TENDERS — check the site or adapter".
