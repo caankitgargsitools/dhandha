@@ -45,6 +45,8 @@ try {
         await page.goto(site.base + path, { waitUntil: "domcontentloaded", timeout: 45000 });
         const links = await page.$$eval("table.list_table a, a[id^=link], a:has-text('Next')", (as) => as.slice(0, 25).map((a) => ({ t: a.innerText.trim().slice(0, 60), id: a.id || null })));
         log(`${site.portal} | ${label} links: ${JSON.stringify(links.slice(0, 12))}`);
+        const nav = await page.$$eval("a, input[type=submit], input[type=image], img[onclick]", (els) => els.map((a) => ({ t: (a.innerText || a.value || a.alt || a.title || "").trim().slice(0, 30), id: a.id || null, src: a.getAttribute("src") || null, href: (a.getAttribute("href") || "").slice(0, 90) })).filter((x) => !/^\[/.test(x.t) && !/^link1$/.test(x.id || "")));
+        log(`${site.portal} | ${label} other controls: ${JSON.stringify(nav.slice(-30))}`);
         if (label === "Org drill-down") {
           const first = await page.$("table.list_table tr td a");
           if (first) {
