@@ -39,6 +39,30 @@ try {
         for (const t of info.tables.slice(0, 3)) log(`   id=${t.id} class=${t.cls} rows=${t.rows} data=${t.data} links=${t.links} head=${JSON.stringify(t.head)} first=${JSON.stringify(t.first)} href=${t.firstHref}`);
       } catch (e) { log(`${site.portal} | ${label} | FAILED ${e.message.split("\n")[0]}`); }
     }
+    // drill-down: first organisation's tender list, and the closing-date page's own links
+    for (const [label, path] of [["Org drill-down", "?page=FrontEndTendersByOrganisation&service=page"], ["Closing-date links", "?page=FrontEndListTendersbyDate&service=page"]]) {
+      try {
+        await page.goto(site.base + path, { waitUntil: "domcontentloaded", timeout: 45000 });
+        const links = await page.$$eval("table.list_table a, a[id^=link], a:has-text('Next')", (as) => as.slice(0, 25).map((a) => ({ t: a.innerText.trim().slice(0, 60), id: a.id || null })));
+        log(`${site.portal} | ${label} links: ${JSON.stringify(links.slice(0, 12))}`);
+        if (label === "Org drill-down") {
+          const first = await page.$("table.list_table tr td a");
+          if (first) {
+            await Promise.all([page.waitForLoadState("domcontentloaded"), first.click()]);
+            const info = await page.evaluate(() => {
+              const captcha = !!document.querySelector("img[id*=aptcha i], input[name*=aptcha i]") || /enter captcha/i.test(document.body.innerText);
+              const t = document.querySelector("table.list_table, table#table");
+              const rows = t ? [...t.querySelectorAll("tr")] : [];
+              const data = rows.filter((r) => /^\s*\d+\.?\s*$/.test(r.cells[0]?.innerText || ""));
+              const nav = [...document.querySelectorAll("a")].map((a) => a.innerText.trim()).filter((x) => /next|>>|last|prev/i.test(x)).slice(0, 6);
+              return { captcha, rows: rows.length, data: data.length, head: rows[0]?.innerText.replace(/\s+/g, " ").slice(0, 160),
+                first: data.slice(0, 2).map((r) => [...r.cells].map((c) => c.innerText.replace(/\s+/g, " ").trim().slice(0, 70))), nav };
+            });
+            log(`${site.portal} | Org drill-down result: ${JSON.stringify(info)}`);
+          }
+        }
+      } catch (e) { log(`${site.portal} | ${label} FAILED ${e.message.split("\n")[0]}`); }
+    }
     await ctx.close();
   }
 } finally {
