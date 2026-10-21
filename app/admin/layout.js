@@ -3,6 +3,7 @@ import { getAdminContext } from "@/lib/admin";
 import SideNav from "@/components/SideNav";
 import Icon from "@/components/Icon";
 import { signOut } from "../login/actions";
+import CaptchaDesk from "./CaptchaDesk";
 
 export const metadata = { title: "Dhandha Admin" };
 
@@ -39,6 +40,7 @@ export default async function AdminLayout({ children }) {
         </header>
         {children}
       </div>
+      <CaptchaDesk />
     </div>
   );
 }
