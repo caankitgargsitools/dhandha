@@ -1,6 +1,7 @@
 // NIC GePNIC "Results of Tenders": public award-of-contract (AOC) notices. Each award names the
 // selected bidder(s), their address, the contract value and date. These become tender-winner leads.
-// Only the public result pages are read; the captcha-protected "Tender Status" search is never touched.
+// Only the public result pages are read. Where a portal puts its results behind a captcha, a person types it in Dhandha (captcha.js).
+import { hasCaptcha } from "../captcha.js";
 import { parseIstDate, rupees, industryPack, stateFrom } from "../classify.js";
 import { parseTitleCell } from "./gepnic.js";
 
@@ -83,14 +84,18 @@ export function cityFrom(address) {
   return null;
 }
 
-export async function crawlGepnicResults(browser, site, { maxPages = 10, maxAwards = 300, log = console.log, progress = () => {} } = {}) {
+export async function crawlGepnicResults(browser, site, { maxPages = 10, maxAwards = 300, log = console.log, progress = () => {}, captcha = null } = {}) {
   const ctx = await browser.newContext({ locale: "en-IN", userAgent: "Mozilla/5.0 (DhandhaBot; tender alerts for registered businesses)" });
   const page = await ctx.newPage();
   const list = [];
   const out = [];
   try {
     await page.goto(site.base + LIST, { waitUntil: "domcontentloaded", timeout: 60000 });
-    if (await page.$("img#captchaImage, input[name*=captcha i]")) { log(`  ${site.portal} results page asks for a captcha — skipped`); return []; }
+    // The results list sits behind a captcha: a person types it in Dhandha (see captcha.js), or the step is skipped.
+    if (await hasCaptcha(page)) {
+      const ok = captcha && await captcha(page, { portal: site.portal, purpose: "Results of tenders (winners)", onWait: () => progress({ phase: "captcha" }) });
+      if (!ok) { log(`  ${site.portal} results page asks for a captcha — nobody typed it, skipped`); return []; }
+    }
     for (let p = 0; p < maxPages && list.length < maxAwards; p++) {
       progress({ phase: "listing", page: p + 1, of: maxPages });
       const { header, rows } = await page.$$eval("table.list_table tr, table#table tr", (trs) => {

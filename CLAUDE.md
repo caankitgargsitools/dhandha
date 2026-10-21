@@ -27,7 +27,7 @@ It covers:
 1. **Cost order is always free → cheaper → costlier.**
    - Tender reading: the free rule engine first (`lib/tenderRules.js`), then Gemini free tier, then Claude Haiku, then Claude Sonnet. See `lib/ai.js`.
    - The Gemini free tier may train on what it receives, so it only ever gets public tender documents (`private:false`). Customer private data goes to paid tiers only (`private:true`).
-2. **Own crawler only.** No aggregator or third-party tender data services. Code is in `crawler/` (Node + Playwright; GePNIC and GeM adapters). Never bypass captchas.
+2. **Own crawler only.** No aggregator or third-party tender data services. Code is in `crawler/` (Node + Playwright; GePNIC and GeM adapters). Never bypass or auto-solve captchas: where a page needs one, the crawler shows the picture to a platform admin (Admin → "Captcha needed" card, `crawler/src/captcha.js`, `crawler_captchas`) and a person types it.
 3. **Signatures need the admin's TOTP code.** Signature and seal go on a PDF only after the admin enters it, and every use is logged (`log_signature_use`). Drafts carry a "DRAFT – NOT SIGNED" watermark.
 4. **No credentials in chat.** Never ask for passwords or keys.
 5. **Prefer non-destructive database changes.** Disable roles, revoke flags or ban users instead of deleting rows.

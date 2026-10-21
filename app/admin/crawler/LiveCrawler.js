@@ -67,7 +67,7 @@ export default function LiveCrawler({ runners, stats }) {
             <strong>{x.step}</strong><span className="tiny faint">{dur(x.elapsed)} · ~{dur(x.left)} left</span>
           </div>
           <div className="tiny muted" style={{ margin: "4px 0 6px" }}>
-            {x.phase === "listing" ? `Reading the list, page ${x.page} of up to ${x.of}` : x.phase === "details" ? `Opening each one: ${x.done} of ${x.total}` : "Opening the portal…"}
+            {x.phase === "captcha" ? "Waiting for someone to type the captcha (card at the bottom right)" : x.phase === "listing" ? `Reading the list, page ${x.page} of up to ${x.of}` : x.phase === "details" ? `Opening each one: ${x.done} of ${x.total}` : "Opening the portal…"}
             {" · "}usually takes {dur(x.expected)}
           </div>
           {bar(x.pct)}
