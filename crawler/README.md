@@ -7,7 +7,7 @@ them to Dhandha, which scores them for every company and records corrigenda and 
 It also reads each GePNIC portal's public "Results of Tenders" (award of contract) pages and posts the winning
 bidders to Dhandha (`ingest_awards`), where they become tender-winner leads. For GeM it reads the public result
 view of finished bids and takes the L1 (or awarded) seller; `GEM_RESULT_STATUS` sets the listing filter it uses. Set `CRAWL_RESULTS=0` to turn this off.
-If a results page asks for a captcha, that portal's results are skipped and logged.
+If a results page asks for a captcha, the crawler shows the captcha picture in Admin → "Captcha needed" (bottom-right card on any admin page) and waits up to `CAPTCHA_WAIT_MIN` minutes (default 8; 0 = never ask) for a person to type it. Nobody answers → that portal's results are skipped and the rest of the run stops asking. Tender lists come from the public "Tenders by Closing Date" page, which has no captcha.
 
 It never solves or bypasses captchas. Tender documents behind a captcha are downloaded later in the user's own
 browser session by the Desktop Agent.
