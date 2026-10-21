@@ -17,6 +17,10 @@ on:
       only:
         description: "Only portals whose name contains (comma separated), blank = all"
         default: ""
+      probe:
+        description: "Only probe which list pages are public (no crawling)"
+        type: boolean
+        default: false
       debug:
         description: "Save the pages of portals that yield nothing (artifact)"
         type: boolean
@@ -55,8 +59,13 @@ jobs:
         working-directory: crawler
         run: npm install --omit=dev --no-audit --no-fund
       - name: Crawl
+        if: github.event.inputs.probe != 'true'
         working-directory: crawler
         run: node src/index.js --once
+      - name: Probe list pages
+        if: github.event.inputs.probe == 'true'
+        working-directory: crawler
+        run: node src/probe.js
       - name: Keep debug pages
         if: always() && github.event.inputs.debug == 'true'
         uses: actions/upload-artifact@v4
