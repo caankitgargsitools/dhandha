@@ -1,6 +1,7 @@
 // NIC GePNIC portals (CPPP, Defence and most states). Reads "Latest Active Tenders",
 // opens each tender's detail page for value / EMD / pre-bid, never touches captcha-protected downloads.
 import { parseIstDate, rupees, industryPack, stateFrom } from "../classify.js";
+import { dumpPage } from "../dump.js";
 
 const LIST = "?page=FrontEndLatestActiveTenders&service=page";
 
@@ -53,6 +54,7 @@ export async function crawlGepnic(browser, site, { maxPages = 20, log = console.
           state: site.state || stateFrom(org), industry_pack: industryPack(title), url: site.base + LIST, _detail: r.href,
         });
       }
+      if (p === 0 && rows.length === 0) await dumpPage(page, `${site.portal} tenders`, log);
       const next = await page.$("a#linkFwd, a:has-text('Next >')");
       if (!next || rows.length === 0) break;
       await Promise.all([page.waitForLoadState("domcontentloaded"), next.click()]);

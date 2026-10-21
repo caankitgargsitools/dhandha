@@ -14,6 +14,10 @@ on:
       budget_minutes:
         description: "Stop starting new portals after this many minutes"
         default: "17"
+      debug:
+        description: "Save the pages of portals that yield nothing (artifact)"
+        type: boolean
+        default: false
 
 concurrency:
   group: crawler-run
@@ -38,6 +42,7 @@ jobs:
       CONCURRENCY: "3"
       CRAWL_BUDGET_MIN: ${{ github.event.inputs.budget_minutes || '17' }}
       TZ: Asia/Kolkata
+      DUMP_DIR: ${{ github.event.inputs.debug == 'true' && '/tmp/crawler-dumps' || '' }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,3 +53,11 @@ jobs:
       - name: Crawl
         working-directory: crawler
         run: node src/index.js --once
+      - name: Keep debug pages
+        if: always() && github.event.inputs.debug == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: crawler-dumps
+          path: /tmp/crawler-dumps
+          retention-days: 3
+          if-no-files-found: ignore
