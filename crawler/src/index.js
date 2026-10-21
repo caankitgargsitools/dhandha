@@ -20,12 +20,16 @@ const log = (...a) => console.log(new Date().toISOString(), ...a);
 
 // One step per portal (its tenders, then its award results); GeM last.
 function plan() {
-  const sites = rotate(GEPNIC.filter((s) => !s.skip), Math.floor(Date.now() / (8 * 3600000)));
+  // ONLY_PORTALS="Punjab,Haryana" limits a run to matching portals (testing)
+  const only = (env.ONLY_PORTALS || "").split(",").map((x) => x.trim().toLowerCase()).filter(Boolean);
+  const pick = (name) => !only.length || only.some((o) => name.toLowerCase().includes(o));
+  const sites = rotate(GEPNIC.filter((s) => !s.skip && pick(s.portal)), Math.floor(Date.now() / (8 * 3600000)));
   const steps = [];
   for (const site of sites) {
     steps.push({ name: `${site.portal} · tenders`, run: (p) => crawlGepnic(p.browser, site, { maxPages, log, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders(site.portal, rows, env)) : "no tenders found — check the site or adapter" })) });
     if (results) steps.push({ name: `${site.portal} · winners`, run: (p) => crawlGepnicResults(p.browser, site, { maxPages: Math.min(maxPages, 10), maxAwards, log, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendAwards(`Results: ${site.portal}`, rows, env)) : "no results found — check the site or adapter" })) });
   }
+  if (!pick("GeM")) return steps;
   steps.push({ name: "GeM · tenders", run: (p) => crawlGem(p.browser, { maxPages, log, base: GEM.base, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders("GeM", rows, env)) : "no bids found — check the adapter" })) });
   if (results) steps.push({ name: "GeM · winners", run: (p) => crawlGemResults(p.browser, { maxPages: Math.min(maxPages, 5), maxBids: maxAwards, log, base: GEM.base, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendAwards("Results: GeM", rows, env)) : "no results found — check GEM_RESULT_STATUS or the adapter" })) });
   return steps;

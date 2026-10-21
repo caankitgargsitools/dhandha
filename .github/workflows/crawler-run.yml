@@ -14,6 +14,9 @@ on:
       budget_minutes:
         description: "Stop starting new portals after this many minutes"
         default: "17"
+      only:
+        description: "Only portals whose name contains (comma separated), blank = all"
+        default: ""
       debug:
         description: "Save the pages of portals that yield nothing (artifact)"
         type: boolean
@@ -42,6 +45,7 @@ jobs:
       CONCURRENCY: "3"
       CRAWL_BUDGET_MIN: ${{ github.event.inputs.budget_minutes || '17' }}
       TZ: Asia/Kolkata
+      ONLY_PORTALS: ${{ github.event.inputs.only || '' }}
       DUMP_DIR: ${{ github.event.inputs.debug == 'true' && '/tmp/crawler-dumps' || '' }}
     steps:
       - uses: actions/checkout@v4
