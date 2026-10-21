@@ -10,4 +10,7 @@ test("cloud-init script carries settings and cannot be broken by odd input", () 
   assert.match(s, /chmod 600 crawler\.env/);
   assert.match(s, /--restart unless-stopped --env-file \/opt\/dhandha\/crawler\.env/);
   assert.match(s, /containrrr\/watchtower/);
+  // works on Ubuntu (apt) and Oracle Linux (dnf)
+  assert.match(s, /apt-get install -y docker\.io/);
+  assert.match(s, /dnf install -y --allowerasing docker-ce/);
 });

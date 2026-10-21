@@ -19,8 +19,9 @@ GitHub Actions builds the crawler image for x86 and ARM on every change to `craw
 1. Once: GitHub → your profile → Packages → `dhandha-crawler` → Package settings → Change visibility → Public
    (the image holds only crawler code, no keys). Otherwise the server would need a GitHub login to pull it.
 2. Dhandha → Admin panel → Crawler → Create key. It shows a ready-made server setup script with the key inside.
-3. Oracle Cloud → Compute → Create instance: Mumbai or Hyderabad, Ubuntu 24.04, shape VM.Standard.A1.Flex
-   (2 OCPU / 12 GB is within Always Free). Advanced options → Initialization script → paste the script → Create.
+3. Oracle Cloud → Compute → Create instance: Mumbai or Hyderabad. Choose the shape first: Ampere →
+   VM.Standard.A1.Flex (2 OCPU / 12 GB is within Always Free), then the image Oracle Linux 9 (Ubuntu works
+   too when Oracle offers an ARM build of it). Advanced options → Initialization script → paste the script → Create.
    Free capacity is sometimes unavailable; retry later or try the other region.
 4. Within about 10 minutes the first run shows under Admin → Crawler → Recent runs. Watchtower on the server
    updates the crawler by itself whenever a new image is published.
