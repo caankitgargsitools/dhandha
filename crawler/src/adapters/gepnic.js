@@ -28,13 +28,14 @@ export function parseDetail(rows) {
   };
 }
 
-export async function crawlGepnic(browser, site, { maxPages = 20, log = console.log } = {}) {
+export async function crawlGepnic(browser, site, { maxPages = 20, log = console.log, progress = () => {} } = {}) {
   const ctx = await browser.newContext({ locale: "en-IN", userAgent: "Mozilla/5.0 (DhandhaBot; tender alerts for registered businesses)" });
   const page = await ctx.newPage();
   const out = [];
   try {
     await page.goto(site.base + LIST, { waitUntil: "domcontentloaded", timeout: 60000 });
     for (let p = 0; p < maxPages; p++) {
+      progress({ phase: "listing", page: p + 1, of: maxPages });
       const rows = await page.$$eval("table.list_table tr, table#table tr", (trs) =>
         trs.map((tr) => {
           const tds = [...tr.querySelectorAll("td")];
@@ -57,7 +58,8 @@ export async function crawlGepnic(browser, site, { maxPages = 20, log = console.
       await Promise.all([page.waitForLoadState("domcontentloaded"), next.click()]);
     }
     // detail pages (value, EMD, pre-bid) — links are session-bound, so open them in the same context
-    for (const t of out) {
+    for (const [i, t] of out.entries()) {
+      progress({ phase: "details", done: i, total: out.length });
       if (!t._detail) continue;
       try {
         const href = t._detail.startsWith("http") ? t._detail : new URL(t._detail, site.base + "/").toString();

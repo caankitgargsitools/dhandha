@@ -1,0 +1,50 @@
+# Runs the tender crawler on GitHub's machines: three times a day and on demand (Actions → crawler run →
+# Run workflow). Progress shows live in Dhandha → Admin → Crawler. Needs the INGEST_KEY repository secret.
+# Budget: each run stops starting new portals after 17 minutes, which keeps 3 runs a day inside the
+# 2,000 free Actions minutes of a private repository; portals rotate so every one is covered during the day.
+name: crawler run
+
+on:
+  schedule:
+    - cron: "40 0 * * *"   # 06:10 IST
+    - cron: "10 7 * * *"   # 12:40 IST
+    - cron: "40 12 * * *"  # 18:10 IST
+  workflow_dispatch:
+    inputs:
+      budget_minutes:
+        description: "Stop starting new portals after this many minutes"
+        default: "17"
+
+concurrency:
+  group: crawler-run
+  cancel-in-progress: false
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-jammy
+      options: --shm-size=1g
+    env:
+      SUPABASE_URL: https://umyesrpibsdgzsrqfvqf.supabase.co
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_b1_jKTEARE2OINvUDaM62g_Q5JxoB6w
+      INGEST_KEY: ${{ secrets.INGEST_KEY }}
+      RUNNER_NAME: github-actions
+      RUNNER_WHERE: GitHub Actions (US)
+      RUNNER_LINK: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      MAX_PAGES: "5"
+      MAX_AWARDS: "40"
+      CONCURRENCY: "3"
+      CRAWL_BUDGET_MIN: ${{ github.event.inputs.budget_minutes || '17' }}
+      TZ: Asia/Kolkata
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: crawler
+      - name: Install
+        working-directory: crawler
+        run: npm install --omit=dev --no-audit --no-fund
+      - name: Crawl
+        working-directory: crawler
+        run: node src/index.js --once

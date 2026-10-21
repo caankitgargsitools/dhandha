@@ -16,13 +16,14 @@ export function mapGemDoc(doc, base) {
   };
 }
 
-export async function crawlGem(browser, { maxPages = 20, log = console.log, base = "https://bidplus.gem.gov.in" } = {}) {
+export async function crawlGem(browser, { maxPages = 20, log = console.log, base = "https://bidplus.gem.gov.in", progress = () => {} } = {}) {
   const ctx = await browser.newContext({ locale: "en-IN" });
   const page = await ctx.newPage();
   const out = [];
   try {
     await page.goto(`${base}/all-bids`, { waitUntil: "domcontentloaded", timeout: 60000 });
     for (let p = 1; p <= maxPages; p++) {
+      progress({ phase: "listing", page: p, of: maxPages });
       const res = await page.evaluate(async ({ p, base }) => {
         const csrf = document.querySelector("input[name=csrf_bd_gem_nk]")?.value
           || document.cookie.split("; ").find((c) => c.startsWith("csrf_gem_cookie="))?.split("=")[1] || "";
