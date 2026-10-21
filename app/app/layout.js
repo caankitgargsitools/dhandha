@@ -12,8 +12,9 @@ export default async function AppLayout({ children }) {
     { items: [{ href: "/app", label: "Dashboard", icon: "home" }, { href: "/app/tasks", label: "Tasks", icon: "check" }] },
     { title: "Find business", items: [
       { href: "/app/tenders", label: "Tenders", icon: "tender" },
-      { href: "/app/leads", label: "Leads", icon: "leads", tag: "Preview" },
-      { href: "/app/crm", label: "CRM pipeline", icon: "crm", tag: "Preview" },
+      { href: "/app/leads", label: "Leads", icon: "leads" },
+      { href: "/app/crm", label: "CRM pipeline", icon: "crm" },
+      { href: "/app/outreach", label: "Outreach", icon: "mail" },
     ] },
     { title: "Business Vault", items: [
       { href: "/app/tenders/preferences", label: "What we do", icon: "briefcase" },
@@ -29,6 +30,7 @@ export default async function AppLayout({ children }) {
       { href: "/app/support", label: "Help & tickets", icon: "ticket" },
       { href: "/app/settings/team", label: "Team", icon: "people" },
       { href: "/app/settings/security", label: "Security", icon: "shield" },
+      ...(isAdmin ? [{ href: "/app/settings/drive", label: "Google Drive", icon: "doc" }, { href: "/app/settings/facebook", label: "Facebook & Instagram", icon: "leads" }] : []),
       ...(tenant.kind === "firm" || companies.length > 1 ? [{ href: "/app/settings/companies", label: "Companies", icon: "building" }] : []),
       ...(isAdmin ? [{ href: "/app/settings/audit", label: "Audit log", icon: "log" }] : []),
       ...(isPlatformAdmin ? [{ href: "/admin", label: "Admin panel", icon: "admin" }] : []),

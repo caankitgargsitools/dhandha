@@ -224,3 +224,11 @@ td.right, th.right { text-align: right; }
   .rise.d1 { animation-delay: .08s; } .rise.d2 { animation-delay: .16s; } .rise.d3 { animation-delay: .24s; }
   @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 }
+
+/* printing an invoice: only the invoice */
+@media print {
+  .side, .topbar, .no-print, .notice { display: none !important; }
+  .shell, .main { display: block; padding: 0; margin: 0; }
+  body { background: #fff; }
+  .panel.invoice { box-shadow: none; border: 0; max-width: none !important; }
+}

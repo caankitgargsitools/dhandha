@@ -1,0 +1,38 @@
+# Builds the tender crawler image for x86 and ARM (Oracle Always Free Ampere) and publishes it to
+# GitHub Container Registry. Servers pull ghcr.io/caankitgargsitools/dhandha-crawler:latest and
+# Watchtower on the server picks up new versions by itself.
+name: crawler image
+
+on:
+  push:
+    branches: [main]
+    paths: ["crawler/**", ".github/workflows/crawler-image.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test parsers
+        working-directory: crawler
+        run: node --test test/*.test.js
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: crawler
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/dhandha-crawler:latest
+            ghcr.io/${{ github.repository_owner }}/dhandha-crawler:${{ github.sha }}
