@@ -37,8 +37,16 @@ export async function crawlGepnic(browser, site, { maxPages = 20, log = console.
   try {
     await page.goto(site.base + LIST, { waitUntil: "domcontentloaded", timeout: 60000 });
     // the page opens on "Closing Today"; widen it to the next 14 days (later ones show up on later runs)
-    const tab = await page.$("a:has-text('Closing within 14 days')");
-    if (tab) await Promise.all([page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 45000 }).catch(() => {}), tab.click()]);
+    // The tab is a "javascript:tapestry.form.submit(...)" link; a plain click did not switch it, so run the
+    // portal's own submit and wait for the new page.
+    const tab = (await page.$("a:text-is('Closing within 14 days')")) || (await page.$("a#LinkSubmit_1"));
+    const js = tab && (await tab.getAttribute("href"));
+    if (js) {
+      const nav = page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 45000 }).catch(() => null);
+      if (js.startsWith("javascript:")) await page.evaluate((code) => { (0, eval)(code); }, js.slice(11));
+      else await tab.click();
+      if (!(await nav)) log(`  ${site.portal}: the 14-day tab did not load; reading the default list`);
+    }
     // the list is sorted soonest-closing first, so the first pages are tenders closing today; start from the
     // last page (most time left to bid) and walk backwards
     const go = async (a) => {
@@ -70,6 +78,7 @@ export async function crawlGepnic(browser, site, { maxPages = 20, log = console.
         });
       }
       if (p === 0 && rows.length === 0) await dumpPage(page, `${site.portal} tenders`, log);
+      if (p === 0 && rows.length) log(`  ${site.portal}: first page closes ${rows[0].cells[2]} … ${rows[rows.length - 1].cells[2]}`);
       if (rows.length === 0) break;
       const next = await page.$(backwards ? "a#linkBwd, a:text-is('<')" : "a#linkFwd, a:has-text('Next >')");
       // a slow portal on a later page keeps what was read so far
