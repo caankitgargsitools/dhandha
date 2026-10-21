@@ -54,9 +54,9 @@ export default async function Facts() {
             <tbody>
               {facts.map((f) => (
                 <tr key={f.id}>
-                  <td><code>{f.key}</code></td>
+                  <td>{/^(presence|gst|cert|reg|age|cond)\./.test(f.key) && f.unit ? <>{f.unit}<div className="tiny faint"><code>{f.key}</code></div></> : <code>{f.key}</code>}</td>
                   <td>{f.period || "—"}</td>
-                  <td>{f.unit === "INR" && !isNaN(Number(f.value)) ? `₹${Number(f.value).toLocaleString("en-IN")}` : `${f.value}${f.unit && f.unit !== "INR" ? " " + f.unit : ""}`}</td>
+                  <td>{/^(presence|gst|cert|reg|age|cond)\./.test(f.key) ? <span className={`chip ${f.value === "yes" ? "ok" : f.value === "no" ? "bad" : "mute"}`}>{f.value === "yes" ? "Yes" : f.value === "no" ? "No" : f.value}</span> : f.unit === "INR" && !isNaN(Number(f.value)) ? `₹${Number(f.value).toLocaleString("en-IN")}` : `${f.value}${f.unit && f.unit !== "INR" ? " " + f.unit : ""}`}</td>
                   <td className="small">{f.source}</td>
                   <td className="small muted">{new Date(f.updated_at).toLocaleDateString("en-IN")}</td>
                   <td>{isAdmin && <DeleteButton table="company_facts" id={f.id} />}</td>

@@ -40,3 +40,4 @@ Social lead sources:
 
 18. `crawler_live_progress` — `crawler_live` (what each runner is doing now), `crawler_step_stats` (moving-average seconds per portal step), `crawler_progress` (ingest-key RPC the crawler calls)
 19. `crawler_captcha_help` — `crawler_captchas` (captcha pictures waiting for a person; platform-admin read), `captcha_ask` / `captcha_poll` (ingest-key RPCs the crawler calls), `answer_captcha` / `skip_captcha` (platform admin types or skips)
+20. `tender_conditions_questions` — `tenders.conditions`, `tender_matches.pending`, `set_tender_conditions`; `score_tender` checks yes/no conditions against `company_facts`, treats missing turnover / no recorded works / unanswered conditions as pending instead of not eligible, and defaults the similar-work window to 7 years when the tender gives none

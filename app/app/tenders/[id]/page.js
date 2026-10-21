@@ -70,8 +70,14 @@ export default async function TenderDetail({ params }) {
             </div>
           </div>
         </div>
-        <Link className="btn ghost" href={`/app/tasks?link_type=tender&link_id=${t.id}&link_label=${encodeURIComponent(t.title.slice(0, 80))}&title=${encodeURIComponent("Prepare bid: " + t.title.slice(0, 120))}`}>Assign to someone</Link>
+        <div className="row" style={{ gap: 8 }}>
+          <Link className="btn" href={`/app/tenders/${m.id}/assistant`}>Prepare with assistant</Link>
+          <Link className="btn ghost" href={`/app/tasks?link_type=tender&link_id=${t.id}&link_label=${encodeURIComponent(t.title.slice(0, 80))}&title=${encodeURIComponent("Prepare bid: " + t.title.slice(0, 120))}`}>Assign to someone</Link>
+        </div>
       </div>
+      {m.eligible && m.pending > 0 && (
+        <div className="notice"><Icon name="sparkle" /><span><strong>This tender qualifies if you answer {m.pending} question{m.pending === 1 ? "" : "s"}.</strong> <Link href={`/app/tenders/${m.id}/assistant`}>Answer in the assistant</Link> — each answer is saved to your Vault for every tender.</span></div>
+      )}
 
       <div className="grid">
         {[["Estimated value", t.value_inr ? lakh(t.value_inr) : "Not stated"], ["EMD", t.emd_inr ? (msme && t.mse_emd_exempt ? `${lakh(t.emd_inr)} · exempt` : lakh(t.emd_inr)) : "Nil"], ["Bid closes", `${fmtDate(t.due_at)}${left >= 0 ? ` · ${left} d` : " · closed"}`], ["Pre-bid meeting", t.prebid_on ? fmtDate(t.prebid_on) : "—"]].map(([l, v]) => (
@@ -127,7 +133,7 @@ export default async function TenderDetail({ params }) {
           <div className="panel">
             <div className="panel-head"><h3>Why this score</h3><span className="tiny faint">{t.eligibility_source === "norms" ? "Using standard CPWD / PWD norms until the tender is read in full" : "From the tender document"}</span></div>
             <ul className="reasons" style={{ fontSize: 14 }}>
-              {(m.reasons || []).map((r, i) => <li key={i}><Icon name={r.ok ? "check" : "cross"} size={15} style={{ color: r.ok ? "var(--leaf)" : "var(--blood)" }} />{r.text}</li>)}
+              {(m.reasons || []).map((r, i) => <li key={i}><Icon name={r.ok ? "check" : r.ask ? "alert" : "cross"} size={15} style={{ color: r.ok ? "var(--leaf)" : r.ask ? "var(--marigold)" : "var(--blood)" }} />{r.ask ? <Link href={`/app/tenders/${m.id}/assistant`}>{r.text}</Link> : r.text}</li>)}
             </ul>
           </div>
           <div className="panel flush table-wrap">

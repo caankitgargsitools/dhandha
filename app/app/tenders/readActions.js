@@ -6,6 +6,7 @@ import { pdfPages } from "@/lib/pdftext";
 import { readTenderText } from "@/lib/tenderRules";
 import { aiReadTender } from "@/lib/tenderAi";
 import { aiTiers } from "@/lib/ai";
+import { extractConditions, conditionsFromLines } from "@/lib/conditions";
 
 export async function recordTenderFile({ tenderId, path, name, size }) {
   const { supabase, user } = await getContext();
@@ -22,7 +23,7 @@ export async function readTender(prev, formData) {
   const matchId = String(formData.get("match_id"));
   const mode = formData.get("mode") === "ai" ? "ai" : "basic";
   if (role === "viewer") return { error: "Viewers cannot run tender reading." };
-  const { data: m } = await supabase.from("tender_matches").select("id, tender_id, tenders(id, tender_ref)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
+  const { data: m } = await supabase.from("tender_matches").select("id, tender_id, tenders(id, tender_ref, state)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
   if (!m) return { error: "Tender not found." };
   const { data: files } = await supabase.from("tender_files").select("*").eq("tender_id", m.tender_id).order("created_at");
   if (!files?.length) return { error: "Upload the tender documents (PDF) first." };
@@ -97,8 +98,14 @@ export async function readTender(prev, formData) {
   await supabase.from("tender_reads").insert({ tender_id: m.tender_id, engine, confidence, fields: { ...fields, _evidence: rules.evidence, _note: note }, required_docs: docs, formats, risks, summary, created_by: user.id });
   const apply = Object.fromEntries(Object.entries(fields).filter(([k]) => ["value_inr", "emd_inr", "req_avg_turnover", "req_similar_one", "req_similar_two", "req_similar_three", "req_similar_years", "mse_emd_exempt", "prebid_on", "due_at"].includes(k)));
   await supabase.rpc("apply_tender_read", { p_tender: m.tender_id, p_fields: apply, p_docs: docs });
+  // yes/no conditions (branch in a state, GST there, ISO, contractor class, years in business) become questions
+  const ctx = { state: m.tenders.state };
+  const found = extractConditions(pages, ctx);
+  const conditions = [...found, ...conditionsFromLines(fields.other_eligibility, ctx, found)];
+  await supabase.rpc("set_tender_conditions", { p_tender: m.tender_id, p_conditions: conditions });
+  const { data: after } = await supabase.from("tender_matches").select("pending").eq("id", matchId).single();
   revalidatePath(`/app/tenders/${matchId}`);
   revalidatePath("/app/tenders");
-  const found = Object.keys(apply).length;
-  return { message: `Read by ${engine === "rules" ? "the free reader" : engine}: ${found} criteria, ${docs.length} documents, ${formats.length} formats, ${risks.length} risk clauses. Score updated. ${price} credits used.` };
+  const asks = after?.pending || 0;
+  return { message: `Read by ${engine === "rules" ? "the free reader" : engine}: ${Object.keys(apply).length} criteria, ${conditions.length} conditions, ${docs.length} documents, ${formats.length} formats, ${risks.length} risk clauses. Score updated. ${price} credits used.${asks ? ` ${asks} question${asks === 1 ? "" : "s"} for you in the assistant.` : ""}`, asks };
 }

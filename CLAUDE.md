@@ -43,6 +43,8 @@ It covers:
   - `lib/tenderAi.js`: AI reading.
   - `lib/formatLibrary.js` and `lib/formatAi.js`: tender format filling.
   - Gap questions save their answers to `company_facts`.
+  - Tender assistant (`app/app/tenders/[id]/assistant/*`): a chat that walks a tender from upload → read → questions → formats → draft bid pack, one question at a time; answers go to the Vault (`questionActions.js`).
+  - Eligibility conditions (`lib/conditions.js`, tested): branch/office in a state, GST in a state, ISO, contractor class, years in business — found free in the tender text (plus the AI reader's other_eligibility lines), stored in `tenders.conditions` via `set_tender_conditions`. Answers are yes/no facts (`presence.office.bihar` etc., period ''). `score_tender`: yes = met, no = not eligible, unanswered = pending (`tender_matches.pending`, chip "Qualifies if you answer N", score capped at 60) — missing turnover or no recorded works are pending too, never a rejection. Open questions show on the Tenders page (`QuestionCards.js`).
 - Tender pages: `app/app/tenders/*`. Actions are in `bidActions.js`, `readActions.js`, `formatActions.js`.
 - Leads and CRM: `lib/leads.js` (CSV import, phone clean-up, free fit score, WhatsApp/tel links; tested in `tests/leads.test.mjs`).
   - Pages: `app/app/leads/*`, `app/app/crm/*`. Actions in `leads/actions.js` and `crm/actions.js`. Timeline and log form in `components/CrmTimeline.js`.
