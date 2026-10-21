@@ -3,7 +3,8 @@
 import { parseIstDate, rupees, industryPack, stateFrom } from "../classify.js";
 import { dumpPage } from "../dump.js";
 
-const LIST = "?page=FrontEndLatestActiveTenders&service=page";
+// "Tenders by Closing Date" is public (no captcha) and has the same columns the old Latest Active list had.
+const LIST = "?page=FrontEndListTendersbyDate&service=page";
 
 export function parseTitleCell(text) {
   // "[Title of work] [Ref No][2026_HRY_412871_1]" — the last bracket is the tender ID
