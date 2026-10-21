@@ -15,7 +15,7 @@ export default function KeyForm() {
         <div className="notice small" style={{ display: "block" }}>
           <strong>Copy this now — the key is shown only once.</strong>
           <ol style={{ margin: "8px 0", paddingLeft: 18 }}>
-            <li>Oracle Cloud → Compute → Create instance: region Mumbai or Hyderabad, image Ubuntu 24.04, shape VM.Standard.A1.Flex (Always Free, 2 OCPU / 12 GB).</li>
+            <li>Oracle Cloud → Compute → Create instance: region Mumbai or Hyderabad, shape first: Ampere → VM.Standard.A1.Flex (Always Free, 2 OCPU / 12 GB); then image Oracle Linux 9 (or an ARM build of Ubuntu if offered).</li>
             <li>Show advanced options → Management → Initialization script → Paste cloud-init script → paste everything below → Create.</li>
             <li>In about 10 minutes the first run appears under Recent runs on this page.</li>
           </ol>
