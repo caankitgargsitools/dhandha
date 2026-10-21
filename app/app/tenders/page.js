@@ -5,6 +5,8 @@ import Icon from "@/components/Icon";
 import PreviewNote from "@/components/PreviewNote";
 import { setTenderStatus } from "./actions";
 import { rescore } from "./bidActions";
+import QuestionCards from "./QuestionCards";
+import { openQuestions } from "@/lib/conditions";
 
 const TABS = [["open", "Worth bidding"], ["shortlisted", "Shortlisted"], ["all", "All matches"], ["done", "Results"]];
 const STATUS_CHIP = { new: ["info", "New"], shortlisted: ["warn", "Shortlisted"], preparing: ["warn", "Preparing bid"], submitted: ["info", "Submitted"], won: ["ok", "Won"], lost: ["bad", "Lost"], skipped: ["mute", "Skipped"] };
@@ -14,7 +16,7 @@ export default async function Tenders({ searchParams }) {
   const tab = TABS.some(([k]) => k === params?.tab) ? params.tab : "open";
   const { supabase, company, role } = await getContext();
   const { data: all } = await supabase.from("tender_matches")
-    .select("id, score, eligible, reasons, status, tenders(*)").eq("company_id", company.id).order("score", { ascending: false });
+    .select("id, score, eligible, pending, reasons, status, tenders(*)").eq("company_id", company.id).order("score", { ascending: false });
   const rows = (all || []).filter((m) => m.tenders);
   const { data: pref } = await supabase.from("tender_preferences").select("services, custom_keywords").eq("company_id", company.id).maybeSingle();
   const noPrefs = !pref || (!(pref.services || []).length && !(pref.custom_keywords || []).length);
@@ -30,6 +32,9 @@ export default async function Tenders({ searchParams }) {
   }));
   const won = rows.filter((m) => m.status === "won").length, lost = rows.filter((m) => m.status === "lost").length;
   const canWrite = role !== "viewer";
+  const { data: facts } = await supabase.from("company_facts").select("key, value").eq("company_id", company.id).eq("period", "");
+  const answers = Object.fromEntries((facts || []).map((f) => [f.key, f.value]));
+  const questions = openQuestions(rows.filter((m) => live(m) && !["skipped", "lost"].includes(m.status)), answers);
 
   return (
     <div className="stack">
@@ -44,10 +49,11 @@ export default async function Tenders({ searchParams }) {
         </div>
       </div>
       {noPrefs && <div className="notice bad"><Icon name="briefcase" /><span><strong>Tell Dhandha what you do</strong> — pick your industry, sub-industry and services so only relevant tenders reach you. <Link href="/app/tenders/preferences">Choose services</Link></span></div>}
+      {questions.length > 0 && <QuestionCards questions={questions} canAnswer={canWrite} />}
       <PreviewNote>Tenders shown are samples until the crawler server is switched on. Scoring, shortlisting and bid packs are live.</PreviewNote>
 
       <div className="grid-3">
-        <div className="panel ledger"><div className="kpi-label">Worth bidding now</div><div className="kpi">{rows.filter((m) => live(m) && m.eligible && !["skipped"].includes(m.status)).length}</div><div className="faint small">eligible and still open</div></div>
+        <div className="panel ledger"><div className="kpi-label">Worth bidding now</div><div className="kpi">{rows.filter((m) => live(m) && m.eligible && !["skipped"].includes(m.status)).length}</div><div className="faint small">eligible and still open{rows.some((m) => live(m) && m.eligible && m.pending) ? ` · ${rows.filter((m) => live(m) && m.eligible && m.pending).length} need your answers` : ""}</div></div>
         <div className="panel ledger"><div className="kpi-label">Win rate</div><div className="kpi">{won + lost ? Math.round((won / (won + lost)) * 100) : 0}%</div><div className="faint small">{won} won · {lost} lost</div></div>
         <div className="panel row" style={{ flexWrap: "nowrap" }}>
           <Donut parts={byPack} size={96} center={String(rows.length)} />
@@ -73,7 +79,7 @@ export default async function Tenders({ searchParams }) {
               <div>
                 <div className="row" style={{ gap: 8, marginBottom: 4 }}>
                   <span className={`chip ${cls}`}>{label}</span>
-                  {!m.eligible && <span className="chip bad">Not eligible</span>}
+                  {!m.eligible ? <span className="chip bad">Not eligible</span> : m.pending ? <Link href={`/app/tenders/${m.id}/assistant`} className="chip warn">Qualifies if you answer {m.pending}</Link> : <span className="chip ok">Qualified</span>}
                   <span className="tiny faint">{t.portal} · {t.tender_ref}</span>
                 </div>
                 <h4><Link href={`/app/tenders/${m.id}`} style={{ color: "inherit" }}>{t.title}</Link></h4>
@@ -95,7 +101,8 @@ export default async function Tenders({ searchParams }) {
                       <form action={setTenderStatus}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="status" value="new" /><button className="sm ghost">Restore</button></form>
                     )}
                     <Link className="btn sm ghost" href={`/app/tasks?link_type=tender&link_id=${t.id}&link_label=${encodeURIComponent(t.title.slice(0, 80))}&title=${encodeURIComponent("Prepare bid: " + t.title.slice(0, 120))}`}>Assign to someone</Link>
-                    <Link className="btn sm" href={`/app/tenders/${m.id}`}>Prepare bid</Link>
+                    <Link className="btn sm" href={`/app/tenders/${m.id}/assistant`}>Prepare with assistant</Link>
+                    <Link className="btn sm ghost" href={`/app/tenders/${m.id}`}>Details</Link>
                   </div>
                 )}
               </div>
