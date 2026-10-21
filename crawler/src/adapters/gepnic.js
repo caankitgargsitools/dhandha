@@ -64,7 +64,9 @@ export async function crawlGepnic(browser, site, { maxPages = 20, log = console.
       const next = await page.$("a#linkFwd, a:has-text('Next >')");
       const href = next && (await next.getAttribute("href"));
       if (!href || href.startsWith("javascript") || rows.length === 0) break;
-      await page.goto(new URL(href, page.url()).toString(), { waitUntil: "domcontentloaded", timeout: 45000 });
+      // a slow portal on a later page keeps what was read so far
+      try { await page.goto(new URL(href, page.url()).toString(), { waitUntil: "domcontentloaded", timeout: 60000 }); }
+      catch (e) { log(`  ${site.portal} page ${p + 2} did not load (${e.message.split("\n")[0]}) — keeping ${out.length}`); break; }
       await new Promise((r) => setTimeout(r, 1000)); // polite pace
     }
     // detail pages (value, EMD, pre-bid) — links are session-bound, so open them in the same context
