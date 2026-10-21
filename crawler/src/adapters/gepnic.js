@@ -36,6 +36,10 @@ export async function crawlGepnic(browser, site, { maxPages = 20, log = console.
   const out = [];
   try {
     await page.goto(site.base + LIST, { waitUntil: "domcontentloaded", timeout: 60000 });
+    // the page opens on "Closing Today"; widen it to the next 14 days (later ones show up on later runs)
+    const tab = await page.$("a:has-text('Closing within 14 days')");
+    if (tab) await Promise.all([page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 45000 }).catch(() => {}), tab.click()]);
+    const seen = new Set();
     for (let p = 0; p < maxPages; p++) {
       progress({ phase: "listing", page: p + 1, of: maxPages });
       const rows = await page.$$eval("table.list_table tr, table#table tr", (trs) =>
@@ -46,7 +50,8 @@ export async function crawlGepnic(browser, site, { maxPages = 20, log = console.
         }).filter((r) => r.cells.length >= 6 && /^\d+\.?$/.test(r.cells[0])));
       for (const r of rows) {
         const { title, ref, tenderId } = parseTitleCell(r.cells[4]);
-        if (!tenderId) continue;
+        if (!tenderId || seen.has(tenderId)) continue;
+        seen.add(tenderId);
         const org = r.cells[5];
         out.push({
           portal: site.portal, tender_ref: tenderId, title: ref && ref !== tenderId ? `${title} (Ref ${ref})` : title,
@@ -57,8 +62,10 @@ export async function crawlGepnic(browser, site, { maxPages = 20, log = console.
       }
       if (p === 0 && rows.length === 0) await dumpPage(page, `${site.portal} tenders`, log);
       const next = await page.$("a#linkFwd, a:has-text('Next >')");
-      if (!next || rows.length === 0) break;
-      await Promise.all([page.waitForLoadState("domcontentloaded"), next.click()]);
+      const href = next && (await next.getAttribute("href"));
+      if (!href || href.startsWith("javascript") || rows.length === 0) break;
+      await page.goto(new URL(href, page.url()).toString(), { waitUntil: "domcontentloaded", timeout: 45000 });
+      await new Promise((r) => setTimeout(r, 1000)); // polite pace
     }
     // detail pages (value, EMD, pre-bid) — links are session-bound, so open them in the same context
     for (const [i, t] of out.entries()) {
