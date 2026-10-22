@@ -14,7 +14,7 @@ It covers:
 
 ## Stack and hosting
 - **Next.js 16** (App Router, plain JS). `proxy.js` replaces middleware. Server actions use `useActionState`.
-- **Vercel** project `dhandha`, team `caa-nkit-garg-sit-ools`. Pushing to `main` deploys to production. Functions run in Mumbai (`vercel.json` regions `bom1`, next to the Supabase database); keep page queries parallel (`Promise.all`).
+- **Vercel** project `dhandha` (`prj_YMLMeRl750pZN5i30myZ89BVuGch`), team `caa-nkit-garg-sit-ools`; live at https://dhandha-amber.vercel.app. Env vars must be ticked for Production and Preview. Pushing to `main` deploys to production. Functions run in Mumbai (`vercel.json` regions `bom1`, next to the Supabase database); keep page queries parallel (`Promise.all`).
 - **Supabase** project `umyesrpibsdgzsrqfvqf` (Mumbai, Pro plan).
   - Postgres with row-level security per tenant.
   - Auth with TOTP 2FA (AAL2 is required for `/app`).
