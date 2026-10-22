@@ -260,3 +260,21 @@ export async function disconnectApollo() {
   await supabase.rpc("disconnect_apollo", { p_tenant: tenant.id });
   revalidatePath("/app/leads/apollo");
 }
+
+// Data marketplace: buy ticked records, or everything matching the search (up to a limit), into Leads.
+export async function buyRecords(prev, formData) {
+  const ctx = await getContext();
+  if (ctx.role === "viewer") return { error: "Viewers cannot buy data." };
+  const set = String(formData.get("set_id"));
+  const all = formData.get("mode") === "all";
+  const ids = formData.getAll("rec").map(Number).filter(Number.isFinite).slice(0, 500);
+  if (!all && !ids.length) return { error: "Tick the records you want, or buy everything that matches." };
+  const filters = JSON.parse(String(formData.get("filters") || "{}"));
+  const { data, error } = all
+    ? await ctx.supabase.rpc("data_buy_matching", { p_company: ctx.company.id, p_set: set, p_q: String(formData.get("q") || ""), p_filters: filters, p_max: Math.min(500, Number(formData.get("max")) || 100) })
+    : await ctx.supabase.rpc("data_buy", { p_company: ctx.company.id, p_set: set, p_ids: ids });
+  if (error) return { error: /insufficient credits/i.test(error.message) ? "Not enough credits. Top up in Credits & plan." : error.message };
+  revalidatePath("/app/leads", "layout");
+  if (!data.bought) return { error: "Nothing new to buy — you already have these records." };
+  return { message: `Bought ${data.bought} record${data.bought === 1 ? "" : "s"} for ${Number(data.credits).toLocaleString("en-IN")} credits: ${data.new_leads} new lead${data.new_leads === 1 ? "" : "s"}${data.already_leads ? `, ${data.already_leads} were already in your leads` : ""}.` };
+}
