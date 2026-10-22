@@ -30,6 +30,7 @@ export default async function AppLayout({ children }) {
       { href: "/app/support", label: "Help & tickets", icon: "ticket" },
       { href: "/app/settings/team", label: "Team", icon: "people" },
       { href: "/app/settings/security", label: "Security", icon: "shield" },
+      { href: "/app/settings/app", label: "Phone app", icon: "phone" },
       ...(isAdmin ? [{ href: "/app/settings/drive", label: "Google Drive", icon: "doc" }, { href: "/app/settings/facebook", label: "Facebook & Instagram", icon: "leads" }] : []),
       ...(tenant.kind === "firm" || companies.length > 1 ? [{ href: "/app/settings/companies", label: "Companies", icon: "building" }] : []),
       ...(isAdmin ? [{ href: "/app/settings/audit", label: "Audit log", icon: "log" }] : []),
