@@ -2,17 +2,18 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { UploadTenderFiles } from "../../TenderDocs";
 import { readTender } from "../../readActions";
 import { prepareFormats } from "../../formatActions";
 import { generateBidPack } from "../../bidActions";
 import { answerQuestion, saveTurnover, answerGap } from "../../questionActions";
+import { confirmBrief } from "../../docActions";
+import DocFetch from "./DocFetch";
 
 const form = (o) => { const f = new FormData(); for (const [k, v] of Object.entries(o)) f.append(k, v); return f; };
 
 // Chat for one tender: the assistant's earlier messages (what is done), then one question at a time.
 // Answers are saved to the Vault by server actions; the page re-loads its steps after each one.
-export default function Assistant({ matchId, tenderId, done, steps, canAnswer, canPrepare }) {
+export default function Assistant({ matchId, tenderId, done, steps, brief, canAnswer, canPrepare }) {
   const router = useRouter();
   const [log, setLog] = useState([]);
   const [skipped, setSkipped] = useState(() => new Set());
@@ -24,10 +25,18 @@ export default function Assistant({ matchId, tenderId, done, steps, canAnswer, c
   const waiting = steps.filter((s) => skipped.has(s.id));
 
   useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [log.length, current?.id]);
+  // documents present but not read yet: read them straight away (AI when available, else the free reader)
+  const autoRead = useRef(false);
+  useEffect(() => {
+    if (current?.kind !== "read" || !current.auto || autoRead.current || !canAnswer) return;
+    autoRead.current = true;
+    run(null, () => readTender({}, form({ match_id: matchId, mode: current.aiReady ? "ai" : "basic" })), (r) => r.message);
+  }, [current?.kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const say = (who, msg, extra) => setLog((l) => [...l, { who, text: msg, ...extra }]);
   async function run(mine, fn, ok) {
     if (mine) say("me", mine);
+    else if (mine === null) say("bot", "Reading the documents…");
     setBusy(true);
     try {
       const r = await fn();
@@ -49,9 +58,13 @@ export default function Assistant({ matchId, tenderId, done, steps, canAnswer, c
             {x.text}{x.url && <> <a href={x.url} target="_blank" rel="noreferrer">Download PDF</a></>}
           </Bubble>
         ))}
+        {brief && current?.kind !== "brief" && (
+          <details style={{ alignSelf: "stretch" }}><summary className="small" style={{ cursor: "pointer" }}>Tender brief</summary><div style={{ marginTop: 8 }}>{brief}</div></details>
+        )}
+        {current?.kind === "brief" && brief}
         {current ? (
           <Bubble>
-            <div>{current.say}</div>
+            {current.kind === "fetch" ? <DocFetch matchId={matchId} tenderId={tenderId} step={current} say={current.say} canAnswer={canAnswer} /> : <div>{current.say}</div>}
             {current.quote && <div className="tiny faint" style={{ marginTop: 6 }}>Tender says{current.page ? ` (p. ${current.page})` : ""}: “{current.quote}”</div>}
           </Bubble>
         ) : (
@@ -60,7 +73,7 @@ export default function Assistant({ matchId, tenderId, done, steps, canAnswer, c
         <div ref={end} />
       </div>
 
-      {current && canAnswer && (
+      {current && canAnswer && current.kind !== "fetch" && (
         <div style={{ borderTop: "1px solid var(--line)", padding: 14, background: "var(--paper-2, transparent)" }} className="stack-sm">
           {current.kind === "yes_no" && (
             <div className="row" style={{ gap: 8 }}>
@@ -86,7 +99,12 @@ export default function Assistant({ matchId, tenderId, done, steps, canAnswer, c
               <button type="button" className="ghost" disabled={busy} onClick={skip}>Skip</button>
             </form>
           )}
-          {current.kind === "upload" && <UploadTenderFiles tenderId={tenderId} />}
+          {current.kind === "brief" && (
+            <div className="row" style={{ gap: 8 }}>
+              <button disabled={busy || !canPrepare} onClick={() => run("Looks good — let's prepare the bid", () => confirmBrief({ matchId, go: true }), "Great. I'll go through what I need from you, one thing at a time.")}>Looks good — start preparing</button>
+              <button className="ghost" disabled={busy || !canPrepare} onClick={() => run("Not for us", () => confirmBrief({ matchId, go: false }), "Okay, I've moved it to Skipped. You can restore it from the Tenders page.")}>Not for us</button>
+            </div>
+          )}
           {current.kind === "read" && (
             <div className="row" style={{ gap: 8 }}>
               <button className="ghost" disabled={busy} onClick={() => run("Read it with the free reader", () => readTender({}, form({ match_id: matchId, mode: "basic" })), (r) => r.message)}>{busy ? "Reading…" : "Free reader · 10 credits"}</button>

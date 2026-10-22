@@ -108,14 +108,22 @@ async function readDetail(page) {
 
 // Click each document link; a captcha on the way goes to the person. Returns [{name, data}].
 async function downloadDocs(page, job) {
-  const linkList = async () => page.$$eval("a", (as, rx) => as.map((a, i) => ({ i, t: a.innerText.trim(), href: a.getAttribute("href") || "", id: a.id || "" }))
-    .filter((a) => new RegExp(rx, "i").test(a.t + " " + a.href) || /download as zip/i.test(a.t)), DOC_RX.source);
+  // NIT documents (named links), work item documents (unnamed links; the name is in their table row) and
+  // "Download as zip file". The zip holds them all, so it goes first: one captcha for every document.
+  const linkList = async () => page.$$eval("a", (as, rx) => as.map((a, i) => {
+    const row = (a.closest("tr")?.innerText || "").replace(/\s+/g, " ");
+    const name = (a.innerText.trim().match(new RegExp(`[^\\s/]+${rx}`, "i")) || row.match(new RegExp(`[^\\s/]+${rx}`, "i")) || [])[0] || "";
+    return { i, t: a.innerText.trim(), name, zip: /download as zip/i.test(a.innerText), id: a.id || "", href: a.getAttribute("href") || "" };
+  }).filter((a) => a.zip || (a.name && /docDownoad|DirectLink/i.test(a.id + a.href) && !/view more|back/i.test(a.t))), DOC_RX.source);
   let links = await linkList();
-  const singles = links.filter((l) => !/zip/i.test(l.t));
-  const plan = (singles.length ? singles : links).slice(0, MAX_FILES);
+  const zip = links.find((l) => l.zip);
+  const singles = links.filter((l) => !l.zip && !/zip$/i.test(l.name));
+  const plan = [...(zip ? [zip] : []), ...singles].slice(0, MAX_FILES);
+  log(`  ${plan.length} document link(s): ${plan.map((l) => l.zip ? "[zip]" : l.name).join(", ")}`);
   const files = [];
   for (const [n, l] of plan.entries()) {
-    await update(job, { status: "running", step: `Downloading ${n + 1} of ${plan.length}: ${l.t.slice(0, 60)}` });
+    if (!l.zip && files.some((f) => /\.zip$/i.test(f.name))) break; // the zip already has them all
+    await update(job, { status: "running", step: l.zip ? "Downloading all documents (zip)" : `Downloading ${n + 1} of ${plan.length}: ${l.name.slice(0, 60)}` });
     for (let tryNo = 0; tryNo < 2; tryNo++) {
       const handle = (await page.$$("a"))[l.i];
       if (!handle) break;
@@ -132,7 +140,7 @@ async function downloadDocs(page, job) {
       if (got) {
         const p = await got.path();
         const data = p ? await readFile(p) : null;
-        if (data && data.length <= MAX_BYTES) files.push({ name: got.suggestedFilename() || l.t, data });
+        if (data && data.length <= MAX_BYTES) files.push({ name: got.suggestedFilename() || l.name || l.t, data });
         break;
       }
       if (await hasCaptcha(page)) {
@@ -142,12 +150,12 @@ async function downloadDocs(page, job) {
         if (d2) {
           const p = await d2.path();
           const data = p ? await readFile(p) : null;
-          if (data && data.length <= MAX_BYTES) files.push({ name: d2.suggestedFilename() || l.t, data });
+          if (data && data.length <= MAX_BYTES) files.push({ name: d2.suggestedFilename() || l.name || l.t, data });
           break;
         }
         // back on the detail page after the captcha: the link list may have moved
         links = await linkList();
-        const again = links.find((x) => x.t === l.t);
+        const again = links.find((x) => x.zip === l.zip && x.name === l.name && x.t === l.t);
         if (again) l.i = again.i; else break;
         continue;
       }

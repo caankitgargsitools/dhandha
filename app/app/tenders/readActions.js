@@ -36,6 +36,7 @@ export async function readTender(prev, formData) {
   const pages = [], blobs = [];
   let scanned = false, total = 0;
   for (const f of files) {
+    if (!/\.pdf$/i.test(f.file_name)) continue; // Excel price schedules and the like are kept, not read
     const { data, error } = await supabase.storage.from("tender-docs").download(f.storage_path);
     if (error) continue;
     const bytes = new Uint8Array(await data.arrayBuffer());
