@@ -97,12 +97,12 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, canAn
           {current.kind === "read" && (
             <div className="row" style={{ gap: 8 }}>
               <button className="ghost" disabled={busy} onClick={() => run("Read it with the free reader", () => readTender({}, form({ match_id: matchId, mode: "basic" })), (r) => r.message)}>{busy ? "Reading…" : "Free reader · 10 credits"}</button>
-              <button disabled={busy || !current.aiReady} title={current.aiReady ? "" : "AI not configured yet"} onClick={() => run("Read it with AI", () => readTender({}, form({ match_id: matchId, mode: "ai" })), (r) => r.message)}>{busy ? "Reading…" : "Read with AI · 99 credits"}</button>
+              <button disabled={busy} onClick={() => run("Read it with AI", () => readTender({}, form({ match_id: matchId, mode: "ai" })), (r) => r.message)}>{busy ? "Reading…" : "Read with AI · 99 credits"}</button>
             </div>
           )}
           {current.kind === "fill_ai" && (
             <div className="row" style={{ gap: 8 }}>
-              <button disabled={busy || !current.paidAi} title={current.paidAi ? "" : "Needs a paid AI key"} onClick={() => run("Yes, fill them with AI", () => fillCustom({ matchId }), (r) => r.message)}>{busy ? "Filling…" : "Fill with AI · 49 credits"}</button>
+              <button disabled={busy} onClick={() => run("Yes, fill them with AI", () => fillCustom({ matchId }), (r) => r.message)}>{busy ? "Filling…" : "Fill with AI · 49 credits"}</button>
               <button className="ghost" disabled={busy} onClick={skip}>Not now</button>
             </div>
           )}

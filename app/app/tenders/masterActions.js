@@ -101,7 +101,7 @@ export async function chooseFormats({ matchId, choices }) {
 export async function fillCustom({ matchId }) {
   const { supabase, tenant, company, role } = await getContext();
   if (!["admin", "manager", "bid_preparer"].includes(role)) return { error: "Only admins, managers and bid preparers can do this." };
-  if (!aiTiers().some((t) => !t.free)) return { error: "Filling the tender's own wording needs a paid AI key (your company data never goes to free AI)." };
+  if (!aiTiers().some((t) => !t.free)) return { error: "Paid AI is not switched on for this site, so I can't fill these yet (your company data never goes to free AI). The owner adds ANTHROPIC_API_KEY in Vercel → Settings → Environment Variables for Production, then redeploys. Meanwhile tap Not now — the formats stay in the bid file for you to fill by hand." };
   const { data: m } = await supabase.from("tender_matches").select("id, filled_formats, tenders(*)").eq("id", matchId).eq("company_id", company.id).single();
   const plan = m?.filled_formats || [];
   const todo = plan.filter((p) => p.kind === "custom" && !p.filled_text);
