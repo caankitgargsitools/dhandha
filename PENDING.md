@@ -46,6 +46,7 @@ Last checked: 22 Oct 2026.
 - Tender assistant: fetch from portal with captcha in chat, brief, format picker, master questions, cost planner, bid file.
 - Crawler reads every active GePNIC tender (12,700+ open); always-on document fetcher; pages run in Mumbai.
 - Phone app with notifications; menus: Source new business (Tenders / Generate leads), Business Vault.
+- Precise tender search: strict keywords and blockers, "Matched on" with × to switch a word off; GSC went from 172 matches to 30 genuine CA tenders.
 - Data marketplace: upload customer databases (CSV/Excel), customers filter and buy per record into Leads.
 - Phone: wide tables (Leads etc.) now scroll sideways.
 - Lead sources: tender winners, MCA, Facebook & Instagram, LinkedIn, Google Maps, Apollo, Excel/CSV.
