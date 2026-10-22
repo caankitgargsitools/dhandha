@@ -1,9 +1,11 @@
-# Fetches tender documents for the tender assistant. Dhandha starts it (workflow_dispatch through the GitHub API,
-# token GITHUB_DISPATCH_TOKEN in Vercel) when someone presses "Fetch documents"; it also runs before every crawl.
+# Fetches tender documents for the tender assistant. A worker stays up for ~6 hours watching for jobs (every 3 s);
+# the hourly schedule keeps one queued behind it, so there is always one running. Free on a public repository.
 # Captchas are shown to the person in the assistant chat; nothing is solved automatically.
 name: tender docs
 
 on:
+  schedule:
+    - cron: "7 * * * *"
   workflow_dispatch:
     inputs:
       probe:
@@ -15,13 +17,13 @@ on:
         default: "CPPP"
 
 concurrency:
-  group: tender-docs
+  group: tender-docs-${{ github.event.inputs.probe == 'true' && 'probe' || 'worker' }}
   cancel-in-progress: false
 
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 360
     container:
       image: mcr.microsoft.com/playwright:v1.56.1-jammy
       options: --shm-size=1g
@@ -42,7 +44,7 @@ jobs:
       - name: Fetch queued documents
         if: github.event.inputs.probe != 'true'
         working-directory: crawler
-        run: node src/docs.js --until-idle --wait 90
+        run: node src/docs.js --forever --hours 5.75
       - name: Probe a tender page
         if: github.event.inputs.probe == 'true'
         working-directory: crawler

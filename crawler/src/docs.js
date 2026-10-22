@@ -215,6 +215,8 @@ async function runJob(browser, job) {
 
 const args = process.argv.slice(2);
 const waitFirst = Number(args[args.indexOf("--wait") + 1]) || (args.includes("--wait") ? 90 : 0);
+// --forever --hours 5.75: keep watching for jobs (checks every 3 s), then exit so the next run takes over
+const stopAt = args.includes("--hours") ? Date.now() + Number(args[args.indexOf("--hours") + 1]) * 3600000 : Infinity;
 const browser = await chromium.launch();
 try {
   const start = Date.now();
@@ -223,7 +225,7 @@ try {
     const job = await rpc("doc_job_claim", { p_runner: RUNNER });
     if (job) { await runJob(browser, job); did++; continue; }
     if (!did && Date.now() - start < waitFirst * 1000) { await sleep(5000); continue; }
-    if (args.includes("--forever")) { await sleep(10000); continue; }
+    if (args.includes("--forever") && Date.now() < stopAt) { await sleep(3000); continue; }
     break;
   }
   log(`done: ${did} job(s)`);

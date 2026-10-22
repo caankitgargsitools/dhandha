@@ -27,7 +27,7 @@ export default function DocFetch({ matchId, tenderId, step, say, canAnswer }) {
     started.current = true;
     fetchDocs({ matchId }).then((r) => {
       if (r.error) { setNote(r.error); return; }
-      if (!r.started) setNote(r.reason === "not_configured" ? "Instant fetching is not switched on yet, so this starts with the next crawler run (06:10, 12:40 or 18:10). You can also upload the PDFs below." : `Could not start the fetcher right now (${r.reason}). It will run with the next crawler run.`);
+      // the always-on fetcher on GitHub picks the job up within seconds; nothing to start from here
       setJob({ id: r.jobId, status: "queued", step: "Waiting for the crawler to start" });
     });
   }, [job, matchId, canAnswer]);
