@@ -56,12 +56,13 @@ export default async function TenderAssistant({ params }) {
   const done = [];
   const steps = [];
   // 1. documents: fetched from the portal by the crawler (captcha typed here), or uploaded
-  if (files?.length) done.push(`I have ${files.length} tender document${files.length === 1 ? "" : "s"}.`);
+  const pdfs = (files || []).filter((x) => /\.pdf$/i.test(x.file_name));
+  if (pdfs.length) done.push(`I have ${files.length} tender document${files.length === 1 ? "" : "s"}: ${files.map((x) => x.file_name).join(", ").slice(0, 200)}.`);
   else steps.push({ id: "fetch", kind: "fetch", job: job && ["queued", "running", "captcha", "fetched", "failed"].includes(job.status) ? job : null, portal: t.portal, aiReady: aiTiers().length > 0,
-    say: `First I'll fetch the tender documents from ${t.portal}. If the portal shows a captcha, I'll put the picture here for you to type.` });
+    say: files?.length ? `I have ${files.map((x) => x.file_name).join(", ")} but not the tender's PDF yet, so I'll fetch again from ${t.portal}.` : `First I'll fetch the tender documents from ${t.portal}. If the portal shows a captcha, I'll put the picture here for you to type.` });
 
   // 2. read them, then 3. the brief — nothing is prepared until you say it looks good
-  if (files?.length && !read) steps.push({ id: "read", kind: "read", auto: true, say: "Reading the documents now…", aiReady: aiTiers().length > 0 });
+  if (pdfs.length && !read) steps.push({ id: "read", kind: "read", auto: true, say: "Reading the documents now…", aiReady: aiTiers().length > 0 });
   if (read && !confirmed) {
     steps.push({ id: "brief", kind: "brief", say: "Here is the tender in one page. Shall we go ahead and prepare the bid?" });
   }
