@@ -14,6 +14,7 @@ const env = process.env;
 for (const k of ["SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "INGEST_KEY"]) if (!env[k]) { console.error(`Missing ${k}`); process.exit(1); }
 const maxPages = Number(env.MAX_PAGES || 20);
 const maxAwards = Number(env.MAX_AWARDS || 300);
+const maxDetails = Number(env.MAX_DETAILS || 40); // tender detail pages opened per portal per run
 const concurrency = Number(env.CONCURRENCY || 2);
 const budgetMs = Number(env.CRAWL_BUDGET_MIN || 0) * 60000; // 0 = no limit
 const results = env.CRAWL_RESULTS !== "0";
@@ -31,7 +32,7 @@ function plan() {
   const sites = rotate(GEPNIC.filter((s) => !s.skip && pick(s.portal)), Math.floor(Date.now() / (8 * 3600000)));
   const steps = [];
   for (const site of sites) {
-    steps.push({ name: `${site.portal} · tenders`, run: (p) => crawlGepnic(p.browser, site, { maxPages, log, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders(site.portal, rows, env)) : "no tenders found — check the site or adapter" })) });
+    steps.push({ name: `${site.portal} · tenders`, run: (p) => crawlGepnic(p.browser, site, { maxDetails, log, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders(site.portal, rows, env)) : "no tenders found — check the site or adapter" })) });
     if (results) steps.push({ name: `${site.portal} · winners`, run: (p) => crawlGepnicResults(p.browser, site, { maxPages: Math.min(maxPages, 10), maxAwards, log, progress: p.update, captcha }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendAwards(`Results: ${site.portal}`, rows, env)) : "no results found — check the site or adapter" })) });
   }
   if (!pick("GeM")) return steps;

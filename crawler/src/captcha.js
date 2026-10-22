@@ -50,7 +50,9 @@ export async function solveWithPerson(page, env, { runner, portal, purpose, log 
     await input.fill(answer);
     const submit = await input.evaluateHandle((el) => {
       const f = el.closest("form") || document;
-      return f.querySelector("input#Search, input[name=Search], input[type=submit], button[type=submit], input[value*=Search i], input[value*=Submit i]");
+      // the first visible search/submit button (portals keep hidden copies of it)
+      const all = [...f.querySelectorAll("input#Search, input[name=Search], input[type=submit], button[type=submit], input[value*=Search i], input[value*=Submit i]")];
+      return all.find((b) => b.offsetParent !== null && getComputedStyle(b).visibility !== "hidden") || null;
     });
     if (submit.asElement()) await Promise.all([page.waitForLoadState("domcontentloaded").catch(() => {}), submit.asElement().click()]);
     else await Promise.all([page.waitForLoadState("domcontentloaded").catch(() => {}), input.press("Enter")]);
