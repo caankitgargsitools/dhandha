@@ -32,7 +32,7 @@ export default async function NewCompanies() {
       </div>
       {!pref && <div className="notice"><Icon name="map" /><span>Set your <Link href="/app/leads">ideal client</Link> industries, cities and states first, so only relevant new companies show up.</span></div>}
 
-      <div className="grid-2" style={{ gridTemplateColumns: "minmax(0, 2.2fr) minmax(260px, 1fr)", alignItems: "start" }}>
+      <div className="grid-main">
         <div className="stack-sm">
           {error && <p className="error">{error.message}</p>}
           {!list.length ? (

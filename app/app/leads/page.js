@@ -61,7 +61,7 @@ export default async function Leads({ searchParams }) {
         </div>
       </div>
 
-      <div className="grid-2" style={{ gridTemplateColumns: "minmax(0, 2.2fr) minmax(280px, 1fr)", alignItems: "start" }}>
+      <div className="grid-main">
         <div className="stack-sm">
           <div className="row" role="tablist">
             {TABS.map(([k, l]) => <Link key={k} role="tab" aria-selected={tab === k} href={`/app/leads?${qs({ tab: k })}`} className={`btn sm ${tab === k ? "" : "ghost"}`}>{l} <span className="faint">({lists[k].length})</span></Link>)}
