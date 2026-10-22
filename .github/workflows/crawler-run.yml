@@ -58,6 +58,10 @@ jobs:
       - name: Install
         working-directory: crawler
         run: npm install --omit=dev --no-audit --no-fund
+      - name: Fetch queued tender documents
+        if: github.event.inputs.probe != 'true'
+        working-directory: crawler
+        run: timeout 600 node src/docs.js --until-idle || true
       - name: Crawl
         if: github.event.inputs.probe != 'true'
         working-directory: crawler
