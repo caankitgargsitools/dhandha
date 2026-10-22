@@ -1,17 +1,38 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Icon from "./Icon";
 
+// The ☰ button in the top bar; it opens the menu drawer.
+export function MenuButton() {
+  return (
+    <button type="button" className="burger" aria-label="Open menu" onClick={() => window.dispatchEvent(new Event("dh-menu"))}>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+    </button>
+  );
+}
+
 export default function SideNav({ sections, admin = false, foot }) {
   const path = usePathname();
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const toggle = () => setOpen((v) => !v);
+    const esc = (e) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("dh-menu", toggle);
+    window.addEventListener("keydown", esc);
+    return () => { window.removeEventListener("dh-menu", toggle); window.removeEventListener("keydown", esc); };
+  }, []);
+  useEffect(() => { setOpen(false); }, [path]); // a menu choice closes the drawer
   const under = (href) => path === href || path.startsWith(href + "/");
   // an item can cover several sections (match) or leave one out (exclude)
   const isActive = (href, it = {}) => (href === "/app" || href === "/admin" ? path === href
     : (it.match || [href]).some(under) && !(it.exclude || []).some(under));
   return (
-    <nav className={`side${admin ? " admin" : ""}`} aria-label="Main">
+    <>
+    {open && <div className="side-scrim" onClick={() => setOpen(false)} aria-hidden="true" />}
+    <nav className={`side${admin ? " admin" : ""}${open ? " open" : ""}`} aria-label="Main" inert={!open}>
+      <button type="button" className="close" aria-label="Close menu" onClick={() => setOpen(false)}>×</button>
       <Link href={admin ? "/admin" : "/app"} className="wordmark"><span>Dhandha</span><span className="dot" /><small style={admin ? { fontFamily: "var(--body)", fontWeight: 700 } : undefined}>{admin ? "Admin" : "धंधा"}</small></Link>
       {sections.map((s, i) => (
         <div key={i} style={{ display: "contents" }}>
@@ -27,6 +48,7 @@ export default function SideNav({ sections, admin = false, foot }) {
       ))}
       {foot && <div className="foot">{foot}</div>}
     </nav>
+    </>
   );
 }
 
