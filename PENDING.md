@@ -25,6 +25,7 @@ Last checked: 22 Oct 2026.
 | 15 | **Decide Phase 4 video style**: template videos / talking avatar / both | Your call. | Tell me A, B or both. |
 | 16 | **Older Dhandha session "Ponytail GitHub installation"** is waiting for a reply from you | Started by you earlier. | Reply there, or tell me to close it. |
 | 17 | **Upload your first database** at Admin → Data marketplace (CSV/Excel), declare its source, set a price, Go live | Only you know where the data comes from and that it is lawful (business data, or consumers who consented). | I see a live database. |
+| 18 | **Say when to add the AI tender check** (AI reads each candidate tender's scope and keeps only work you can do; about ₹0.10 a tender, paid AI) | Your call on the cost. | Tell me "add the AI check". |
 
 ## I'm doing (no action from you)
 
@@ -40,6 +41,7 @@ Last checked: 22 Oct 2026.
 | H | Social posts and AI video (Phase 4) | Waiting on #15 |
 | I | Play Store version of the phone app | When you want it |
 | J | Before launch: remove demo data (152 rows), move pg_net out of the public schema | At launch |
+| K | AI tender check (scope of work, not just the title) | Waiting on #18 |
 
 ## Done (recent)
 
