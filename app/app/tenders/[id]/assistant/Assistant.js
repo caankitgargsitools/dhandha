@@ -6,7 +6,7 @@ import { readTender } from "../../readActions";
 import { generateBidPack } from "../../bidActions";
 import { answerQuestion } from "../../questionActions";
 import { confirmBrief } from "../../docActions";
-import { answerMaster, answerFact, addWork, addPerson, chooseFormats, fillCustom } from "../../masterActions";
+import { answerMaster, answerFact, addWork, addPerson, setPersonField, chooseFormats, fillCustom } from "../../masterActions";
 import DocFetch from "./DocFetch";
 import CostPlanner from "./CostPlanner";
 import { MasterAnswer, WorkAnswer, PersonAnswer, FormatPicker } from "./Questions";
@@ -15,7 +15,7 @@ const form = (o) => { const f = new FormData(); for (const [k, v] of Object.entr
 
 // Chat for one tender: the assistant's earlier messages (what is done), then one question at a time.
 // Answers are saved to the Vault by server actions; the page re-loads its steps after each one.
-export default function Assistant({ matchId, tenderId, done, steps, brief, canAnswer, canPrepare }) {
+export default function Assistant({ matchId, tenderId, done, steps, brief, formats, canAnswer, canPrepare }) {
   const router = useRouter();
   const [log, setLog] = useState([]);
   const [skipped, setSkipped] = useState(() => new Set());
@@ -59,6 +59,19 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, canAn
             {x.text}{x.url && <> <a href={x.url} target="_blank" rel="noreferrer">Download PDF</a></>}
           </Bubble>
         ))}
+        {formats?.length > 0 && (
+          <details style={{ alignSelf: "stretch" }}>
+            <summary className="small" style={{ cursor: "pointer" }}>Your formats ({formats.length}) — {formats.filter((f) => /^Ready/.test(f.status)).length} ready</summary>
+            <div className="stack-sm" style={{ marginTop: 8 }}>
+              {formats.map((f, i) => (
+                <details key={i} className="panel" style={{ padding: "8px 12px" }}>
+                  <summary className="small" style={{ cursor: f.text ? "pointer" : "default" }}><strong>{f.title}</strong> <span className={`chip ${/^Ready/.test(f.status) ? "ok" : /blank|Waiting/.test(f.status) ? "warn" : "mute"}`}>{f.status}</span></summary>
+                  {f.text && <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", fontSize: 13, margin: "8px 0 0" }}>{f.text}</pre>}
+                </details>
+              ))}
+            </div>
+          </details>
+        )}
         {brief && current?.kind !== "brief" && (
           <details style={{ alignSelf: "stretch" }}><summary className="small" style={{ cursor: "pointer" }}>Tender brief</summary><div style={{ marginTop: 8 }}>{brief}</div></details>
         )}
@@ -85,6 +98,7 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, canAn
           )}
           {current.kind === "master" && <MasterAnswer key={current.id} step={current} busy={busy} skip={skip} send={(mine, v) => run(mine, () => answerMaster({ field: current.field, value: v, matchId }), "Saved to your masters — I won't ask again.")} />}
           {current.kind === "fact" && <MasterAnswer key={current.id} step={current} busy={busy} skip={skip} send={(mine, v) => run(current.type === "money" ? `₹${Number(v).toLocaleString("en-IN")}` : mine, () => answerFact({ key: current.key, period: current.period || "", value: v, unit: current.unit || null, money: current.type === "money", matchId }), "Saved to your masters — every tender that needs it will use it.")} />}
+          {current.kind === "person_field" && <MasterAnswer key={current.id} step={current} busy={busy} skip={skip} send={(mine, v) => run(mine, () => setPersonField({ personId: current.personId, field: current.field, value: v, matchId }), "Saved in Key people — every tender that needs it will use it.")} />}
           {current.kind === "work" && <WorkAnswer busy={busy} skip={skip} send={(mine, w) => run(mine, () => addWork({ ...w, matchId }), "Saved to your works. I'll list it in every similar-works format.")} />}
           {current.kind === "person" && <PersonAnswer busy={busy} skip={skip} send={(mine, p) => run(mine, () => addPerson({ ...p, matchId }), "Saved to your key people.")} />}
           {current.kind === "choose_formats" && <FormatPicker step={current} busy={busy || !canPrepare} send={(mine, list) => run(mine, () => chooseFormats({ matchId, choices: list }), "Done. Now only what these formats need and your masters don't have yet.")} />}

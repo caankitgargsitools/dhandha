@@ -46,7 +46,7 @@ export function WorkAnswer({ busy, send, skip }) {
 }
 
 export function PersonAnswer({ busy, send, skip }) {
-  const [p, setP] = useState({ name: "", designation: "", qualification: "", years: "" });
+  const [p, setP] = useState({ name: "", designation: "", qualification: "", years: "", membership_no: "", pan: "" });
   const f = (k) => (e) => setP({ ...p, [k]: e.target.value });
   return (
     <form className="stack-sm" onSubmit={(e) => { e.preventDefault(); send(`${p.name}${p.designation ? `, ${p.designation}` : ""}${p.qualification ? ` (${p.qualification})` : ""}${p.years ? `, ${p.years} years` : ""}`, p); }}>
@@ -55,6 +55,8 @@ export function PersonAnswer({ busy, send, skip }) {
         <div><label htmlFor="pds">Designation</label><input id="pds" value={p.designation} onChange={f("designation")} /></div>
         <div><label htmlFor="pq">Qualification</label><input id="pq" value={p.qualification} onChange={f("qualification")} placeholder="e.g. FCA, B.E. Civil" /></div>
         <div><label htmlFor="py">Years of experience</label><input id="py" inputMode="numeric" value={p.years} onChange={f("years")} /></div>
+        <div><label htmlFor="pm">Membership no. (ICAI etc.)</label><input id="pm" value={p.membership_no} onChange={f("membership_no")} /></div>
+        <div><label htmlFor="pp">PAN</label><input id="pp" value={p.pan} onChange={f("pan")} placeholder="ABCDE1234F" /></div>
       </div>
       <div className="row" style={{ gap: 8 }}><button disabled={busy || !p.name}>Save this person</button><button type="button" className="ghost" disabled={busy} onClick={skip}>Skip</button></div>
     </form>
