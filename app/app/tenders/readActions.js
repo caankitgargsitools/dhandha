@@ -75,7 +75,9 @@ export async function readTender(prev, formData) {
     for (const k of ["value_inr", "emd_inr", "req_avg_turnover", "req_similar_one", "req_similar_two", "req_similar_three", "req_similar_years", "bid_validity_days", "performance_security_pct", "turnover_years"]) {
       if (num(d[k]) !== null) fields[k] = num(d[k]);
     }
-    for (const k of ["due_at", "prebid_on", "completion_period", "similar_work_definition", "language"]) if (d[k]) fields[k] = d[k];
+    for (const k of ["due_at", "prebid_on", "completion_period", "similar_work_definition", "language", "location", "opening_at"]) if (d[k]) fields[k] = d[k];
+    if (num(d.tender_fee_inr) !== null) fields.tender_fee_inr = num(d.tender_fee_inr);
+    for (const k of ["work_scope", "highlights"]) if (Array.isArray(d[k])) fields[k] = d[k].map(String).slice(0, 12);
     if (typeof d.mse_emd_exempt === "boolean") fields.mse_emd_exempt = d.mse_emd_exempt;
     if (Array.isArray(d.other_eligibility)) fields.other_eligibility = d.other_eligibility.slice(0, 15);
     if (Array.isArray(d.required_docs) && d.required_docs.length) docs = [...new Set([...docs, ...d.required_docs])];
