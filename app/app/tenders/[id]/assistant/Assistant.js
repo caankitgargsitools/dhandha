@@ -3,11 +3,13 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { readTender } from "../../readActions";
-import { prepareFormats } from "../../formatActions";
 import { generateBidPack } from "../../bidActions";
-import { answerQuestion, saveTurnover, answerGap } from "../../questionActions";
+import { answerQuestion } from "../../questionActions";
 import { confirmBrief } from "../../docActions";
+import { answerMaster, answerFact, addWork, addPerson, chooseFormats, fillCustom } from "../../masterActions";
 import DocFetch from "./DocFetch";
+import CostPlanner from "./CostPlanner";
+import { MasterAnswer, WorkAnswer, PersonAnswer, FormatPicker } from "./Questions";
 
 const form = (o) => { const f = new FormData(); for (const [k, v] of Object.entries(o)) f.append(k, v); return f; };
 
@@ -19,7 +21,6 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, canAn
   const [skipped, setSkipped] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
   const [text, setText] = useState("");
-  const [years, setYears] = useState({});
   const end = useRef(null);
   const current = steps.find((s) => !skipped.has(s.id));
   const waiting = steps.filter((s) => skipped.has(s.id));
@@ -41,7 +42,7 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, canAn
     try {
       const r = await fn();
       if (r?.error) say("bot", r.error, { error: true });
-      else { say("bot", typeof ok === "function" ? ok(r) : ok, r?.url ? { url: r.url } : undefined); setText(""); setYears({}); }
+      else { say("bot", typeof ok === "function" ? ok(r) : ok, r?.url ? { url: r.url } : undefined); setText(""); }
     } catch (e) { say("bot", `Something went wrong: ${e.message}`, { error: true }); }
     setBusy(false);
     router.refresh();
@@ -82,23 +83,11 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, canAn
               <button className="ghost" disabled={busy} onClick={skip}>Skip</button>
             </div>
           )}
-          {current.kind === "turnover" && (
-            <form className="stack-sm" onSubmit={(e) => { e.preventDefault(); run(current.years.map((y) => `${y}: ₹${Number(years[y] || 0).toLocaleString("en-IN")}`).join(" · "), () => saveTurnover({ values: years, matchId }), "Saved to your Vault and re-scored the tenders."); }}>
-              <div className="form-grid">
-                {current.years.map((y) => (
-                  <div key={y}><label htmlFor={y}>{y} (₹)</label><input id={y} inputMode="numeric" required value={years[y] || ""} onChange={(e) => setYears({ ...years, [y]: e.target.value.replace(/[^\d]/g, "") })} placeholder="25000000" /></div>
-                ))}
-              </div>
-              <div className="row" style={{ gap: 8 }}><button disabled={busy}>Save</button><button type="button" className="ghost" disabled={busy} onClick={skip}>Skip</button></div>
-            </form>
-          )}
-          {current.kind === "gap" && (
-            <form className="row" style={{ gap: 8, flexWrap: "nowrap" }} onSubmit={(e) => { e.preventDefault(); run(text, () => answerGap({ matchId, key: current.key, value: text }), "Saved to your Vault. I'll use it in this and future formats."); }}>
-              <input value={text} onChange={(e) => setText(e.target.value)} placeholder={current.hint || "Type your answer"} aria-label="Answer" autoFocus style={{ flex: 1, width: "auto" }} />
-              <button disabled={busy || !text.trim()}>Send</button>
-              <button type="button" className="ghost" disabled={busy} onClick={skip}>Skip</button>
-            </form>
-          )}
+          {current.kind === "master" && <MasterAnswer key={current.id} step={current} busy={busy} skip={skip} send={(mine, v) => run(mine, () => answerMaster({ field: current.field, value: v, matchId }), "Saved to your masters — I won't ask again.")} />}
+          {current.kind === "fact" && <MasterAnswer key={current.id} step={current} busy={busy} skip={skip} send={(mine, v) => run(current.type === "money" ? `₹${Number(v).toLocaleString("en-IN")}` : mine, () => answerFact({ key: current.key, period: current.period || "", value: v, unit: current.unit || null, money: current.type === "money", matchId }), "Saved to your masters — every tender that needs it will use it.")} />}
+          {current.kind === "work" && <WorkAnswer busy={busy} skip={skip} send={(mine, w) => run(mine, () => addWork({ ...w, matchId }), "Saved to your works. I'll list it in every similar-works format.")} />}
+          {current.kind === "person" && <PersonAnswer busy={busy} skip={skip} send={(mine, p) => run(mine, () => addPerson({ ...p, matchId }), "Saved to your key people.")} />}
+          {current.kind === "choose_formats" && <FormatPicker step={current} busy={busy || !canPrepare} send={(mine, list) => run(mine, () => chooseFormats({ matchId, choices: list }), "Done. Now only what these formats need and your masters don't have yet.")} />}
           {current.kind === "brief" && (
             <div className="row" style={{ gap: 8 }}>
               <button disabled={busy || !canPrepare} onClick={() => run("Looks good — let's prepare the bid", () => confirmBrief({ matchId, go: true }), "Great. I'll go through what I need from you, one thing at a time.")}>Looks good — start preparing</button>
@@ -111,25 +100,13 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, canAn
               <button disabled={busy || !current.aiReady} title={current.aiReady ? "" : "AI not configured yet"} onClick={() => run("Read it with AI", () => readTender({}, form({ match_id: matchId, mode: "ai" })), (r) => r.message)}>{busy ? "Reading…" : "Read with AI · 99 credits"}</button>
             </div>
           )}
-          {current.kind === "link" && (
-            <div className="row" style={{ gap: 8 }}>
-              <Link className="btn" href={current.href} target="_blank">{current.button}</Link>
-              <button className="ghost" disabled={busy} onClick={() => { say("me", "Done"); router.refresh(); setSkipped((s) => new Set(s).add(current.id)); }}>I've done it</button>
-              <button className="ghost" disabled={busy} onClick={skip}>Skip</button>
-            </div>
-          )}
-          {current.kind === "formats" && (
-            <div className="row" style={{ gap: 8 }}>
-              <button disabled={busy || !canPrepare} onClick={() => run("Yes, match the formats", () => prepareFormats({}, form({ match_id: matchId, ai: "0" })), (r) => r.message)}>{busy ? "Working…" : "Match formats (free)"}</button>
-              <button className="ghost" disabled={busy} onClick={skip}>Skip</button>
-            </div>
-          )}
           {current.kind === "fill_ai" && (
             <div className="row" style={{ gap: 8 }}>
-              <button disabled={busy || !current.paidAi} title={current.paidAi ? "" : "Needs a paid AI key"} onClick={() => run("Yes, fill them with AI", () => prepareFormats({}, form({ match_id: matchId, ai: "1" })), (r) => r.message)}>{busy ? "Filling…" : "Fill with AI · 49 credits"}</button>
+              <button disabled={busy || !current.paidAi} title={current.paidAi ? "" : "Needs a paid AI key"} onClick={() => run("Yes, fill them with AI", () => fillCustom({ matchId }), (r) => r.message)}>{busy ? "Filling…" : "Fill with AI · 49 credits"}</button>
               <button className="ghost" disabled={busy} onClick={skip}>Not now</button>
             </div>
           )}
+          {current.kind === "price" && <CostPlanner matchId={matchId} initial={current.sheet} estimate={current.estimate} fresh={current.fresh} onDone={(label) => { say("me", label); say("bot", "Price saved for this tender. It goes on the preparation sheet; you enter it in the portal's price bid."); router.refresh(); }} />}
           {current.kind === "draft" && (
             <div className="row" style={{ gap: 8 }}>
               <button disabled={busy} onClick={() => run("Make the draft", () => generateBidPack({}, form({ match_id: matchId, kind: "draft" })), (r) => r.message || "Draft ready.")}>{busy ? "Preparing…" : "Make draft bid pack"}</button>

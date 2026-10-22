@@ -43,3 +43,4 @@ Social lead sources:
 20. `tender_conditions_questions` — `tenders.conditions`, `tender_matches.pending`, `set_tender_conditions`; `score_tender` checks yes/no conditions against `company_facts`, treats missing turnover / no recorded works / unanswered conditions as pending instead of not eligible, and defaults the similar-work window to 7 years when the tender gives none
 21. `tender_doc_fetch` — `tender_doc_jobs`, `tender_doc_chunks`; `request_tender_docs`, `answer_doc_captcha`, `mark_doc_job` (users); `doc_job_claim`, `doc_job_update`, `doc_job_poll`, `doc_job_put_chunk` (crawler, ingest key; `private.check_ingest_key`)
 22. `tender_docs_bucket_types` — `tender-docs` bucket also takes Excel, Word, zip and images
+23. `tender_price_and_costing` — `tender_matches.cost_sheet`, `quoted_price`, `price_note`, `priced_at`
