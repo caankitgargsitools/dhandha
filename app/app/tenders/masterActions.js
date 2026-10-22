@@ -65,11 +65,27 @@ export async function addWork({ work_name, client, value_inr, end_date, matchId 
   return { ok: true };
 }
 
-export async function addPerson({ name, designation, qualification, years, matchId }) {
+export async function addPerson({ name, designation, qualification, years, membership_no, pan, matchId }) {
   const { supabase, tenant, company, role } = await getContext();
   if (writer(role)) return writer(role);
   if (!String(name || "").trim()) return { error: "The person's name is needed." };
-  const { error } = await supabase.from("people").insert({ tenant_id: tenant.id, company_id: company.id, name: String(name).trim().slice(0, 120), designation: String(designation || "").slice(0, 120) || null, qualification: String(qualification || "").slice(0, 160) || null, years_experience: Number(years) || null });
+  const { error } = await supabase.from("people").insert({ tenant_id: tenant.id, company_id: company.id, name: String(name).trim().slice(0, 120), designation: String(designation || "").slice(0, 120) || null, qualification: String(qualification || "").slice(0, 160) || null, years_experience: Number(years) || null,
+    membership_no: String(membership_no || "").trim().slice(0, 40) || null, pan: String(pan || "").trim().toUpperCase().slice(0, 10) || null });
+  if (error) return { error: error.message };
+  done(matchId);
+  return { ok: true };
+}
+
+// One detail of a person already in Key people (a partner's membership number, PAN, ...), asked by a format.
+const PERSON_FIELDS = ["name", "designation", "qualification", "years_experience", "membership_no", "pan"];
+export async function setPersonField({ personId, field, value, matchId }) {
+  const { supabase, company, role } = await getContext();
+  if (writer(role)) return writer(role);
+  if (!PERSON_FIELDS.includes(field)) return { error: "Unknown detail." };
+  let v = String(value || "").trim();
+  if (!v) return { error: "Type an answer, or skip for now." };
+  if (field === "pan") { v = v.toUpperCase(); if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v)) return { error: "PAN should look like ABCDE1234F." }; }
+  const { error } = await supabase.from("people").update({ [field]: field === "years_experience" ? Number(v) || null : v.slice(0, 120) }).eq("id", personId).eq("company_id", company.id);
   if (error) return { error: error.message };
   done(matchId);
   return { ok: true };

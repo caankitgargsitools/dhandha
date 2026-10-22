@@ -50,3 +50,4 @@ Social lead sources:
 27. `data_marketplace_bucket` — private `datasets` bucket (platform admin only)
 28. `data_marketplace_grants` / `data_marketplace_fix_buy` — data RPCs not callable by anon; buy fix
 29. `precise_tender_matching` (+ `_pack_not`, `_fast_rescore`, `_fast_rescore_fix`) — `tender_preferences.rules` / `muted`, `tender_matches.matched_on` / `unfit`, `tender_pack_not`; `tender_match_words`, `tender_fits` on rules, `upsert_match` stores the words, `rescore_company` (regex prefilter, hides matches that stop fitting), `ingest_tenders` hides them too, `mute_tender_word`
+30. `people_membership_pan` — `people.membership_no`, `people.pan` (partner details in tender formats)

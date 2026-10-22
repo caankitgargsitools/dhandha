@@ -143,6 +143,8 @@ export async function addPerson(prev, formData) {
     designation: s(formData.get("designation")),
     qualification: s(formData.get("qualification")),
     years_experience: n(formData.get("years_experience")),
+    membership_no: s(formData.get("membership_no")),
+    pan: s(formData.get("pan"))?.toUpperCase() || null,
   });
   if (error) return { error: error.message };
   revalidatePath("/app/vault/people");
