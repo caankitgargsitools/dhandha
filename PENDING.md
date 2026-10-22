@@ -10,8 +10,6 @@ Last checked: 22 Oct 2026.
 |---|------|------------------|--------------------------|
 | 1 | **Indian server (Oracle Mumbai VM)** | Needs your Oracle account. Unlocks GeM tenders, faster document fetching, a proper home for the always-on fetcher. | Say "server ready" — I'll check it reports in. |
 | 2 | **Open Settings → Phone app once, install the app, turn on notifications** | Your first visit creates the notification keys and saves the site address (needs you signed in as platform admin). | I can see it in the database. |
-| 3 | **Tell me the production web address** (or buy a domain, e.g. dhandha.in) | Vercel does not show me the project. | Paste the link. |
-| 4 | **Gemini API key** (`GEMINI_API_KEY` in Vercel, free tier) | Makes tender reading free; today it uses paid Claude Haiku (99 credits a read). Needs your Google account. | I'll see reads by "gemini-free". |
 | 5 | **Google Maps key** (`GOOGLE_MAPS_API_KEY` in Vercel; enable Places API (New) with billing) | Your Google Cloud billing account. | Search works on Generate leads → Google Maps. |
 | 6 | **Apollo API key** (paste in Generate leads → Apollo) | Your Apollo account / plan with API access. | I can see it connected. |
 | 7 | **Razorpay switch-on** (keys in Vercel, webhook in Razorpay, secret in Supabase Vault, seller GSTIN in Admin → Billing) | Your Razorpay account and KYC. | I can see the webhook secret and GSTIN. |
@@ -48,6 +46,7 @@ Last checked: 22 Oct 2026.
 - Tender assistant: fetch from portal with captcha in chat, brief, format picker, master questions, cost planner, bid file.
 - Crawler reads every active GePNIC tender (12,700+ open); always-on document fetcher; pages run in Mumbai.
 - Phone app with notifications; menus: Source new business (Tenders / Generate leads), Business Vault.
+- Live address found: https://dhandha-amber.vercel.app. Claude now has Vercel access; Gemini and Claude keys switched on for the live site and test copies.
 - Precise tender search: strict keywords and blockers, "Matched on" with × to switch a word off; GSC went from 172 matches to 30 genuine CA tenders.
 - Data marketplace: upload customer databases (CSV/Excel), customers filter and buy per record into Leads.
 - Phone: wide tables (Leads etc.) now scroll sideways.
