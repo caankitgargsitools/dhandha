@@ -11,20 +11,12 @@ export default async function AppLayout({ children }) {
   const sections = [
     { items: [{ href: "/app", label: "Dashboard", icon: "home" }, { href: "/app/tasks", label: "Tasks", icon: "check" }] },
     { title: "Find business", items: [
-      { href: "/app/tenders", label: "Tenders", icon: "tender" },
+      { href: "/app/tenders", label: "Tenders", icon: "tender", exclude: ["/app/tenders/preferences"] },
       { href: "/app/leads", label: "Leads", icon: "leads" },
       { href: "/app/crm", label: "CRM pipeline", icon: "crm" },
       { href: "/app/outreach", label: "Outreach", icon: "mail" },
     ] },
-    { title: "Business Vault", items: [
-      { href: "/app/tenders/preferences", label: "What we do", icon: "briefcase" },
-      { href: "/app/vault/profile", label: "Company profile", icon: "building" },
-      { href: "/app/vault/documents", label: "Documents", icon: "doc" },
-      { href: "/app/vault/facts", label: "Facts", icon: "facts" },
-      { href: "/app/vault/experience", label: "Experience", icon: "briefcase" },
-      { href: "/app/vault/people", label: "Key people", icon: "people" },
-      { href: "/app/brand", label: "Letterhead & signature", icon: "pen" },
-    ] },
+    { items: [{ href: "/app/vault", label: "Business Vault", icon: "vault", match: ["/app/vault", "/app/brand", "/app/tenders/preferences"] }] },
     { title: "Account", items: [
       { href: "/app/wallet", label: "Credits & plan", icon: "wallet" },
       { href: "/app/support", label: "Help & tickets", icon: "ticket" },
