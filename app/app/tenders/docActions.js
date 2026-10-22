@@ -1,7 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { getContext } from "@/lib/session";
-import { startDocFetcher } from "@/lib/github";
 
 // Tender assistant → crawler: fetch this tender's documents from its portal.
 export async function fetchDocs({ matchId }) {
@@ -9,8 +8,8 @@ export async function fetchDocs({ matchId }) {
   if (role === "viewer") return { error: "Viewers cannot fetch documents." };
   const { data: jobId, error } = await supabase.rpc("request_tender_docs", { p_match: matchId });
   if (error) return { error: error.message };
-  const started = await startDocFetcher();
-  return { jobId, started: started.ok, reason: started.reason };
+  // the always-on fetcher (GitHub Actions "tender docs") claims it within seconds
+  return { jobId };
 }
 
 export async function answerDocCaptcha({ jobId, answer }) {
