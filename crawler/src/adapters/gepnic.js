@@ -1,10 +1,12 @@
-// NIC GePNIC portals (CPPP, Defence and most states). Reads "Latest Active Tenders",
-// opens each tender's detail page for value / EMD / pre-bid, never touches captcha-protected downloads.
+// NIC GePNIC portals (CPPP, Defence and most states). Reads every active tender through the public
+// "Tenders by Organisation" pages, opens the newest tenders' detail pages for value / EMD / pre-bid,
+// never touches captcha-protected pages.
 import { parseIstDate, rupees, industryPack, stateFrom } from "../classify.js";
 import { dumpPage } from "../dump.js";
 
-// "Tenders by Closing Date" is public (no captcha) and has the same columns the old Latest Active list had.
+// the link stored on each tender (the public closing-date list)
 const LIST = "?page=FrontEndListTendersbyDate&service=page";
+const ORGS = "?page=FrontEndTendersByOrganisation&service=page";
 
 export function parseTitleCell(text) {
   // "[Title of work] [Ref No][2026_HRY_412871_1]" — the last bracket is the tender ID
@@ -30,50 +32,36 @@ export function parseDetail(rows) {
   };
 }
 
-export async function crawlGepnic(browser, site, { maxPages = 20, log = console.log, progress = () => {} } = {}) {
+export async function crawlGepnic(browser, site, { maxOrgs = 400, maxDetails = 40, log = console.log, progress = () => {} } = {}) {
   const ctx = await browser.newContext({ locale: "en-IN", userAgent: "Mozilla/5.0 (DhandhaBot; tender alerts for registered businesses)" });
   const page = await ctx.newPage();
   const out = [];
   try {
-    await page.goto(site.base + LIST, { waitUntil: "domcontentloaded", timeout: 60000 });
-    // the page opens on "Closing Today"; widen it to the next 14 days (later ones show up on later runs)
-    // The tab is a "javascript:tapestry.form.submit(...)" link; a plain click did not switch it, so run the
-    // portal's own submit and wait for the new page.
-    const tab = (await page.$("a:text-is('Closing within 14 days')")) || (await page.$("a#LinkSubmit_1"));
-    const js = tab && (await tab.getAttribute("href"));
-    if (js) {
-      const nav = page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 45000 }).catch(() => null);
-      const m = js.match(/submit\('([^']+)',\s*'([^']+)'\)/);
-      if (m) {
-        // what tapestry.form.submit(form, name) does: name the pressed control, then submit the form
-        await page.evaluate(([formName, name]) => {
-          const f = document.forms[formName] || document.getElementById(formName);
-          let i = f.querySelector("input[name=submitname]");
-          if (!i) { i = document.createElement("input"); i.type = "hidden"; i.name = "submitname"; f.appendChild(i); }
-          i.value = name;
-          HTMLFormElement.prototype.submit.call(f);
-        }, [m[1], m[2]]);
-      } else await tab.click();
-      if (!(await nav)) log(`  ${site.portal}: the 14-day tab did not load; reading the default list`);
-    }
-    // the list is sorted soonest-closing first, so the first pages are tenders closing today; start from the
-    // last page (most time left to bid) and walk backwards
-    const go = async (a) => {
-      const href = a && (await a.getAttribute("href"));
-      if (!href || href.startsWith("javascript")) return false;
-      await page.goto(new URL(href, page.url()).toString(), { waitUntil: "domcontentloaded", timeout: 60000 });
-      return true;
-    };
-    const backwards = await go(await page.$("a#linkLast")).catch(() => false);
+    // "Tenders by Organisation" is public (no captcha): the list of organisations with their tender counts,
+    // and each organisation's page lists all of its active tenders. Together that is every active tender.
+    await page.goto(site.base + ORGS, { waitUntil: "domcontentloaded", timeout: 60000 });
+    const orgs = await page.$$eval("table.list_table tr, table#table tr", (trs) => trs
+      .map((tr) => ({ cells: [...tr.querySelectorAll("td")].map((td) => td.innerText.trim()), href: tr.querySelector("td a")?.getAttribute("href") }))
+      .filter((r) => r.href && /^\d+\.?$/.test(r.cells[0] || "")));
+    if (!orgs.length) await dumpPage(page, `${site.portal} organisations`, log);
+    const todo = orgs.slice(0, maxOrgs);
+    log(`  ${site.portal}: ${orgs.length} organisations, ${orgs.reduce((n, o) => n + (Number(o.cells[2]) || 0), 0)} active tenders listed`);
     const seen = new Set();
-    for (let p = 0; p < maxPages; p++) {
-      progress({ phase: "listing", page: p + 1, of: maxPages });
+    for (const [i, o] of todo.entries()) {
+      progress({ phase: "listing", page: i + 1, of: todo.length });
+      try {
+        await page.goto(new URL(o.href, site.base + "/").toString(), { waitUntil: "domcontentloaded", timeout: 60000 });
+      } catch (e) { log(`  ${site.portal}: ${o.cells[1]} did not load (${e.message.split("\n")[0]})`); continue; }
       const rows = await page.$$eval("table.list_table tr, table#table tr", (trs) =>
         trs.map((tr) => {
           const tds = [...tr.querySelectorAll("td")];
           const a = tr.querySelector("td a");
           return { cells: tds.map((td) => td.innerText.trim()), href: a ? a.getAttribute("href") : null };
         }).filter((r) => r.cells.length >= 6 && /^\d+\.?$/.test(r.cells[0])));
+      if (!rows.length && Number(o.cells[2]) > 0 && i === 0) {
+        log(`  ${site.portal}: ${o.cells[1]} showed no tenders (expected ${o.cells[2]})`);
+        await dumpPage(page, `${site.portal} organisation`, log);
+      }
       for (const r of rows) {
         const { title, ref, tenderId } = parseTitleCell(r.cells[4]);
         if (!tenderId || seen.has(tenderId)) continue;
@@ -86,19 +74,16 @@ export async function crawlGepnic(browser, site, { maxPages = 20, log = console.
           state: site.state || stateFrom(org), industry_pack: industryPack(title), url: site.base + LIST, _detail: r.href,
         });
       }
-      if (p === 0 && rows.length === 0) await dumpPage(page, `${site.portal} tenders`, log);
-      if (p === 0 && rows.length) log(`  ${site.portal}: first page closes ${rows[0].cells[2]} … ${rows[rows.length - 1].cells[2]}`);
-      if (rows.length === 0) break;
-      const next = await page.$(backwards ? "a#linkBwd, a:text-is('<')" : "a#linkFwd, a:has-text('Next >')");
-      // a slow portal on a later page keeps what was read so far
-      try { if (!(await go(next))) break; }
-      catch (e) { log(`  ${site.portal} page ${p + 2} did not load (${e.message.split("\n")[0]}) — keeping ${out.length}`); break; }
-      await new Promise((r) => setTimeout(r, 1000)); // polite pace
+      await new Promise((r) => setTimeout(r, 800)); // polite pace
     }
+    // Detail pages (value, EMD, pre-bid) cost a page load each, so only the newest few per run; the rest get
+    // theirs on later runs or when a company opens the tender.
+    const cutoff = Date.now() + 2 * 864e5;
+    const detailed = new Set(out.filter((t) => t._detail && Date.parse(t.due_at) > cutoff)
+      .sort((a, b) => String(b.published_on).localeCompare(String(a.published_on))).slice(0, maxDetails));
     // detail pages (value, EMD, pre-bid) — links are session-bound, so open them in the same context
-    for (const [i, t] of out.entries()) {
-      progress({ phase: "details", done: i, total: out.length });
-      if (!t._detail) continue;
+    for (const [i, t] of [...detailed].entries()) {
+      progress({ phase: "details", done: i, total: detailed.size });
       try {
         const href = t._detail.startsWith("http") ? t._detail : new URL(t._detail, site.base + "/").toString();
         const d = await ctx.newPage();
@@ -111,8 +96,8 @@ export async function crawlGepnic(browser, site, { maxPages = 20, log = console.
       } catch (e) {
         log(`  detail failed ${site.portal} ${t.tender_ref}: ${e.message}`);
       }
-      delete t._detail;
     }
+    for (const t of out) delete t._detail;
   } finally {
     await ctx.close();
   }
