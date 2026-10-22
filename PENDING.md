@@ -24,6 +24,7 @@ Last checked: 22 Oct 2026.
 | 14 | **Try the DFO Nuh tender in the assistant** (brief approved — continue: formats, questions, price, bid file) | Your answers and price. | I see the bid file made. |
 | 15 | **Decide Phase 4 video style**: template videos / talking avatar / both | Your call. | Tell me A, B or both. |
 | 16 | **Older Dhandha session "Ponytail GitHub installation"** is waiting for a reply from you | Started by you earlier. | Reply there, or tell me to close it. |
+| 17 | **Upload your first database** at Admin → Data marketplace (CSV/Excel), declare its source, set a price, Go live | Only you know where the data comes from and that it is lawful (business data, or consumers who consented). | I see a live database. |
 
 ## I'm doing (no action from you)
 
@@ -45,4 +46,6 @@ Last checked: 22 Oct 2026.
 - Tender assistant: fetch from portal with captcha in chat, brief, format picker, master questions, cost planner, bid file.
 - Crawler reads every active GePNIC tender (12,700+ open); always-on document fetcher; pages run in Mumbai.
 - Phone app with notifications; menus: Source new business (Tenders / Generate leads), Business Vault.
+- Data marketplace: upload customer databases (CSV/Excel), customers filter and buy per record into Leads.
+- Phone: wide tables (Leads etc.) now scroll sideways.
 - Lead sources: tender winners, MCA, Facebook & Instagram, LinkedIn, Google Maps, Apollo, Excel/CSV.

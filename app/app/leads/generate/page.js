@@ -22,6 +22,7 @@ export default async function GenerateLeads() {
     { href: "/app/leads/linkedin", icon: "people", title: "LinkedIn", text: "Your LinkedIn connections as leads, from LinkedIn's own export. Free.", status: by("linkedin") ? `${by("linkedin")} imported` : "Not imported yet", ok: by("linkedin") > 0 },
     { href: "/app/leads/google-maps", icon: "map", title: "Google Maps", text: "Local businesses by what they do and where — phone, address, website, rating.", status: by("google_maps") ? `${by("google_maps")} added` : "Search businesses", ok: by("google_maps") > 0 },
     { href: "/app/leads/apollo", icon: "people", title: "Apollo", text: "Decision-makers by job title, place and industry, from your own Apollo account.", status: apollo ? `Connected · ${by("apollo")} added` : "Not connected", ok: apollo },
+    { href: "/app/leads/databases", icon: "facts", title: "Buy data", text: "Ready contact databases — search and filter by industry, role, city and more for free; pay per record you take.", status: by("database") ? `${by("database")} bought` : "Browse databases", ok: true },
     { href: "/app/leads?import=1", icon: "doc", title: "Import a list", text: "Excel or CSV from anywhere — IndiaMART, directories, old client lists. Duplicates are skipped.", status: `${by("upload", "indiamart", "directory")} imported`, ok: true },
   ];
   return (
