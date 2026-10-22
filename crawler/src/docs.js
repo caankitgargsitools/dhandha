@@ -121,8 +121,18 @@ async function downloadDocs(page, job) {
   const plan = [...(zip ? [zip] : []), ...singles].slice(0, MAX_FILES);
   log(`  ${plan.length} document link(s): ${plan.map((l) => l.zip ? "[zip]" : l.name).join(", ")}`);
   const files = [];
+  // a zip is opened straight away, so the separate links below can skip what it already held
+  const add = (name, data) => {
+    if (!data || data.length > MAX_BYTES) return;
+    if (/\.zip$/i.test(name) || data.subarray(0, 2).toString() === "PK" && !/\.(xlsx|docx)$/i.test(name)) {
+      try { for (const x of unzip(data)) if (DOC_RX.test(x.name) && !/\.zip$/i.test(x.name)) files.push({ name: x.name, data: x.data }); return; } catch {}
+    }
+    files.push({ name, data });
+  };
+  const seen = new Set();
   for (const [n, l] of plan.entries()) {
-    if (!l.zip && files.some((f) => /\.zip$/i.test(f.name))) break; // the zip already has them all
+    if (!l.zip && (seen.has(l.name) || files.some((f) => f.name === l.name))) continue;
+    seen.add(l.name);
     await update(job, { status: "running", step: l.zip ? "Downloading all documents (zip)" : `Downloading ${n + 1} of ${plan.length}: ${l.name.slice(0, 60)}` });
     for (let tryNo = 0; tryNo < 2; tryNo++) {
       const handle = (await page.$$("a"))[l.i];
@@ -140,7 +150,7 @@ async function downloadDocs(page, job) {
       if (got) {
         const p = await got.path();
         const data = p ? await readFile(p) : null;
-        if (data && data.length <= MAX_BYTES) files.push({ name: got.suggestedFilename() || l.name || l.t, data });
+        add(got.suggestedFilename() || l.name || l.t, data);
         break;
       }
       if (await hasCaptcha(page)) {
@@ -150,7 +160,7 @@ async function downloadDocs(page, job) {
         if (d2) {
           const p = await d2.path();
           const data = p ? await readFile(p) : null;
-          if (data && data.length <= MAX_BYTES) files.push({ name: d2.suggestedFilename() || l.name || l.t, data });
+          add(d2.suggestedFilename() || l.name || l.t, data);
           break;
         }
         // back on the detail page after the captcha: the link list may have moved
@@ -162,8 +172,8 @@ async function downloadDocs(page, job) {
       break;
     }
   }
-  // portals that only offer one zip: open it
-  return files.flatMap((f) => /\.zip$/i.test(f.name) ? (() => { try { return unzip(f.data).filter((x) => DOC_RX.test(x.name)); } catch { return [f]; } })() : [f]).slice(0, 30);
+  log(`  got: ${files.map((f) => f.name).join(", ")}`);
+  return files.slice(0, 30);
 }
 
 async function upload(job, files) {

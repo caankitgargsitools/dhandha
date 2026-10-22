@@ -26,7 +26,7 @@ export async function readTender(prev, formData) {
   const { data: m } = await supabase.from("tender_matches").select("id, tender_id, tenders(id, tender_ref, state)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
   if (!m) return { error: "Tender not found." };
   const { data: files } = await supabase.from("tender_files").select("*").eq("tender_id", m.tender_id).order("created_at");
-  if (!files?.length) return { error: "Upload the tender documents (PDF) first." };
+  if (!files?.some((f) => /\.pdf$/i.test(f.file_name))) return { error: files?.length ? "Only spreadsheets or other files so far — the tender's PDF (NIT) is needed to read it." : "Upload the tender documents (PDF) first." };
 
   const price = mode === "ai" ? 99 : 10;
   const { data: w } = await supabase.from("wallets").select("balance").eq("tenant_id", tenant.id).maybeSingle();
