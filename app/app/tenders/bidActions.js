@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { getContext } from "@/lib/session";
 import { buildBidPack } from "@/lib/bidpack";
-import { keywordsFor, SERVICE_INDEX } from "@/lib/taxonomy";
+import { keywordsFor, rulesFor, parseRule, SERVICE_INDEX } from "@/lib/taxonomy";
 
 async function download(supabase, path) {
   const { data, error } = await supabase.storage.from("brand").download(path);
@@ -86,13 +86,15 @@ export async function savePreferences(prev, formData) {
   const num = (k) => { const v = String(formData.get(k) || "").replace(/,/g, "").trim(); return v ? Number(v) * (formData.get(`${k}_unit`) === "cr" ? 1e7 : 1e5) : null; };
   const services = formData.getAll("services").map(String).filter((id) => SERVICE_INDEX[id]);
   const custom = list("keywords");
+  const { data: old } = await supabase.from("tender_preferences").select("muted").eq("company_id", company.id).maybeSingle();
+  const muted = (old?.muted || []).filter((m) => !custom.some((c) => parseRule(c).k.toLowerCase() === m));
   const row = {
     company_id: company.id, tenant_id: tenant.id,
     services, custom_keywords: custom,
     // matching is by the chosen services' own words, so "roads" does not pull in every construction tender
     packs: [],
     allowed_packs: [...new Set(services.map((id) => SERVICE_INDEX[id].pack || "any"))],
-    keywords: [...new Set([...keywordsFor(services), ...custom])], exclude_keywords: list("exclude_keywords"), states: formData.getAll("states").map(String),
+    keywords: [...new Set([...keywordsFor(services), ...custom.map((c) => parseRule(c).k)])], rules: rulesFor(services, custom, muted), muted, exclude_keywords: list("exclude_keywords"), states: formData.getAll("states").map(String),
     min_value: num("min_value"), max_value: num("max_value"), max_emd: num("max_emd"),
     min_days_left: Number(formData.get("min_days_left") || 5), updated_at: new Date().toISOString(),
   };
@@ -110,4 +112,16 @@ export async function rescore() {
   await supabase.rpc("rescore_company", { p_company: company.id });
   revalidatePath("/app/tenders");
   revalidatePath("/app");
+}
+
+// "Never match this word": the word stops counting for this company; its tenders are hidden on re-score.
+export async function muteTenderWord(formData) {
+  const { supabase, company } = await getContext();
+  const word = String(formData.get("word") || "").trim().toLowerCase();
+  if (!word) return;
+  const { data: p } = await supabase.from("tender_preferences").select("services, custom_keywords, muted").eq("company_id", company.id).maybeSingle();
+  if (!p) return;
+  const rules = rulesFor(p.services || [], p.custom_keywords || [], [...(p.muted || []), word]);
+  await supabase.rpc("mute_tender_word", { p_company: company.id, p_word: word, p_rules: rules });
+  revalidatePath("/app/tenders");
 }

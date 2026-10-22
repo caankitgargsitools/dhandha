@@ -4,7 +4,7 @@ import { ScoreRing, Donut } from "@/components/Charts";
 import Icon from "@/components/Icon";
 import PreviewNote from "@/components/PreviewNote";
 import { setTenderStatus } from "./actions";
-import { rescore } from "./bidActions";
+import { rescore, muteTenderWord } from "./bidActions";
 import QuestionCards from "./QuestionCards";
 import { openQuestions } from "@/lib/conditions";
 
@@ -16,8 +16,9 @@ export default async function Tenders({ searchParams }) {
   const tab = TABS.some(([k]) => k === params?.tab) ? params.tab : "open";
   const { supabase, company, role } = await getContext();
   const { data: all } = await supabase.from("tender_matches")
-    .select("id, score, eligible, pending, reasons, status, tenders(*)").eq("company_id", company.id).order("score", { ascending: false });
-  const rows = (all || []).filter((m) => m.tenders);
+    .select("id, score, eligible, pending, reasons, status, matched_on, unfit, tenders(*)").eq("company_id", company.id).order("score", { ascending: false });
+  // matches that no longer fit the search are hidden unless someone already acted on them
+  const rows = (all || []).filter((m) => m.tenders && !(m.unfit && ["new", "skipped"].includes(m.status)));
   const { data: pref } = await supabase.from("tender_preferences").select("services, custom_keywords").eq("company_id", company.id).maybeSingle();
   const noPrefs = !pref || (!(pref.services || []).length && !(pref.custom_keywords || []).length);
   const live = (m) => daysLeft(m.tenders.due_at) >= 0;
@@ -84,6 +85,16 @@ export default async function Tenders({ searchParams }) {
                 </div>
                 <h4><Link href={`/app/tenders/${m.id}`} style={{ color: "inherit" }}>{t.title}</Link></h4>
                 <div className="small muted">{t.authority}{t.district ? `, ${t.district}` : ""} · value {t.value_inr ? lakh(t.value_inr) : "not stated"} · EMD {t.emd_inr ? lakh(t.emd_inr) : "nil"}</div>
+                {m.matched_on?.length > 0 && (
+                  <div className="row tiny" style={{ gap: 6, marginTop: 6 }}>
+                    <span className="faint">Matched on:</span>
+                    {m.matched_on.map((w) => (
+                      <span key={w} className="chip mute" style={{ gap: 4 }}>{w}
+                        {canWrite && <form action={muteTenderWord} style={{ display: "inline" }}><input type="hidden" name="word" value={w} /><button className="link" title={`Never match "${w}" again`} aria-label={`Never match ${w} again`} style={{ padding: 0, border: 0, background: "none", color: "inherit", cursor: "pointer", fontSize: 13 }}>×</button></form>}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <ul className="reasons">
                   {(m.reasons || []).map((r, i) => (
                     <li key={i}><Icon name={r.ok ? "check" : "cross"} size={14} style={{ color: r.ok ? "var(--leaf)" : "var(--blood)" }} />{r.text}</li>

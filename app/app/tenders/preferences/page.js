@@ -22,9 +22,10 @@ export default async function Preferences({ searchParams }) {
             <h3>Industry, sub-industry and services</h3>
             <ServicePicker initial={p?.services || []} />
             <div className="form-grid">
-              <div><label htmlFor="keywords">Also match these words (comma separated)</label><input id="keywords" name="keywords" defaultValue={(p?.custom_keywords || []).join(", ")} placeholder="Anything specific to you, e.g. dredging, kiosk" /></div>
+              <div><label htmlFor="keywords">Also match these words (comma separated)</label><input id="keywords" name="keywords" defaultValue={(p?.custom_keywords || []).join(", ")} placeholder="e.g. dredging, kiosk, valuation + land|property" /><div className="tiny faint">To stay precise, add "+" and words that must also appear: <em>valuation + land|property</em>.</div></div>
               <div><label htmlFor="exclude_keywords">Never show tenders with</label><input id="exclude_keywords" name="exclude_keywords" defaultValue={(p?.exclude_keywords || []).join(", ")} placeholder="bridge, dredging" /></div>
             </div>
+            {p?.muted?.length > 0 && <p className="tiny faint" style={{ margin: 0 }}>Words you switched off (they no longer find tenders): {p.muted.join(", ")}. Type one in “Also match these words” to switch it back on.</p>}
           </div>
           <div className="panel stack-sm">
             <h3>Where</h3>
