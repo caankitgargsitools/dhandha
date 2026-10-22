@@ -36,7 +36,7 @@ It covers:
 
 ## Map of the code
 - `lib/session.js`: `getContext()` (user, tenant, role, company switcher, 2FA check). `lib/admin.js` holds the platform-admin context.
-- Source new business: one menu item → `/app/source` (cards: Tenders, Leads, Facebook & Instagram, LinkedIn); list pages share `components/SourceTabs.js` (via `layout.js` in tenders, leads, settings/facebook). LinkedIn import page: `/app/leads/linkedin`. "Win the business" group: CRM pipeline, Outreach.
+- Source new business: a menu item with a submenu (SideNav `children`, opens on hover or tap): Tenders and Generate leads. `/app/source` shows both as cards; `/app/leads/generate` holds every lead source as a card (Your leads, Tender winners, New companies, Facebook & Instagram, LinkedIn `/app/leads/linkedin`, Import a list) — new sources go there. Lead pages share `components/SourceTabs.js`. "Win the business" group: CRM pipeline, Outreach.
 - Business Vault: one menu item → `/app/vault` (cards with completeness); its pages (What we do, Company profile, Documents, Facts, Experience, Key people, Letterhead & signature) share a tab strip (`components/VaultTabs.js` via `layout.js` in each folder). SideNav items take `match` / `exclude` path lists for highlighting.
 - `lib/taxonomy.js`: 10 industries → 29 sub-industries → 65 services, mapped to keywords and industry pack. Used by "What we do" at `/app/tenders/preferences`.
 - Tender engine:

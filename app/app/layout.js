@@ -10,7 +10,10 @@ export default async function AppLayout({ children }) {
   const trialLeft = daysLeft(tenant.trial_ends_at);
   const sections = [
     { items: [{ href: "/app", label: "Dashboard", icon: "home" }, { href: "/app/tasks", label: "Tasks", icon: "check" }] },
-    { items: [{ href: "/app/source", label: "Source new business", icon: "leads", match: ["/app/source", "/app/tenders", "/app/leads", "/app/settings/facebook"], exclude: ["/app/tenders/preferences"] }] },
+    { items: [{ href: "/app/source", label: "Source new business", icon: "leads", match: ["/app/source", "/app/tenders", "/app/leads", "/app/settings/facebook"], exclude: ["/app/tenders/preferences"], children: [
+      { href: "/app/tenders", label: "Tenders", icon: "tender", exclude: ["/app/tenders/preferences"] },
+      { href: "/app/leads/generate", label: "Generate leads", icon: "leads", match: ["/app/leads", "/app/settings/facebook"] },
+    ] }] },
     { title: "Win the business", items: [
       { href: "/app/crm", label: "CRM pipeline", icon: "crm" },
       { href: "/app/outreach", label: "Outreach", icon: "mail" },
