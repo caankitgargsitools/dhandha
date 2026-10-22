@@ -223,3 +223,40 @@ export async function addMcaCompanies(prev, formData) {
   if (!data.added) return { error: "Those companies are already in your leads." };
   return { message: `${data.added} companies added to your leads.${data.duplicates?.length ? ` ${data.duplicates.length} were already there.` : ""}` };
 }
+
+// Google Maps / Apollo results ticked on their search pages → leads. Google Maps leads cost lead_found credits
+// (Dhandha pays Google); Apollo uses the workspace's own Apollo account, so they are free here.
+export async function addFoundLeads(prev, formData) {
+  const ctx = await getContext();
+  if (ctx.role === "viewer") return { error: "Viewers cannot add leads." };
+  const source = formData.get("source") === "apollo" ? "apollo" : "google_maps";
+  const picks = formData.getAll("pick").map(String).slice(0, 100);
+  if (!picks.length) return { error: "Tick the ones you want to add." };
+  const rows = [];
+  for (const p of picks) {
+    try {
+      const r = JSON.parse(p);
+      const keep = ["name", "contact_person", "phone", "email", "city", "state", "industry", "website", "linkedin_url", "notes"];
+      rows.push(Object.fromEntries(keep.map((k) => [k, typeof r[k] === "string" ? r[k].slice(0, k === "notes" ? 1500 : 300) : null])));
+    } catch { /* skip a damaged row */ }
+  }
+  const { data, error } = await runImport(ctx, source, String(formData.get("owner_id") || "") || null, rows.filter((r) => r.name));
+  if (error) return { error: /insufficient credits/i.test(error.message) ? "Not enough credits. Top up in Credits & plan." : error.message };
+  revalidatePath("/app/leads", "layout");
+  return { message: `${data.added} added to your leads.${data.duplicates?.length ? ` ${data.duplicates.length} were already there.` : ""}${source === "google_maps" && data.added ? ` ${data.added * 2} credits used.` : ""}` };
+}
+
+export async function saveApolloKey(prev, formData) {
+  const { supabase, tenant, isAdmin } = await getContext();
+  if (!isAdmin) return { error: "Only the workspace admin can connect Apollo." };
+  const { error } = await supabase.rpc("set_apollo_key", { p_tenant: tenant.id, p_key: String(formData.get("key") || "").trim() });
+  if (error) return { error: error.message };
+  revalidatePath("/app/leads/apollo");
+  return { message: "Apollo connected." };
+}
+
+export async function disconnectApollo() {
+  const { supabase, tenant } = await getContext();
+  await supabase.rpc("disconnect_apollo", { p_tenant: tenant.id });
+  revalidatePath("/app/leads/apollo");
+}

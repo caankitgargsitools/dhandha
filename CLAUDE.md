@@ -36,7 +36,8 @@ It covers:
 
 ## Map of the code
 - `lib/session.js`: `getContext()` (user, tenant, role, company switcher, 2FA check). `lib/admin.js` holds the platform-admin context.
-- Source new business: a menu item with a submenu (SideNav `children`, opens on hover or tap): Tenders and Generate leads. `/app/source` shows both as cards; `/app/leads/generate` holds every lead source as a card (Your leads, Tender winners, New companies, Facebook & Instagram, LinkedIn `/app/leads/linkedin`, Import a list) — new sources go there. Lead pages share `components/SourceTabs.js`. "Win the business" group: CRM pipeline, Outreach.
+- Source new business: a menu item with a submenu (SideNav `children`, opens on hover or tap): Tenders and Generate leads. `/app/source` shows both as cards; `/app/leads/generate` holds every lead source as a card (Your leads, Tender winners, New companies, Facebook & Instagram, LinkedIn `/app/leads/linkedin`, Google Maps `/app/leads/google-maps`, Apollo `/app/leads/apollo`, Import a list) — new sources go there.
+  - Google Maps (`lib/connectors.js` `placesSearch`/`mapPlace`, tested): Places API (New) Text Search with Dhandha's `GOOGLE_MAPS_API_KEY` (Vercel; owner switch-on); 2 credits (`lead_found`) per lead added. Apollo: each workspace admin connects their own Apollo API key (`set_apollo_key` → Vault, `lead_connectors`); people search via `apolloSearch`/`mapApolloPerson`; free in Dhandha. Ticked results → `addFoundLeads` → `import_leads` (sources `google_maps`, `apollo`). Lead pages share `components/SourceTabs.js`. "Win the business" group: CRM pipeline, Outreach.
 - Business Vault: one menu item → `/app/vault` (cards with completeness); its pages (What we do, Company profile, Documents, Facts, Experience, Key people, Letterhead & signature) share a tab strip (`components/VaultTabs.js` via `layout.js` in each folder). SideNav items take `match` / `exclude` path lists for highlighting.
 - `lib/taxonomy.js`: 10 industries → 29 sub-industries → 65 services, mapped to keywords and industry pack. Used by "What we do" at `/app/tenders/preferences`.
 - Tender engine:
@@ -100,6 +101,7 @@ It covers:
 - **Phase 3, part 2:** tender-winner leads from GePNIC award results. When a Dhandha company itself wins, its tender match is marked won.
 
 ## Still to do
+- Google Maps switch-on: owner enables Places API (New) in a Google Cloud project with billing, creates an API key (restrict to Places API), adds `GOOGLE_MAPS_API_KEY` in Vercel.
 - Desktop helper for DSC-assisted submission.
 - Crawler runs on GitHub Actions (`.github/workflows/crawler-run.yml`, 3×/day + Run workflow; secret `INGEST_KEY`; 17-min budget, 3 portals at a time, portals rotate). Live progress: crawler → `crawler_progress` → `crawler_live` / `crawler_step_stats` → Admin → Crawler "Live crawler" window (`app/admin/crawler/LiveCrawler.js`, estimates in `lib/crawlerEta.js`). If some state portals refuse GitHub's US machines, move them to an Indian server.
 - Optional Indian server: Admin → Crawler → Create key shows a cloud-init script; paste it into a new Oracle Always Free Ubuntu VM (Mumbai). The image is published to GHCR by `.github/workflows/crawler-image.yml` (make the package public once).
