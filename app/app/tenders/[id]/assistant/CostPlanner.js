@@ -66,7 +66,7 @@ export default function CostPlanner({ matchId, initial, estimate, saved, fresh, 
 
   return (
     <div className="stack-sm" style={{ width: "100%" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.7fr) minmax(240px, 1fr)", gap: 12, alignItems: "start" }}>
+      <div className="grid-main">
         <div className="stack-sm">
           <Section title="Items / BOQ" total={c.boq} onAdd={() => addRow("boq", { item: "", unit: "job", qty: "", rate: "" })}>
             <table className="small" style={{ width: "100%" }}><thead><tr><th>Item</th><th>Unit</th><th>Qty</th><th>Rate ₹</th><th className="right">Amount</th><th /></tr></thead><tbody>
