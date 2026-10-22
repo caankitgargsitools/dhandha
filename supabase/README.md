@@ -45,3 +45,4 @@ Social lead sources:
 22. `tender_docs_bucket_types` — `tender-docs` bucket also takes Excel, Word, zip and images
 23. `tender_price_and_costing` — `tender_matches.cost_sheet`, `quoted_price`, `price_note`, `priced_at`
 24. `phone_app_push` — `push_subscriptions`, `push_queue`; `push_public_key`, `push_init_keys` (private key to Vault), `push_test`, `push_claim` / `push_report` (worker key), `private.push_to`; triggers on `crawler_captchas` and `tender_doc_jobs`; cron `push_tender_digest` (hourly), `push_followups` (daily), `push_kick_if_due` (5 min); `worker_kick` allows `/api/push/run`
+25. `lead_sources_maps_apollo` — lead source `apollo`; `import_leads` charges `lead_found` for `google_maps` and accepts contactless `apollo` rows; `lead_connectors` + `set_apollo_key` / `disconnect_apollo` / `apollo_key` (Apollo key in Vault)

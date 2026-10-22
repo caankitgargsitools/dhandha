@@ -9,6 +9,8 @@ export const LEAD_PAGES = [
   ["/app/leads/new-companies", "New companies"],
   ["/app/settings/facebook", "Facebook & Instagram"],
   ["/app/leads/linkedin", "LinkedIn"],
+  ["/app/leads/google-maps", "Google Maps"],
+  ["/app/leads/apollo", "Apollo"],
 ];
 
 export default function SourceTabs() {
