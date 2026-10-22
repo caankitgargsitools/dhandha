@@ -16,7 +16,7 @@ export async function generateBidPack(prev, formData) {
   const kind = formData.get("kind") === "final" ? "final" : "draft";
   if (!["admin", "manager", "bid_preparer"].includes(role)) return { error: "Only admins, managers and bid preparers can make bid packs." };
 
-  const { data: match } = await supabase.from("tender_matches").select("id, tender_id, company_id, filled_formats, tenders(*)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
+  const { data: match } = await supabase.from("tender_matches").select("id, tender_id, company_id, filled_formats, reasons, tenders(*)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
   if (!match) return { error: "Tender not found for this company." };
 
   if (kind === "final") {
@@ -41,7 +41,11 @@ export async function generateBidPack(prev, formData) {
   ]);
   const asset = (k) => (brand || []).find((b) => b.kind === k);
   const lh = asset("letterhead");
-  const ctx = { formats: match.filled_formats || [], tender: match.tenders, company: c, facts: facts || [], works: works || [], people: people || [], docs: docs || [], docTypes: docTypes || [], draft: kind === "draft" };
+  const [{ data: reads }, { data: jobs }] = await Promise.all([
+    supabase.from("tender_reads").select("fields, risks, summary, formats").eq("tender_id", match.tender_id).order("created_at", { ascending: false }).limit(1),
+    supabase.from("tender_doc_jobs").select("detail").eq("tender_id", match.tender_id).order("created_at", { ascending: false }).limit(1),
+  ]);
+  const ctx = { read: reads?.[0], detail: jobs?.[0]?.detail, reasons: match.reasons || [], formats: match.filled_formats || [], tender: match.tenders, company: c, facts: facts || [], works: works || [], people: people || [], docs: docs || [], docTypes: docTypes || [], draft: kind === "draft" };
   if (lh) {
     ctx.letterheadBytes = await download(supabase, lh.storage_path);
     ctx.letterheadType = lh.storage_path.endsWith(".pdf") ? "pdf" : lh.storage_path.endsWith(".png") ? "png" : "jpg";
