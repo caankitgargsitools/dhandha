@@ -4,18 +4,20 @@ import { getContext, lakh, fmtDate, daysLeft } from "@/lib/session";
 import { aiTiers } from "@/lib/ai";
 import { checkConditions } from "@/lib/conditions";
 import { requiredDocs } from "@/lib/bidpack";
+import { missingMasters, placeholders, labelKey, matchFact } from "@/lib/masters";
+import { candidates, CHOICES } from "@/lib/formatLibrary";
+import { emptySheet, monthsFrom } from "@/lib/costing";
 import Assistant from "./Assistant";
 import TenderBrief from "../../TenderBrief";
 
 export const maxDuration = 60;
 
-const PROFILE_NEEDED = [["legal_name", "legal name"], ["pan", "PAN"], ["gstin", "GSTIN"], ["registered_address", "registered address"], ["signatory_name", "signatory's name"], ["signatory_designation", "signatory's designation"], ["bank_account", "bank account"], ["bank_ifsc", "IFSC"]];
-
-// The last three completed financial years, newest first: "FY 2025-26", ...
-function lastFys(now = new Date()) {
-  const start = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
-  return [1, 2, 3].map((k) => `FY ${start - k}-${String(start - k + 1).slice(2)}`);
-}
+// When the tender's own list of formats is not known: the usual set.
+const STANDARD = [
+  { title: "Bidder information", kind: "bidder_info" }, { title: "Financial turnover and net worth", kind: "turnover" },
+  { title: "Statement of similar works completed", kind: "similar_works" }, { title: "Key personnel", kind: "key_personnel" },
+  { title: "Declaration regarding blacklisting / debarment", kind: "non_blacklisting" }, { title: "Declaration for MSE benefits", kind: "mse" },
+];
 
 // Tender assistant: a chat that walks one tender from documents to a draft bid pack, asking each thing it
 // needs on the way. Every answer goes into the Vault, so the next tender asks less.
@@ -25,12 +27,13 @@ export default async function TenderAssistant({ params }) {
   const { data: m } = await supabase.from("tender_matches").select("*, tenders(*)").eq("id", id).eq("company_id", company.id).maybeSingle();
   if (!m) notFound();
   const t = m.tenders;
-  const [{ data: c }, { data: files }, { data: reads }, { data: facts }, { count: works }, { data: packs }, { data: jobs }, { data: docs }, { data: types }] = await Promise.all([
+  const [{ data: c }, { data: files }, { data: reads }, { data: facts }, { count: works }, { count: people }, { data: packs }, { data: jobs }, { data: docs }, { data: types }] = await Promise.all([
     supabase.from("companies").select("*").eq("id", company.id).single(),
     supabase.from("tender_files").select("id, file_name").eq("tender_id", t.id),
     supabase.from("tender_reads").select("engine, fields, formats, risks, summary, created_at").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
     supabase.from("company_facts").select("key, period, value").eq("company_id", company.id),
     supabase.from("experience_items").select("id", { count: "exact", head: true }).eq("company_id", company.id).eq("status", "completed"),
+    supabase.from("people").select("id", { count: "exact", head: true }).eq("company_id", company.id),
     supabase.from("bid_packs").select("id, kind, created_at").eq("match_id", m.id).order("created_at", { ascending: false }).limit(1),
     supabase.from("tender_doc_jobs").select("id, status, step, detail, error, created_at").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
     supabase.from("documents").select("type_code, valid_until").eq("company_id", company.id).eq("status", "active"),
@@ -45,11 +48,8 @@ export default async function TenderAssistant({ params }) {
   const confirmed = ["preparing", "submitted", "won", "lost"].includes(m.status);
   const read = reads?.[0];
   const answers = Object.fromEntries((facts || []).filter((f) => !f.period).map((f) => [f.key, f.value]));
-  const turnoverYears = new Set((facts || []).filter((f) => f.key === "fin.turnover").map((f) => f.period));
   const cond = checkConditions(t.conditions, answers);
-  const asks = (m.reasons || []).filter((r) => r.ask);
   const canPrepare = ["admin", "manager", "bid_preparer"].includes(role);
-  const custom = (m.filled_formats || []).filter((f) => f.kind === "custom" && !f.filled_text);
   const paidAi = aiTiers().some((x) => !x.free);
 
   // What has been done (shown as the assistant's earlier messages) and what is next (asked one at a time).
@@ -76,20 +76,39 @@ export default async function TenderAssistant({ params }) {
   for (const x of cond.failed) done.push(`✗ ${x.label} — your Vault says no, so this tender is not eligible. Change it in Vault → Facts if that has changed.`);
   for (const x of cond.pending) steps.push({ id: `q:${x.key}`, kind: "yes_no", key: x.key, label: x.label, say: x.question, quote: x.quote, page: x.page });
 
-  if (asks.some((a) => a.key === "fin.turnover")) {
-    const years = lastFys().filter((fy) => !turnoverYears.has(fy));
-    steps.push({ id: "turnover", kind: "turnover", years, say: `${asks.find((a) => a.key === "fin.turnover").text.split(". ")[0]}. What was your turnover in these years (in rupees)?` });
+  // 4. formats: the best template for each, alternatives offered; confirmed with one click
+  const plan = m.filled_formats || [];
+  if (!plan.length) {
+    const fmts = read?.formats?.length ? read.formats : STANDARD;
+    steps.push({ id: "choose", kind: "choose_formats", say: `The tender asks for ${fmts.length} format${fmts.length === 1 ? "" : "s"}. For each one I've picked the best fit from my templates — change any you like, then confirm.`,
+      formats: fmts.map((f) => ({ title: f.title, page: f.page || null, options: (f.kind ? [f.kind, "custom", "manual"] : candidates(f.title, f.text)).map((k) => ({ kind: k, label: CHOICES[k] })) })) });
+  } else {
+    const n = (k) => plan.filter((p) => p.kind === k).length;
+    done.push(`Formats chosen: ${plan.length - n("custom") - n("manual") - n("price")} from my templates${n("custom") ? `, ${n("custom")} in the tender's own wording` : ""}${n("manual") ? `, ${n("manual")} you'll fill yourself` : ""}${n("price") ? ", the price bid on the portal" : ""}.`);
+    // 5. master questions: only what the chosen formats need and the masters don't have, one at a time
+    for (const q of missingMasters(c, ["covering_letter", ...plan.map((p) => p.kind)], { facts: facts || [], counts: { works, people } })) steps.push(q);
+    // 6. formats kept in the tender's own wording: filled from the masters by AI; blanks it could not fill become master questions
+    const todo = plan.filter((p) => p.kind === "custom" && !p.filled_text);
+    if (todo.length && canPrepare) steps.push({ id: "fill_ai", kind: "fill_ai", paidAi, say: `${todo.length} format${todo.length === 1 ? " is" : "s are"} in the tender's own wording. Shall I fill ${todo.length === 1 ? "it" : "them"} from your masters with AI (49 credits)? Your company data only goes to paid AI.` });
+    const asked = new Set();
+    for (const p of plan.filter((x) => x.kind === "custom" && x.filled_text)) {
+      for (const label of placeholders(p.filled_text)) {
+        const key = labelKey(label);
+        if (asked.has(key) || matchFact(label, facts || [])) continue;
+        asked.add(key);
+        steps.push({ id: `x:${key}`, kind: "fact", key, period: "", type: "text", say: `For “${p.title}”: ${label}?`, label });
+      }
+    }
   }
-  if (asks.some((a) => a.key === "vault.experience") || (!works && read)) {
-    steps.push({ id: "experience", kind: "link", href: "/app/vault/experience", button: "Add completed works", say: `${asks.find((a) => a.key === "vault.experience")?.text.split(". ")[0] || "This tender asks for similar work"}. I have no completed works on record yet. Add them once (name, client, value, completion date) and every tender will use them.` });
-  }
-  const missingProfile = PROFILE_NEEDED.filter(([k]) => !c[k]).map(([, l]) => l);
-  if (missingProfile.length) steps.push({ id: "profile", kind: "link", href: "/app/vault/profile", button: "Fill company profile", say: `The bid forms need your ${missingProfile.join(", ")}. Fill them once in your company profile.` });
 
-  if (read?.formats?.length && !(m.filled_formats || []).length) steps.push({ id: "formats", kind: "formats", say: `The tender has ${read.formats.length} format${read.formats.length === 1 ? "" : "s"} to fill. Shall I match them to my free templates?` });
-  else if ((m.filled_formats || []).length) done.push(`I matched ${m.filled_formats.length} format${m.filled_formats.length === 1 ? "" : "s"}.`);
-  for (const g of m.gaps || []) steps.push({ id: `g:${g.key}`, kind: "gap", key: g.key, say: `For “${g.format}”: ${g.label}?`, hint: g.hint || "" });
-  if (custom.length && canPrepare) steps.push({ id: "fill_ai", kind: "fill_ai", paidAi, say: `${custom.length} format${custom.length === 1 ? " is" : "s are"} in the tender's own wording. Shall I fill ${custom.length === 1 ? "it" : "them"} from your Vault with AI (49 credits)? Your company data only goes to paid AI.` });
+  // 7. the price — the one thing asked for every tender: typed, or worked out in the cost planner
+  if (m.quoted_price) done.push(`Your price: ₹${Number(m.quoted_price).toLocaleString("en-IN")} + GST${m.price_note ? ` (${m.price_note})` : ""}.`);
+  else if (canPrepare && read) {
+    const f = read.fields || {};
+    steps.push({ id: "price", kind: "price", fresh: !m.cost_sheet, estimate: Number(f.value_inr || t.value_inr || job?.detail?.value_inr) || null,
+      sheet: m.cost_sheet || emptySheet({ months: monthsFrom(f.completion_period || job?.detail?.period_of_work), value: Number(f.value_inr || t.value_inr || job?.detail?.value_inr) || null, scope: f.work_scope || [], travel: !!(t.state && c.state && t.state !== c.state) }),
+      say: "Last, your price. Type it if you know it, or let's work out the cost together — items, manpower with PF/ESI/bonus, travel and stay, overheads and margin — and I'll suggest a quote." });
+  }
 
   if (packs?.[0]) done.push(`A ${packs[0].kind === "final" ? "signed" : "draft"} bid pack was made ${fmtDate(packs[0].created_at)}.`);
   if (read && canPrepare) steps.push({ id: "draft", kind: "draft", last: true, say: `${packs?.[0] ? "Shall I make a fresh bid file with your latest answers?" : m.eligible && !m.pending ? "That is everything I need — this tender is qualified." : "Some answers are still open, but I can make the file with what we have."} The bid file is one PDF: the tender brief, the submission checklist (documents, fees, dates), the covering letter and every format filled from your Vault. Free, marked DRAFT; signed only with the admin's code.` });
@@ -100,7 +119,7 @@ export default async function TenderAssistant({ params }) {
 
 function page({ m, t, left, done, steps, role, canPrepare, brief }) {
   return (
-    <div className="stack" style={{ maxWidth: 820 }}>
+    <div className="stack" style={{ maxWidth: 1040 }}>
       <Link href={`/app/tenders/${m.id}`} className="small">Back to the tender</Link>
       <div className="page-head" style={{ alignItems: "flex-start" }}>
         <div>
