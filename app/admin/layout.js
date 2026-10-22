@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
-import SideNav from "@/components/SideNav";
+import SideNav, { MenuButton } from "@/components/SideNav";
 import Icon from "@/components/Icon";
 import { signOut } from "../login/actions";
 import CaptchaDesk from "./CaptchaDesk";
@@ -33,9 +33,12 @@ export default async function AdminLayout({ children }) {
       <div className="main">
         <header className="topbar">
           <div className="row"><span className="chip info plain">Admin panel</span><span className="small muted">Changes here affect every customer.</span></div>
-          <div className="user-pill">
-            <span className="small muted">{user.email}</span>
-            <form action={signOut}><button className="ghost sm" aria-label="Sign out" style={{ borderRadius: 99, padding: 6 }}><Icon name="logout" size={16} /></button></form>
+          <div className="row">
+            <div className="user-pill">
+              <span className="small muted">{user.email}</span>
+              <form action={signOut}><button className="ghost sm" aria-label="Sign out" style={{ borderRadius: 99, padding: 6 }}><Icon name="logout" size={16} /></button></form>
+            </div>
+            <MenuButton />
           </div>
         </header>
         {children}

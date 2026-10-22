@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getContext, daysLeft, initials, ROLES } from "@/lib/session";
-import SideNav from "@/components/SideNav";
+import SideNav, { MenuButton } from "@/components/SideNav";
 import Icon from "@/components/Icon";
 import { switchCompany } from "./actions";
 import { signOut } from "../login/actions";
@@ -61,6 +61,7 @@ export default async function AppLayout({ children }) {
               <span className="small muted">{user.email}</span>
               <form action={signOut}><button className="ghost sm" title="Sign out" aria-label="Sign out" style={{ borderRadius: 99, padding: 6 }}><Icon name="logout" size={16} /></button></form>
             </div>
+            <MenuButton />
           </div>
         </header>
         {isAdmin && !has2fa && (
