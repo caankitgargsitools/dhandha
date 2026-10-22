@@ -161,11 +161,16 @@ td.right, th.right { text-align: right; }
 :root[data-theme="dark"] .side.admin { background: #0b0e1e; }
 .side .wordmark { color: #fff; padding: 2px 10px 18px; }
 .side .group { font-size: 12px; font-weight: 700; color: rgba(255, 255, 255, .55); margin: 18px 10px 6px; }
-.side a.nav { display: flex; align-items: center; gap: 10px; color: rgba(255, 255, 255, .88); padding: 8px 10px; border-radius: 8px; font-size: 14px; font-weight: 600; position: relative; }
+.side .nav { width: 100%; border: 0; background: none; cursor: pointer; text-align: left; font-family: inherit; }
+.side a.nav, .side button.nav { display: flex; align-items: center; gap: 10px; color: rgba(255, 255, 255, .88); padding: 8px 10px; border-radius: 8px; font-size: 14px; font-weight: 600; position: relative; }
 .side a.nav svg { opacity: .85; flex: none; }
-.side a.nav:hover { background: rgba(255, 255, 255, .09); text-decoration: none; color: #fff; }
-.side a.nav.active { background: rgba(255, 255, 255, .14); color: #fff; }
+.side a.nav:hover, .side button.nav:hover { background: rgba(255, 255, 255, .09); text-decoration: none; color: #fff; }
+.side a.nav.active, .side button.nav.active { background: rgba(255, 255, 255, .14); color: #fff; }
 .side a.nav.active::before { content: ""; position: absolute; left: -14px; top: 7px; bottom: 7px; width: 4px; border-radius: 0 4px 4px 0; background: var(--marigold); }
+.side .caret { margin-left: auto; font-size: 11px; opacity: .7; }
+.side .sub { display: grid; gap: 2px; margin: 2px 0 4px; }
+.side .sub a.nav { padding-left: 32px; font-size: 13.5px; }
+.side .sub a.nav.active::before { left: -14px; }
 .side .tag { margin-left: auto; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 99px; background: rgba(240, 162, 2, .25); color: #ffd66b; }
 .side .foot { margin-top: auto; padding: 14px 10px 0; font-size: 12px; color: rgba(255, 255, 255, .6); }
 .main { padding: 26px 34px 72px; width: 100%; max-width: 1240px; min-width: 0; }
@@ -180,6 +185,10 @@ td.right, th.right { text-align: right; }
   .side .group, .side .foot { display: none; }
   .side .wordmark { width: 100%; padding-bottom: 8px; }
   .side a.nav.active::before { display: none; }
+  .side .navgroup { display: contents; }
+  .side .sub { display: contents; }
+  .side .sub a.nav { padding-left: 10px; }
+  .side .caret { display: none; }
   .main { padding: 18px 16px 56px; }
 }
 

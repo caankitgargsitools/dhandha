@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Icon from "./Icon";
@@ -15,7 +16,7 @@ export default function SideNav({ sections, admin = false, foot }) {
       {sections.map((s, i) => (
         <div key={i} style={{ display: "contents" }}>
           {s.title && <div className="group">{s.title}</div>}
-          {s.items.map((it) => (
+          {s.items.map((it) => it.children ? <NavGroup key={it.href} it={it} isActive={isActive} /> : (
             <Link key={it.href} href={it.href} className={`nav${isActive(it.href, it) ? " active" : ""}`} aria-current={isActive(it.href, it) ? "page" : undefined}>
               <Icon name={it.icon} />
               <span>{it.label}</span>
@@ -26,5 +27,32 @@ export default function SideNav({ sections, admin = false, foot }) {
       ))}
       {foot && <div className="foot">{foot}</div>}
     </nav>
+  );
+}
+
+// A menu item with a submenu: opens on hover or tap, and stays open while one of its pages is showing.
+function NavGroup({ it, isActive }) {
+  const [hover, setHover] = useState(false);
+  const [tapped, setTapped] = useState(false);
+  const here = isActive(it.href, it);
+  const open = here || hover || tapped;
+  return (
+    <div className="navgroup" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      <button type="button" className={`nav${here ? " active" : ""}`} aria-expanded={open} onClick={() => setTapped((v) => !v)}>
+        <Icon name={it.icon} />
+        <span>{it.label}</span>
+        <span className="caret" aria-hidden="true">{open ? "▾" : "▸"}</span>
+      </button>
+      {open && (
+        <div className="sub">
+          {it.children.map((c) => (
+            <Link key={c.href} href={c.href} className={`nav${isActive(c.href, c) ? " active" : ""}`} aria-current={isActive(c.href, c) ? "page" : undefined}>
+              <Icon name={c.icon} size={15} />
+              <span>{c.label}</span>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
