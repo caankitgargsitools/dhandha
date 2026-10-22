@@ -36,6 +36,7 @@ It covers:
 
 ## Map of the code
 - `lib/session.js`: `getContext()` (user, tenant, role, company switcher, 2FA check). `lib/admin.js` holds the platform-admin context.
+- Business Vault: one menu item → `/app/vault` (cards with completeness); its pages (What we do, Company profile, Documents, Facts, Experience, Key people, Letterhead & signature) share a tab strip (`components/VaultTabs.js` via `layout.js` in each folder). SideNav items take `match` / `exclude` path lists for highlighting.
 - `lib/taxonomy.js`: 10 industries → 29 sub-industries → 65 services, mapped to keywords and industry pack. Used by "What we do" at `/app/tenders/preferences`.
 - Tender engine:
   - `lib/bidpack.js`: PDF bid pack on the letterhead.
