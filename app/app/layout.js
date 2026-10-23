@@ -4,6 +4,7 @@ import SideNav, { MenuButton } from "@/components/SideNav";
 import Icon from "@/components/Icon";
 import { switchCompany } from "./actions";
 import { signOut } from "../login/actions";
+import CaptchaDesk from "../admin/CaptchaDesk";
 
 export default async function AppLayout({ children }) {
   const { tenant, companies, company, user, role, isAdmin, has2fa, isPlatformAdmin, otherWorkspaces } = await getContext();
@@ -72,6 +73,7 @@ export default async function AppLayout({ children }) {
         )}
         {children}
       </div>
+      {isPlatformAdmin && <CaptchaDesk />}
     </div>
   );
 }

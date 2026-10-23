@@ -9,7 +9,8 @@ import { readTender } from "../../readActions";
 const form = (o) => { const f = new FormData(); for (const [k, v] of Object.entries(o)) f.append(k, v); return f; };
 
 // Step 1 of the assistant: the crawler fetches the documents from the portal while this shows what it is doing.
-// A captcha picture appears here for the person to type. When the files arrive they are stored and read.
+// A captcha on the portal goes to Dhandha's platform admins (captcha desk + phone notification); only they see the
+// picture here. Customers just see the fetch progressing. When the files arrive they are stored and read.
 export default function DocFetch({ matchId, tenderId, step, say, canAnswer }) {
   const router = useRouter();
   const [job, setJob] = useState(step.job);
@@ -75,17 +76,17 @@ export default function DocFetch({ matchId, tenderId, step, say, canAnswer }) {
     if (r.error) setNote(r.error); else setJob({ id: r.jobId, status: "queued", step: "Waiting for the crawler to start" });
   }
 
-  const working = job && ["queued", "running"].includes(job.status) || phase;
+  const working = job && ["queued", "running"].includes(job.status) || (job?.status === "captcha" && !step.typer) || phase;
   return (
     <div className="stack-sm">
       <div>{say}</div>
       {job && (
         <div className="row small" style={{ gap: 8, alignItems: "center" }}>
           {working && <span className="spinner" aria-hidden style={{ width: 12, height: 12, borderRadius: 99, border: "2px solid var(--line)", borderTopColor: "var(--madder)", display: "inline-block", animation: "spin 0.8s linear infinite" }} />}
-          <span>{phase === "storing" ? "Saving the documents…" : phase === "reading" ? "Reading every page and preparing the brief…" : job.status === "failed" ? "" : job.step}</span>
+          <span>{phase === "storing" ? "Saving the documents…" : phase === "reading" ? "Reading every page and preparing the brief…" : job.status === "failed" ? "" : job.status === "captcha" && !step.typer ? "Fetching from the portal — a few more minutes" : job.step}</span>
         </div>
       )}
-      {job?.status === "captcha" && job.captcha_image && canAnswer && (
+      {job?.status === "captcha" && job.captcha_image && canAnswer && step.typer && (
         <form onSubmit={sendCaptcha} className="stack-sm" style={{ background: "#fff", border: "1px solid var(--marigold)", borderRadius: 10, padding: 10, maxWidth: 360 }}>
           <strong className="small">The portal asks for a captcha</strong>
           {/* eslint-disable-next-line @next/next/no-img-element */}

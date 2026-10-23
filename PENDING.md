@@ -41,6 +41,8 @@ Last checked: 23 Oct 2026.
 
 ## Done (recent)
 
+- 23 Oct: customers never see captchas — they go to platform admins (desk + phone push); one portal session reused across tenders; shortlisted and strong matches fetched in advance.
+
 - 23 Oct: fetched-document chunks are cleared automatically once the files are saved (13 MB freed).
 - 22 Oct: DFO Nuh and J C Bose University draft bid files made; assistant shows filled formats, builds tables and partner details from Key people / Experience; AI fill and free Gemini reading fixed.
 

@@ -3,20 +3,26 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 // "Captcha needed" card on every admin page. The crawler has stopped at a portal page that asks for a captcha;
-// a person reads the picture and types it, and the crawler carries on with that answer.
+// a person reads the picture and types it, and the crawler carries on with that answer. Shown to platform admins on
+// admin pages and on /app pages. Covers the crawler's captchas and document fetches (tender assistant, prefetches).
 export default function CaptchaDesk() {
   const [items, setItems] = useState([]);
   const [busy, setBusy] = useState(null);
   const [err, setErr] = useState("");
   const [now, setNow] = useState(() => Date.now());
   const seen = useRef(new Set());
+  const hidden = useRef(new Set());
   const supabase = useRef(null);
 
   const load = useCallback(async () => {
     supabase.current ||= createClient();
-    const { data } = await supabase.current.from("crawler_captchas").select("id, portal, purpose, image, runner, asked_at, expires_at")
-      .eq("status", "waiting").gt("expires_at", new Date().toISOString()).order("asked_at").limit(5);
-    const list = data || [];
+    const [{ data }, { data: docs }] = await Promise.all([
+      supabase.current.from("crawler_captchas").select("id, portal, purpose, image, runner, asked_at, expires_at")
+        .eq("status", "waiting").gt("expires_at", new Date().toISOString()).order("asked_at").limit(5),
+      supabase.current.rpc("admin_doc_captchas"),
+    ]);
+    // document fetches waiting at a portal captcha (the fetcher waits about 9 minutes for an answer)
+    const list = [...(data || []), ...(docs || []).filter((d) => !hidden.current.has(d.id)).map((d) => ({ id: d.id, doc: true, portal: d.portal, purpose: `${d.auto ? "Fetching in advance" : "A customer is waiting"}: ${d.title}`, image: d.image, asked_at: d.asked_at, expires_at: new Date(Date.parse(d.asked_at) + 9 * 60000).toISOString() }))];
     const fresh = list.filter((c) => !seen.current.has(c.id));
     if (fresh.length) {
       fresh.forEach((c) => seen.current.add(c.id));
@@ -33,9 +39,14 @@ export default function CaptchaDesk() {
     return () => { clearInterval(poll); clearInterval(tick); };
   }, [load]);
 
-  async function act(id, answer) {
+  async function act(c, answer) {
+    const id = c.id;
     setBusy(id); setErr("");
-    const { error } = answer === null ? await supabase.current.rpc("skip_captcha", { p_id: id }) : await supabase.current.rpc("answer_captcha", { p_id: id, p_answer: answer });
+    let error = null;
+    // skipping a document fetch only hides it here; the fetcher gives up after its wait and can be asked again
+    if (c.doc && answer === null) hidden.current.add(id);
+    else if (c.doc) ({ error } = await supabase.current.rpc("answer_doc_captcha", { p_job: id, p_answer: answer }));
+    else ({ error } = answer === null ? await supabase.current.rpc("skip_captcha", { p_id: id }) : await supabase.current.rpc("answer_captcha", { p_id: id, p_answer: answer }));
     if (error) setErr(error.message);
     setBusy(null);
     load();
@@ -52,7 +63,7 @@ export default function CaptchaDesk() {
       {items.map((c) => {
         const left = Math.max(0, Math.round((Date.parse(c.expires_at) - now) / 1000));
         return (
-          <form key={c.id} onSubmit={(e) => { e.preventDefault(); act(c.id, new FormData(e.currentTarget).get("answer")); }} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 10 }} className="stack-sm">
+          <form key={c.id} onSubmit={(e) => { e.preventDefault(); act(c, new FormData(e.currentTarget).get("answer")); }} style={{ border: "1px solid var(--line)", borderRadius: 10, padding: 10 }} className="stack-sm">
             <div className="row between small"><strong>{c.portal}</strong><span className="tiny faint">{Math.floor(left / 60)}:{String(left % 60).padStart(2, "0")} left</span></div>
             <div className="tiny faint">{c.purpose}</div>
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -60,7 +71,7 @@ export default function CaptchaDesk() {
             <div className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
               <input name="answer" autoComplete="off" autoCapitalize="off" spellCheck={false} required maxLength={40} aria-label="Captcha text" autoFocus style={{ flex: 1, width: "auto" }} />
               <button className="sm" disabled={busy === c.id}>Send</button>
-              <button type="button" className="ghost sm" disabled={busy === c.id} onClick={() => act(c.id, null)}>Skip</button>
+              <button type="button" className="ghost sm" disabled={busy === c.id} onClick={() => act(c, null)}>Skip</button>
             </div>
           </form>
         );
