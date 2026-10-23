@@ -72,7 +72,7 @@ export default async function TenderAssistant({ params }) {
   }
   if (!confirmed) {
     const left = daysLeft(t.due_at);
-    return page({ m, t, left, done, steps, role, canPrepare, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} /> : null });
+    return page({ m, t, left, done, steps, role, canPrepare, redo: canPrepare && read ? { read: aiTiers().length > 0 } : null, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} /> : null });
   }
   if (read) done.push("You approved the brief — preparing the bid.");
 
@@ -151,10 +151,12 @@ export default async function TenderAssistant({ params }) {
   if (read && canPrepare) steps.push({ id: "draft", kind: "draft", last: true, say: `${packs?.[0] ? "Shall I make a fresh bid file with your latest answers?" : m.eligible && !m.pending ? "That is everything I need — this tender is qualified." : "Some answers are still open, but I can make the file with what we have."} The bid file is one PDF: the tender brief, the submission checklist (documents, fees, dates), the covering letter and every format filled from your Vault. Free, marked DRAFT; signed only with the admin's code.` });
 
   const left = daysLeft(t.due_at);
-  return page({ m, t, left, done, steps, role, canPrepare, formatsView, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} /> : null });
+  // results can be redone (e.g. after a bad read of a big scanned document)
+  const redo = canPrepare && read ? { read: aiTiers().length > 0, tech: !!m.tech_eval && paidAi } : null;
+  return page({ m, t, left, done, steps, role, canPrepare, formatsView, redo, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} /> : null });
 }
 
-function page({ m, t, left, done, steps, role, canPrepare, brief, formatsView = null }) {
+function page({ m, t, left, done, steps, role, canPrepare, brief, formatsView = null, redo = null }) {
   return (
     <div className="stack" style={{ maxWidth: 1040 }}>
       <Link href={`/app/tenders/${m.id}`} className="small">Back to the tender</Link>
@@ -168,7 +170,7 @@ function page({ m, t, left, done, steps, role, canPrepare, brief, formatsView = 
         </div>
         <span className={`chip ${mandatoryUnmet(m.reasons).length || m.pending ? "warn" : "ok"}`}>{mandatoryUnmet(m.reasons).length ? (m.forced_at ? "Filing despite a warning" : "⚠ Mandatory condition not met") : m.pending ? `Qualifies if you answer ${m.pending}` : "Qualified"}</span>
       </div>
-      <Assistant matchId={m.id} tenderId={t.id} done={done} steps={steps} brief={brief} formats={formatsView} canAnswer={role !== "viewer"} canPrepare={canPrepare} />
+      <Assistant matchId={m.id} tenderId={t.id} done={done} steps={steps} brief={brief} formats={formatsView} redo={redo} canAnswer={role !== "viewer"} canPrepare={canPrepare} />
     </div>
   );
 }
