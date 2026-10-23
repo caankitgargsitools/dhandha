@@ -1,11 +1,11 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { PDFDocument } from "pdf-lib";
 import { getContext } from "@/lib/session";
 import { pdfPages } from "@/lib/pdftext";
 import { readTenderText } from "@/lib/tenderRules";
 import { aiReadTender } from "@/lib/tenderAi";
 import { aiTiers } from "@/lib/ai";
+import { aiDocument } from "@/lib/tenderPdf";
 import { extractConditions, conditionsFromLines } from "@/lib/conditions";
 
 export async function recordTenderFile({ tenderId, path, name, size }) {
@@ -58,18 +58,10 @@ export async function readTender(prev, formData) {
   // 2. AI only when asked; cheapest engine that succeeds
   if (mode === "ai") {
     if (!aiTiers().length) return { error: "AI reading is not switched on yet (no AI key configured). Use the free reading for now." };
-    let pdf = null, text = null;
-    if (total <= 18 * 1024 * 1024 && pages.length <= 100) {
-      if (blobs.length === 1) pdf = blobs[0];
-      else {
-        const merged = await PDFDocument.create();
-        for (const b of blobs) { try { const src = await PDFDocument.load(b, { ignoreEncryption: true }); (await merged.copyPages(src, src.getPageIndices())).forEach((p) => merged.addPage(p)); } catch {} }
-        pdf = await merged.save();
-      }
-    } else {
-      text = pages.map((p, i) => `--- page ${i + 1} ---\n${p}`).join("\n").slice(0, 150000);
-      note = "Document too large to send whole; AI read the extracted text.";
-    }
+    const doc = await aiDocument(blobs, pages);
+    if (doc.error) return { error: doc.error };
+    const { pdf = null, text = null } = doc;
+    note = doc.note || null;
     const ai = await aiReadTender({ supabase, tenantId: tenant.id, pdf, text });
     if (ai.error) return { error: `${ai.error} Free reading result kept. (${ai.attempts.join("; ").slice(0, 300)})` };
     const d = ai.data;
