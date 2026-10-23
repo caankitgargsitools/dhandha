@@ -1,4 +1,5 @@
 import Icon from "@/components/Icon";
+import { mandatoryUnmet } from "@/lib/conditions";
 import { lakh, fmtDate, daysLeft } from "@/lib/session";
 
 // One-page brief of a tender: what it is, the numbers, the dates, the work, who can bid, what to submit,
@@ -33,7 +34,7 @@ export default function TenderBrief({ t, m, read, detail = {}, checklist = [], f
     <article className="stack-sm" style={{ background: "var(--paper, #fff)", border: "1px solid var(--line)", borderRadius: 14, padding: 18, width: "100%" }}>
       <header>
         <div className="row" style={{ gap: 8, marginBottom: 6 }}>
-          <span className={`chip ${!m.eligible ? "bad" : m.pending ? "warn" : "ok"}`}>{!m.eligible ? "Not eligible" : m.pending ? `Qualifies if you answer ${m.pending}` : "Qualified"}</span>
+          <span className={`chip ${mandatoryUnmet(m.reasons).length || m.pending ? "warn" : "ok"}`}>{mandatoryUnmet(m.reasons).length ? (m.forced_at ? "Filing despite a warning" : "⚠ Mandatory condition not met") : m.pending ? `Qualifies if you answer ${m.pending}` : "Qualified"}</span>
           <span className={`chip ${left < 0 ? "mute" : left <= 5 ? "bad" : "info"}`}>{left < 0 ? "Closed" : `${left} day${left === 1 ? "" : "s"} left`}</span>
           <span className="tiny faint">{t.portal} · Tender ID {t.tender_ref}</span>
         </div>

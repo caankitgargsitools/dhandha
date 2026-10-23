@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { getContext } from "@/lib/session";
 import { buildBidPack } from "@/lib/bidpack";
+import { mandatoryUnmet } from "@/lib/conditions";
 import { keywordsFor, rulesFor, parseRule, SERVICE_INDEX } from "@/lib/taxonomy";
 
 async function download(supabase, path) {
@@ -16,8 +17,10 @@ export async function generateBidPack(prev, formData) {
   const kind = formData.get("kind") === "final" ? "final" : "draft";
   if (!["admin", "manager", "bid_preparer"].includes(role)) return { error: "Only admins, managers and bid preparers can make bid packs." };
 
-  const { data: match } = await supabase.from("tender_matches").select("id, tender_id, company_id, filled_formats, reasons, quoted_price, price_note, cost_sheet, tenders(*)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
+  const { data: match } = await supabase.from("tender_matches").select("id, tender_id, company_id, filled_formats, reasons, eligible, forced_at, quoted_price, price_note, cost_sheet, tenders(*)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
   if (!match) return { error: "Tender not found for this company." };
+  // a mandatory condition that is not met: no bid file until the person says it is met or chooses to file anyway
+  if (mandatoryUnmet(match.reasons).length && !match.forced_at) return { error: "A mandatory condition of this tender is not met. Open the tender assistant: confirm you meet it, or choose “File anyway”." };
 
   if (kind === "final") {
     if (!isAdmin) return { error: "Only an admin (the signatory) can approve use of the signature." };

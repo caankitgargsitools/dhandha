@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getContext, lakh, fmtDate, daysLeft } from "@/lib/session";
 import { aiTiers } from "@/lib/ai";
-import { checkConditions } from "@/lib/conditions";
+import { checkConditions, mandatoryUnmet } from "@/lib/conditions";
 import { requiredDocs } from "@/lib/bidpack";
-import { missingMasters, classifyBlanks, labelKey, matchFact, partnerList, partnerLabel, partnerFact, fillPlaceholders, isReference } from "@/lib/masters";
+import { missingMasters, fillPlaceholders, isReference } from "@/lib/masters";
+import { buildSegments, blanksLeft } from "@/lib/annexure";
+import { computeSheet } from "@/lib/costing";
 import { candidates, CHOICES } from "@/lib/formatLibrary";
 import { emptySheet, monthsFrom } from "@/lib/costing";
 import Assistant from "./Assistant";
@@ -74,8 +76,18 @@ export default async function TenderAssistant({ params }) {
   if (read) done.push("You approved the brief — preparing the bid.");
 
   for (const x of cond.met) done.push(`✓ ${x.label} — you told me yes earlier (saved in your Vault).`);
-  for (const x of cond.failed) done.push(`✗ ${x.label} — your Vault says no, so this tender is not eligible. Change it in Vault → Facts if that has changed.`);
   for (const x of cond.pending) steps.push({ id: `q:${x.key}`, kind: "yes_no", key: x.key, label: x.label, say: x.question, quote: x.quote, page: x.page });
+
+  // a mandatory condition that is not met never silently rejects the tender: the person is warned and decides —
+  // "we do meet it" (the Vault is corrected), file anyway (recorded), or not for us. Nothing goes further until then.
+  const unmet = [...new Set([...cond.failed.map((x) => x.label), ...mandatoryUnmet(m.reasons)])];
+  if (unmet.length && !m.forced_at) {
+    steps.push({ id: "mandatory", kind: "mandatory", unmet, conds: cond.failed.map((x) => ({ key: x.key, label: x.label })),
+      say: `Warning: ${unmet.length === 1 ? "a mandatory condition of this tender is" : `${unmet.length} mandatory conditions of this tender are`} not met according to your Vault. A bid that misses a mandatory condition is usually rejected at the technical stage.` });
+    const left = daysLeft(t.due_at);
+    return page({ m, t, left, done, steps, role, canPrepare, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} /> : null });
+  }
+  if (unmet.length) done.push(`⚠ Filing although: ${unmet.join("; ")} — you chose to file anyway on ${fmtDate(m.forced_at)}${m.forced_note ? ` (“${m.forced_note}”)` : ""}.`);
 
   // 4. formats: the best template for each, alternatives offered; confirmed with one click
   const plan = m.filled_formats || [];
@@ -92,57 +104,44 @@ export default async function TenderAssistant({ params }) {
     // 6. formats kept in the tender's own wording: filled from the masters by AI; blanks it could not fill become master questions
     const todo = plan.filter((p) => p.kind === "custom" && !p.filled_text);
     if (todo.length && canPrepare) steps.push({ id: "fill_ai", kind: "fill_ai", paidAi, say: `${todo.length} format${todo.length === 1 ? " is" : "s are"} in the tender's own wording. Shall I fill ${todo.length === 1 ? "it" : "them"} from your masters with AI (49 credits)? Your company data only goes to paid AI.` });
-    // blanks the AI left: partner details and tables come from Key people / Experience, pages that are not forms are
-    // skipped, and anything else is one master question (saved, so no tender asks it again)
-    const asked = new Set();
-    const ps = partnerList(peopleRows || []);
-    for (const p of plan.filter((x) => x.kind === "custom" && x.filled_text && !isReference(x.filled_text))) {
-      for (const b of classifyBlanks(p.filled_text)) {
-        if (b.type === "junk") continue;
-        if (b.type === "partner") {
-          const who = ps[b.n - 1];
-          if (!who) {
-            // no partners in Key people yet: ask it as a master answer for this partner
-            if (partnerFact(b, facts || [])) continue;
-            const lbl = partnerLabel(b), key = labelKey(lbl);
-            if (asked.has(key)) continue;
-            asked.add(key);
-            steps.push({ id: `x:${key}`, kind: "fact", key, period: "", type: "text", say: `For “${p.title}”: ${lbl}?`, label: lbl });
-            continue;
-          }
-          if (who[b.field] != null && who[b.field] !== "") continue;
-          if (asked.has(`${who.id}:${b.field}`)) continue;
-          asked.add(`${who.id}:${b.field}`);
-          steps.push({ id: `pf:${who.id}:${b.field}`, kind: "person_field", personId: who.id, field: b.field, type: b.field === "years_experience" ? "text" : "text", label: b.label,
-            hint: b.field === "pan" ? "ABCDE1234F" : "", say: `${who.name}'s ${{ membership_no: "membership number (ICAI etc.)", pan: "PAN", qualification: "qualification", years_experience: "years of experience", designation: "designation", name: "name" }[b.field]}? (for “${p.title}”, saved in Key people)` });
-          continue;
-        }
-        if (b.type === "people") { if (!people && !asked.has("people") && !steps.some((x) => x.kind === "person")) { asked.add("people"); steps.push({ id: "tp:people", kind: "person", say: `“${p.title}” needs a table of ${b.label.replace(/^complete (the )?table with /i, "")}. I build it from Key people — add the first person now (more any time in Vault → Key people).` }); } continue; }
-        if (b.type === "works") { if (!works && !asked.has("works") && !steps.some((x) => x.kind === "work")) { asked.add("works"); steps.push({ id: "tp:works", kind: "work", say: `“${p.title}” needs a table of ${b.label.replace(/^complete (the )?table with /i, "")}. I build it from your Experience — add your best completed assignment now (more any time in Vault → Experience).` }); } continue; }
-        const key = labelKey(b.label);
-        if (asked.has(key) || matchFact(b.label, facts || [])) continue;
-        asked.add(key);
-        steps.push({ id: `x:${key}`, kind: "fact", key, period: "", type: "text", say: `For “${p.title}”: ${b.label}?`, label: b.label });
-      }
-    }
-    // the formats as they will go into the bid file, to look at any time
-    formatsView = plan.map((p) => {
-      if (p.kind === "price") return { title: p.title, status: "Price — quoted on the portal" };
-      if (p.kind === "manual") return { title: p.title, status: "You fill it in the draft" };
-      if (p.kind !== "custom") return { title: p.title, status: "Ready — from my template" };
-      if (!p.filled_text) return { title: p.title, status: "Waiting for AI fill" };
-      if (isReference(p.filled_text)) return { title: p.title, status: "Reference page — nothing to fill" };
-      const text = fillPlaceholders(p.filled_text, facts || [], { people: peopleRows || [], works: workRows || [] });
-      const left = (text.match(/\[TO BE FILLED:/gi) || []).length;
-      return { title: p.title, status: left ? `${left} blank${left === 1 ? "" : "s"} left` : "Ready", text: text.slice(0, 6000) };
+    // each annexure in the tender's own wording opens as a form, pre-filled from the masters; the person fills the
+    // yellow boxes, adds rows, changes wording, and saves (answers and new rows go to the masters)
+    const ctx = { facts: facts || [], people: peopleRows || [], works: workRows || [] };
+    plan.forEach((p, idx) => {
+      if (p.reviewed || !canPrepare) return;
+      const text = p.kind === "custom" ? p.filled_text : p.kind === "manual" ? p.text : null;
+      if (!text || isReference(text)) return;
+      const segments = buildSegments(text, ctx);
+      const left = blanksLeft(segments);
+      steps.push({ id: `ax:${idx}`, kind: "annexure", idx, title: p.title, segments,
+        say: `Here is “${p.title}”, filled from your masters.${left ? ` ${left} yellow box${left === 1 ? "" : "es"} need${left === 1 ? "s" : ""} you` : " Check it"} — add rows or change wording if you like, then save.` });
     });
+    // the formats as they will go into the bid file, to look at (and open again) any time
+    formatsView = plan.map((p, idx) => {
+      if (p.kind === "price") return { title: p.title, status: "Price — quoted on the portal" };
+      if (p.kind !== "custom" && p.kind !== "manual") return { title: p.title, status: "Ready — from my template" };
+      const src = p.edited_text || (p.kind === "custom" ? p.filled_text : p.text);
+      if (!src) return { title: p.title, status: p.kind === "custom" ? "Waiting for AI fill" : "You fill it in the draft" };
+      if (isReference(src)) return { title: p.title, status: "Reference page — nothing to fill" };
+      const text = p.edited_text || fillPlaceholders(src, facts || [], { people: peopleRows || [], works: workRows || [] });
+      const left = (text.match(/\[TO BE FILLED:/gi) || []).length;
+      return { idx, editable: canPrepare, title: p.title, status: left ? `${left} blank${left === 1 ? "" : "s"} left` : p.reviewed ? "Ready — checked by you" : "Ready", text: text.replace(/⟦\/?table[^⟧]*⟧/g, "").slice(0, 6000) };
+    });
+  }
+
+  // technical marking: how the tender is evaluated and the marks your Vault earns (paid AI, asked once)
+  if (m.tech_eval) {
+    const ev = m.tech_eval, tot = ev.criteria?.length ? ev.criteria.reduce((a, c) => [a[0] + (c.awarded || 0), a[1] + (c.max || 0)], [0, 0]) : null;
+    done.push(`Evaluation: ${ev.method === "QCBS" ? `QCBS, technical ${ev.tech_weight}% : financial ${ev.fin_weight}%` : ev.method === "L1" ? "L1 — lowest price among qualified bids wins" : ev.method}${tot ? `. Your technical marks: ${tot[0]} of ${tot[1]}` : ""}.`);
+  } else if (read && canPrepare && plan.length) {
+    steps.push({ id: "tech", kind: "tech_eval", paidAi, say: "Shall I work out how this tender is evaluated and your technical marks, criterion by criterion, from your Vault? For an L1 tender I'll give you the best price; for QCBS, your weighted final score. (29 credits)" });
   }
 
   // 7. the price — the one thing asked for every tender: typed, or worked out in the cost planner
   if (m.quoted_price) done.push(`Your price: ₹${Number(m.quoted_price).toLocaleString("en-IN")} + GST${m.price_note ? ` (${m.price_note})` : ""}.`);
   else if (canPrepare && read) {
     const f = read.fields || {};
-    steps.push({ id: "price", kind: "price", fresh: !m.cost_sheet, estimate: Number(f.value_inr || t.value_inr || job?.detail?.value_inr) || null,
+    steps.push({ id: "price", kind: "price", fresh: !m.cost_sheet, ev: m.tech_eval || null, cost: m.cost_sheet ? computeSheet(m.cost_sheet).cost : null, quote: m.quoted_price || null, estimate: Number(f.value_inr || t.value_inr || job?.detail?.value_inr) || null,
       sheet: m.cost_sheet || emptySheet({ months: monthsFrom(f.completion_period || job?.detail?.period_of_work), value: Number(f.value_inr || t.value_inr || job?.detail?.value_inr) || null, scope: f.work_scope || [], travel: !!(t.state && c.state && t.state !== c.state) }),
       say: "Last, your price. Type it if you know it, or let's work out the cost together — items, manpower with PF/ESI/bonus, travel and stay, overheads and margin — and I'll suggest a quote." });
   }
@@ -166,7 +165,7 @@ function page({ m, t, left, done, steps, role, canPrepare, brief, formatsView = 
             <span>{t.authority}</span><span>{t.tender_ref}</span><span>{left >= 0 ? `closes in ${left} d` : "closed"}</span>
           </div>
         </div>
-        <span className={`chip ${!m.eligible ? "bad" : m.pending ? "warn" : "ok"}`}>{!m.eligible ? "Not eligible" : m.pending ? `Qualifies if you answer ${m.pending}` : "Qualified"}</span>
+        <span className={`chip ${mandatoryUnmet(m.reasons).length || m.pending ? "warn" : "ok"}`}>{mandatoryUnmet(m.reasons).length ? (m.forced_at ? "Filing despite a warning" : "⚠ Mandatory condition not met") : m.pending ? `Qualifies if you answer ${m.pending}` : "Qualified"}</span>
       </div>
       <Assistant matchId={m.id} tenderId={t.id} done={done} steps={steps} brief={brief} formats={formatsView} canAnswer={role !== "viewer"} canPrepare={canPrepare} />
     </div>

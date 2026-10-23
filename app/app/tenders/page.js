@@ -6,7 +6,7 @@ import PreviewNote from "@/components/PreviewNote";
 import { setTenderStatus } from "./actions";
 import { rescore, muteTenderWord } from "./bidActions";
 import QuestionCards from "./QuestionCards";
-import { openQuestions } from "@/lib/conditions";
+import { openQuestions, mandatoryUnmet } from "@/lib/conditions";
 
 const TABS = [["open", "Worth bidding"], ["shortlisted", "Shortlisted"], ["all", "All matches"], ["done", "Results"]];
 const STATUS_CHIP = { new: ["info", "New"], shortlisted: ["warn", "Shortlisted"], preparing: ["warn", "Preparing bid"], submitted: ["info", "Submitted"], won: ["ok", "Won"], lost: ["bad", "Lost"], skipped: ["mute", "Skipped"] };
@@ -16,14 +16,15 @@ export default async function Tenders({ searchParams }) {
   const tab = TABS.some(([k]) => k === params?.tab) ? params.tab : "open";
   const { supabase, company, role } = await getContext();
   const { data: all } = await supabase.from("tender_matches")
-    .select("id, score, eligible, pending, reasons, status, matched_on, unfit, tenders(*)").eq("company_id", company.id).order("score", { ascending: false });
+    .select("id, score, eligible, pending, reasons, status, matched_on, unfit, forced_at, tenders(*)").eq("company_id", company.id).order("score", { ascending: false });
   // matches that no longer fit the search are hidden unless someone already acted on them
   const rows = (all || []).filter((m) => m.tenders && !(m.unfit && ["new", "skipped"].includes(m.status)));
   const { data: pref } = await supabase.from("tender_preferences").select("services, custom_keywords").eq("company_id", company.id).maybeSingle();
   const noPrefs = !pref || (!(pref.services || []).length && !(pref.custom_keywords || []).length);
   const live = (m) => daysLeft(m.tenders.due_at) >= 0;
   const list = rows.filter((m) =>
-    tab === "open" ? live(m) && m.eligible && !["skipped", "won", "lost"].includes(m.status)
+    // a tender that misses a mandatory condition stays in the list with a warning; the person decides
+    tab === "open" ? live(m) && !["skipped", "won", "lost"].includes(m.status)
     : tab === "shortlisted" ? ["shortlisted", "preparing"].includes(m.status)
     : tab === "done" ? ["won", "lost", "submitted"].includes(m.status) : true);
   const byPack = ["construction", "it_services", "ca_audit", "goods_supply"].map((p, i) => ({
@@ -80,7 +81,7 @@ export default async function Tenders({ searchParams }) {
               <div>
                 <div className="row" style={{ gap: 8, marginBottom: 4 }}>
                   <span className={`chip ${cls}`}>{label}</span>
-                  {!m.eligible ? <span className="chip bad">Not eligible</span> : m.pending ? <Link href={`/app/tenders/${m.id}/assistant`} className="chip warn">Qualifies if you answer {m.pending}</Link> : <span className="chip ok">Qualified</span>}
+                  {mandatoryUnmet(m.reasons).length ? <span className="chip warn" title={mandatoryUnmet(m.reasons).join("; ")}>{m.forced_at ? "Filing despite a warning" : "⚠ Mandatory condition not met"}</span> : !m.eligible ? <span className="chip mute">Outside your preferences</span> : m.pending ? <Link href={`/app/tenders/${m.id}/assistant`} className="chip warn">Qualifies if you answer {m.pending}</Link> : <span className="chip ok">Qualified</span>}
                   <span className="tiny faint">{t.portal} · {t.tender_ref}</span>
                 </div>
                 <h4><Link href={`/app/tenders/${m.id}`} style={{ color: "inherit" }}>{t.title}</Link></h4>
