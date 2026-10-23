@@ -19,7 +19,7 @@ const form = (o) => { const f = new FormData(); for (const [k, v] of Object.entr
 
 // Chat for one tender: the assistant's earlier messages (what is done), then one question at a time.
 // Answers are saved to the Vault by server actions; the page re-loads its steps after each one.
-export default function Assistant({ matchId, tenderId, done, steps, brief, formats, canAnswer, canPrepare }) {
+export default function Assistant({ matchId, tenderId, done, steps, brief, formats, redo, canAnswer, canPrepare }) {
   const router = useRouter();
   const [log, setLog] = useState([]);
   const [skipped, setSkipped] = useState(() => new Set());
@@ -83,6 +83,12 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, forma
       <div style={{ flex: 1, padding: "18px 18px 8px", display: "flex", flexDirection: "column", gap: 10 }} aria-live="polite">
         <Bubble>Namaste! I'll prepare this tender with you. I'll ask only what I can't find in your Vault, and save every answer so the next tender asks less.</Bubble>
         {done.map((d, i) => <Bubble key={`d${i}`}>{d}</Bubble>)}
+        {redo && (redo.read || redo.tech) && (
+          <div className="row" style={{ gap: 8, alignSelf: "flex-start" }}>
+            {redo.read && <button className="ghost sm" aria-busy={busy} disabled={busy} onClick={() => run("Read the tender again with AI", () => readTender({}, form({ match_id: matchId, mode: "ai" })), (r) => r.message, { label: "AI is reading the tender again…", seconds: 60 })}>↻ Read again with AI · 99 credits</button>}
+            {redo.tech && <button className="ghost sm" aria-busy={busy} disabled={busy} onClick={() => run("Redo the technical marking", () => techMarking({ matchId }), (r) => r.message, { label: "Reading the evaluation criteria and marking your firm again…", seconds: 50 })}>↻ Redo technical marking · 29 credits</button>}
+          </div>
+        )}
         {log.map((x, i) => (
           <Bubble key={`l${i}`} me={x.who === "me"} error={x.error}>
             {x.text}{x.url && <> <a href={x.url} target="_blank" rel="noreferrer">Download PDF</a></>}
