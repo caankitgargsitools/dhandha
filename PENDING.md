@@ -10,7 +10,6 @@ Last checked: 23 Oct 2026.
 |---|------|------------------|--------------------------|
 | 1 | **Indian server (Oracle Mumbai VM)** | Needs your Oracle account. Unlocks GeM tenders, faster document fetching, a proper home for the always-on fetcher. | Say "server ready" — I'll check it reports in. |
 | 2 | **Open Settings → Phone app once, install the app, turn on notifications** | Your first visit creates the notification keys and saves the site address (needs you signed in as platform admin). | I can see it in the database. |
-| 5 | **Google Maps key** (`GOOGLE_MAPS_API_KEY` in Vercel; enable Places API (New) with billing) | Your Google Cloud billing account. | Search works on Generate leads → Google Maps. |
 | 6 | **Apollo API key** (paste in Generate leads → Apollo) | Your Apollo account / plan with API access. | I can see it connected. |
 | 7 | **Razorpay switch-on** (keys in Vercel, webhook in Razorpay, secret in Supabase Vault, seller GSTIN in Admin → Billing) | Your Razorpay account and KYC. | I can see the webhook secret and GSTIN. |
 | 8 | **Email sending (Resend)**: account, `RESEND_API_KEY` and `OUTREACH_FROM_EMAIL` in Vercel, verify your domain | Your domain's DNS. | Outreach emails go out. |
@@ -40,6 +39,8 @@ Last checked: 23 Oct 2026.
 | K | AI tender check (scope of work, not just the title) | Waiting on #18 |
 
 ## Done (recent)
+
+- 23 Oct: Google Maps key added by the owner (Production + Preview) — Generate leads → Google Maps is on.
 
 - 23 Oct: tender assistant — mandatory-condition warning with "File anyway", ask-anything box (Claude), technical marking with L1 best price / QCBS final score, annexures as editable forms with add-row.
 
