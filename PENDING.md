@@ -41,6 +41,8 @@ Last checked: 23 Oct 2026.
 
 ## Done (recent)
 
+- 23 Oct: tender assistant — mandatory-condition warning with "File anyway", ask-anything box (Claude), technical marking with L1 best price / QCBS final score, annexures as editable forms with add-row.
+
 - 23 Oct: customers never see captchas — they go to platform admins (desk + phone push); one portal session reused across tenders; shortlisted and strong matches fetched in advance.
 
 - 23 Oct: fetched-document chunks are cleared automatically once the files are saved (13 MB freed).

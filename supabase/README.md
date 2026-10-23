@@ -53,3 +53,4 @@ Social lead sources:
 30. `people_membership_pan` — `people.membership_no`, `people.pan` (partner details in tender formats)
 31. `tender_doc_chunks_cleanup` — trigger `tender_doc_jobs_drop_chunks` (`private.drop_collected_chunks`) deletes a job's chunks when it becomes `collected` (applied with execute_sql in parts)
 32. `doc_prefetch_and_admin_captcha` (applied with execute_sql in parts) — `tender_doc_jobs.auto`; `answer_doc_captcha` allows platform admins; `admin_doc_captchas`; `push_on_doc_job` sends captchas to platform admins only, prefetches quiet; `doc_job_claim(key, runner, portal)`; trigger `tender_matches_prefetch` / `private.queue_prefetch`; `private.expire_prefetches` (cron `expire_doc_prefetches`, 03:17 UTC)
+33. `assistant_eval_force` (execute_sql) — `tender_matches.forced_at`, `forced_by`, `forced_note`, `tech_eval`; price_book `tech_marking` (29), `assistant_chat` (3)

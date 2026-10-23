@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { mandatoryUnmet } from "@/lib/conditions";
 import { notFound } from "next/navigation";
 import { getContext, daysLeft, lakh, fmtDate } from "@/lib/session";
 import { requiredDocs } from "@/lib/bidpack";
@@ -66,7 +67,7 @@ export default async function TenderDetail({ params }) {
             <p>{t.authority}{t.department ? ` · ${t.department}` : ""}{t.district ? ` · ${t.district}` : ""}{t.state ? `, ${t.state}` : ""}</p>
             <div className="row tiny faint" style={{ gap: 10, marginTop: 6 }}>
               <span>{t.portal}</span><span>Tender ID {t.tender_ref}</span>{t.url && <a href={t.url} target="_blank" rel="noreferrer">Open portal</a>}
-              {!m.eligible && <span className="chip bad">Not eligible on current Vault</span>}
+              {mandatoryUnmet(m.reasons).length > 0 && <span className="chip warn">⚠ Mandatory condition not met — you decide in the assistant</span>}
             </div>
           </div>
         </div>
