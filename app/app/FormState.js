@@ -9,7 +9,7 @@ export default function FormState({ action, children, submit = "Save", className
       {children}
       {state?.error && <p className="error">{state.error}</p>}
       {state?.message && <p className="small" style={{ color: "var(--ok)" }}>{state.message}</p>}
-      <div><button disabled={pending}>{pending ? "Saving…" : submit}</button></div>
+      <div><button disabled={pending} aria-busy={pending}>{pending ? "Working…" : submit}</button></div>
     </form>
   );
 }

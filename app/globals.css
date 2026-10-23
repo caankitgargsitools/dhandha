@@ -244,3 +244,17 @@ td.right, th.right { text-align: right; }
   body { background: #fff; }
   .panel.invoice { box-shadow: none; border: 0; max-width: none !important; }
 }
+
+/* working indicators: top activity bar, spinners, progress bars, busy buttons */
+.activity-bar { position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 1000; overflow: hidden; background: rgba(140, 29, 47, .15); }
+.activity-bar::after { content: ""; position: absolute; top: 0; bottom: 0; width: 35%; background: linear-gradient(90deg, var(--madder), var(--marigold)); animation: dh-slide 1.1s ease-in-out infinite; }
+@keyframes dh-slide { from { left: -35%; } to { left: 100%; } }
+.spinner { display: inline-block; border-radius: 99px; border: 2px solid var(--line); border-top-color: var(--madder); animation: dh-spin .8s linear infinite; flex: none; }
+@keyframes dh-spin { to { transform: rotate(360deg); } }
+.progress-track { height: 8px; background: var(--line-soft); border-radius: 99px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--madder), var(--marigold)); border-radius: 99px; transition: width .25s linear; }
+button[aria-busy="true"] { position: relative; padding-left: 34px; }
+button[aria-busy="true"]::before { content: ""; position: absolute; left: 12px; top: 50%; width: 13px; height: 13px; margin-top: -7px; border-radius: 99px; border: 2px solid currentColor; border-top-color: transparent; animation: dh-spin .8s linear infinite; opacity: .8; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.page-loading { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 40vh; color: var(--ink-3); }
+@media (prefers-reduced-motion: reduce) { .activity-bar::after, .spinner, button[aria-busy="true"]::before { animation-duration: 2.4s; } }

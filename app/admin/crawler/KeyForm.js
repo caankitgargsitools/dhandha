@@ -8,7 +8,7 @@ export default function KeyForm() {
     <form action={action} className="stack-sm">
       <div className="row" style={{ flexWrap: "nowrap" }}>
         <input name="name" placeholder="e.g. Bangalore server" aria-label="Key name" style={{ maxWidth: 280 }} />
-        <button disabled={pending}>{pending ? "Creating…" : "Create key"}</button>
+        <button aria-busy={!!pending} disabled={pending}>{pending ? "Creating…" : "Create key"}</button>
       </div>
       {state?.error && <p className="error">{state.error}</p>}
       {state?.key && (

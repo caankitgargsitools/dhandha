@@ -34,7 +34,7 @@ export default function AddMemberForm({ tenantId }) {
           )}
         </div>
       )}
-      <div><button disabled={pending}>{pending ? "Adding…" : "Add person"}</button></div>
+      <div><button aria-busy={!!pending} disabled={pending}>{pending ? "Adding…" : "Add person"}</button></div>
     </form>
   );
 }

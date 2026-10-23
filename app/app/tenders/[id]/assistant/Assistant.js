@@ -12,6 +12,7 @@ import CostPlanner from "./CostPlanner";
 import { MasterAnswer, WorkAnswer, PersonAnswer, FormatPicker } from "./Questions";
 import AnnexureEditor from "./AnnexureEditor";
 import EvalPanel from "./EvalPanel";
+import { Spinner, TimedProgress } from "@/components/Progress";
 import { forceFiling, techMarking, askAssistant, saveAnnexure, annexureSegments } from "../../assistantActions";
 
 const form = (o) => { const f = new FormData(); for (const [k, v] of Object.entries(o)) f.append(k, v); return f; };
@@ -23,6 +24,7 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, forma
   const [log, setLog] = useState([]);
   const [skipped, setSkipped] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
+  const [working, setWorking] = useState(null); // { label, seconds } of what is running, for the progress bar
   const [text, setText] = useState("");
   const [ask, setAsk] = useState("");
   const [asking, setAsking] = useState(false);
@@ -38,20 +40,23 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, forma
   useEffect(() => {
     if (current?.kind !== "read" || !current.auto || autoRead.current || !canAnswer) return;
     autoRead.current = true;
-    run(null, () => readTender({}, form({ match_id: matchId, mode: current.aiReady ? "ai" : "basic" })), (r) => r.message);
+    run(null, () => readTender({}, form({ match_id: matchId, mode: current.aiReady ? "ai" : "basic" })), (r) => r.message, { label: "Reading every page of the tender…", seconds: current.aiReady ? 60 : 15 });
   }, [current?.kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const say = (who, msg, extra) => setLog((l) => [...l, { who, text: msg, ...extra }]);
-  async function run(mine, fn, ok) {
+  // roughly how long the slow steps take, for a progress bar instead of a bare spinner
+  async function run(mine, fn, ok, eta) {
     if (mine) say("me", mine);
     else if (mine === null) say("bot", "Reading the documents…");
     setBusy(true);
+    setWorking(eta || { label: "Working…" });
     try {
       const r = await fn();
       if (r?.error) say("bot", r.error, { error: true });
       else { say("bot", typeof ok === "function" ? ok(r) : ok, r?.url ? { url: r.url } : undefined); setText(""); }
     } catch (e) { say("bot", `Something went wrong: ${e.message}`, { error: true }); }
     setBusy(false);
+    setWorking(null);
     router.refresh();
   }
   // ask anything, at any point: about the tender, or about the question on screen (Claude, from the documents)
@@ -123,6 +128,11 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, forma
         <div ref={end} />
       </div>
 
+      {(working || asking) && (
+        <div style={{ borderTop: "1px solid var(--line)", padding: "10px 14px" }} aria-live="polite">
+          {asking ? <TimedProgress key="ask" seconds={20} label="Looking through the tender for your answer…" /> : working?.seconds ? <TimedProgress key={working.label} seconds={working.seconds} label={working.label} /> : <Spinner label={working?.label || "Working…"} />}
+        </div>
+      )}
       {current && canAnswer && current.kind !== "fetch" && (
         <div style={{ borderTop: "1px solid var(--line)", padding: 14, background: "var(--paper-2, transparent)" }} className="stack-sm">
           {current.kind === "yes_no" && (
@@ -154,7 +164,7 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, forma
           )}
           {current.kind === "tech_eval" && (
             <div className="row" style={{ gap: 8 }}>
-              <button disabled={busy || !current.paidAi} title={current.paidAi ? "" : "Needs a paid AI key"} onClick={() => run("Yes, work out the technical marks", () => techMarking({ matchId }), (r) => r.message)}>{busy ? "Reading the evaluation…" : "Work it out · 29 credits"}</button>
+              <button disabled={busy || !current.paidAi} title={current.paidAi ? "" : "Needs a paid AI key"} onClick={() => run("Yes, work out the technical marks", () => techMarking({ matchId }), (r) => r.message, { label: "Reading the evaluation criteria and marking your firm…", seconds: 50 })}>{busy ? "Reading the evaluation…" : "Work it out · 29 credits"}</button>
               <button className="ghost" disabled={busy} onClick={skip}>Not now</button>
             </div>
           )}
@@ -169,13 +179,13 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, forma
           )}
           {current.kind === "read" && (
             <div className="row" style={{ gap: 8 }}>
-              <button className="ghost" disabled={busy} onClick={() => run("Read it with the free reader", () => readTender({}, form({ match_id: matchId, mode: "basic" })), (r) => r.message)}>{busy ? "Reading…" : "Free reader · 10 credits"}</button>
-              <button disabled={busy} onClick={() => run("Read it with AI", () => readTender({}, form({ match_id: matchId, mode: "ai" })), (r) => r.message)}>{busy ? "Reading…" : "Read with AI · 99 credits"}</button>
+              <button className="ghost" disabled={busy} onClick={() => run("Read it with the free reader", () => readTender({}, form({ match_id: matchId, mode: "basic" })), (r) => r.message, { label: "Reading the tender (free reader)…", seconds: 15 })}>{busy ? "Reading…" : "Free reader · 10 credits"}</button>
+              <button disabled={busy} onClick={() => run("Read it with AI", () => readTender({}, form({ match_id: matchId, mode: "ai" })), (r) => r.message, { label: "AI is reading the tender…", seconds: 60 })}>{busy ? "Reading…" : "Read with AI · 99 credits"}</button>
             </div>
           )}
           {current.kind === "fill_ai" && (
             <div className="row" style={{ gap: 8 }}>
-              <button disabled={busy} onClick={() => run("Yes, fill them with AI", () => fillCustom({ matchId }), (r) => r.message)}>{busy ? "Filling…" : "Fill with AI · 49 credits"}</button>
+              <button disabled={busy} onClick={() => run("Yes, fill them with AI", () => fillCustom({ matchId }), (r) => r.message, { label: "Filling the formats from your masters…", seconds: 45 })}>{busy ? "Filling…" : "Fill with AI · 49 credits"}</button>
               <button className="ghost" disabled={busy} onClick={skip}>Not now</button>
             </div>
           )}
@@ -183,7 +193,7 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, forma
           {current.kind === "price" && <CostPlanner matchId={matchId} initial={current.sheet} estimate={current.estimate} fresh={current.fresh} onDone={(label) => { say("me", label); say("bot", "Price saved for this tender. It goes on the preparation sheet; you enter it in the portal's price bid."); router.refresh(); }} />}
           {current.kind === "draft" && (
             <div className="row" style={{ gap: 8 }}>
-              <button disabled={busy} onClick={() => run("Make the draft", () => generateBidPack({}, form({ match_id: matchId, kind: "draft" })), (r) => r.message || "Draft ready.")}>{busy ? "Preparing…" : "Make draft bid pack"}</button>
+              <button disabled={busy} onClick={() => run("Make the draft", () => generateBidPack({}, form({ match_id: matchId, kind: "draft" })), (r) => r.message || "Draft ready.", { label: "Putting the bid file together…", seconds: 20 })}>{busy ? "Preparing…" : "Make draft bid pack"}</button>
               <Link className="btn ghost" href={`/app/tenders/${matchId}`}>Open the tender page</Link>
             </div>
           )}
@@ -192,7 +202,7 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, forma
       {canAnswer && (
         <form onSubmit={askNow} className="row" style={{ gap: 8, flexWrap: "nowrap", borderTop: "1px solid var(--line)", padding: "10px 14px" }}>
           <input value={ask} onChange={(e) => setAsk(e.target.value)} placeholder="Ask anything about this tender or this question…" aria-label="Ask the assistant" style={{ flex: 1, width: "auto" }} />
-          <button className="ghost" disabled={asking || !ask.trim()}>{asking ? "Thinking…" : "Ask · 3 credits"}</button>
+          <button aria-busy={!!asking} className="ghost" disabled={asking || !ask.trim()}>{asking ? "Thinking…" : "Ask · 3 credits"}</button>
         </form>
       )}
     </div>

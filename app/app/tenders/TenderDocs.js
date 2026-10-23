@@ -44,8 +44,8 @@ export function ReadButtons({ matchId, aiReady, hasFiles }) {
     <form action={action} className="stack-sm">
       <input type="hidden" name="match_id" value={matchId} />
       <div className="row">
-        <button name="mode" value="basic" className="ghost" disabled={pending || !hasFiles}>{pending ? "Reading…" : "Read (free engine · 10 credits)"}</button>
-        <button name="mode" value="ai" disabled={pending || !hasFiles || !aiReady} title={aiReady ? "" : "AI not configured yet"}>{pending ? "Reading…" : "Read with AI · 99 credits"}</button>
+        <button aria-busy={!!pending} name="mode" value="basic" className="ghost" disabled={pending || !hasFiles}>{pending ? "Reading…" : "Read (free engine · 10 credits)"}</button>
+        <button aria-busy={!!pending} name="mode" value="ai" disabled={pending || !hasFiles || !aiReady} title={aiReady ? "" : "AI not configured yet"}>{pending ? "Reading…" : "Read with AI · 99 credits"}</button>
       </div>
       <p className="tiny faint" style={{ margin: 0 }}>
         The free engine reads typed English tenders. AI is needed for scanned, Hindi or regional-language documents, and gives a summary and the full list of formats.

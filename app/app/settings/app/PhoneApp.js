@@ -73,7 +73,7 @@ export default function PhoneApp({ devices }) {
         <p className="small muted" style={{ margin: 0 }}>Get a notification when a captcha needs typing, when tender documents are fetched, when new tenders match your company (hourly), and for follow-ups due (every morning at 9).</p>
         {!support ? <p className="small">This browser cannot show notifications. Use Chrome on Android, or install the app first on iPhone.</p>
           : sub ? <div className="row" style={{ gap: 8 }}><span className="chip ok">On for this device</span><button className="ghost sm" disabled={busy} onClick={() => testPush().then(() => setMsg("Test sent."))}>Send a test</button><button className="ghost sm" disabled={busy} onClick={turnOff}>Turn off</button></div>
-          : <div><button disabled={busy || perm === "denied"} onClick={turnOn}>{busy ? "Turning on…" : "Turn on notifications"}</button>{perm === "denied" && <p className="small" style={{ color: "var(--blood)" }}>Blocked in the browser. Allow notifications for this site in the browser's settings first.</p>}</div>}
+          : <div><button aria-busy={!!busy} disabled={busy || perm === "denied"} onClick={turnOn}>{busy ? "Turning on…" : "Turn on notifications"}</button>{perm === "denied" && <p className="small" style={{ color: "var(--blood)" }}>Blocked in the browser. Allow notifications for this site in the browser's settings first.</p>}</div>}
         {devices.length > 0 && <div className="tiny faint">Your devices with notifications: {devices.map((d) => d.device || "device").join(" · ")}</div>}
       </div>
       {msg && <p className="small" style={{ margin: 0 }}>{msg}</p>}
