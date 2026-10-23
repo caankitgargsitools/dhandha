@@ -24,8 +24,8 @@ It covers:
 - **Secrets** live only in Vercel Environment Variables (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, and so on), never in code or chat.
 
 ## Ground rules from the owner
-1. **Cost order is always free → cheaper → costlier.**
-   - Tender reading: the free rule engine first (`lib/tenderRules.js`), then Gemini free tier, then Claude Haiku, then Claude Sonnet. See `lib/ai.js`.
+1. **Cost order is always free → cheaper → costlier — for every AI or paid tool, in every project.** Where several tiers exist, layer them: a free tool or reader first (rules engine, Gemini free tier, …); only if it cannot do the job, the cheapest paid one; then costlier ones. Never start at a paid tier when a free one can try.
+   - Tender reading: the free rule engine first (`lib/tenderRules.js`), then Gemini free tier, then Claude Haiku 5.5, then Haiku 4.5, then Claude Sonnet 5.5 (`lib/ai.js` `aiTiers`; each failure, refusal or cut-off answer falls through to the next; spend per call in `ai_usage`).
    - The Gemini free tier may train on what it receives, so it only ever gets public tender documents (`private:false`). Customer private data goes to paid tiers only (`private:true`).
 2. **Own crawler only.** No aggregator or third-party tender data services. Code is in `crawler/` (Node + Playwright; GePNIC and GeM adapters). Never bypass or auto-solve captchas: where a page needs one, the crawler shows the picture to a platform admin (Admin → "Captcha needed" card, `crawler/src/captcha.js`, `crawler_captchas`) and a person types it.
 3. **Signatures need the admin's TOTP code.** Signature and seal go on a PDF only after the admin enters it, and every use is logged (`log_signature_use`). Drafts carry a "DRAFT – NOT SIGNED" watermark.
