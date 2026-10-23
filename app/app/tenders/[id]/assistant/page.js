@@ -12,7 +12,8 @@ import { emptySheet, monthsFrom } from "@/lib/costing";
 import Assistant from "./Assistant";
 import TenderBrief from "../../TenderBrief";
 
-export const maxDuration = 60;
+// AI steps (reading, filling, marking) can take a few minutes; lib/ai.js keeps the whole chain inside this
+export const maxDuration = 300;
 
 // When the tender's own list of formats is not known: the usual set.
 const STANDARD = [

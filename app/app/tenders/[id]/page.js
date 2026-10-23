@@ -11,7 +11,8 @@ import { UploadTenderFiles, ReadButtons } from "../TenderDocs";
 import FormatsPanel from "../FormatsPanel";
 import { aiTiers } from "@/lib/ai";
 
-export const maxDuration = 60;
+// AI steps (reading, filling, marking) can take a few minutes; lib/ai.js keeps the whole chain inside this
+export const maxDuration = 300;
 
 const PROFILE_NEEDED = [["legal_name", "Legal name"], ["pan", "PAN"], ["gstin", "GSTIN"], ["registered_address", "Registered address"], ["signatory_name", "Signatory name"], ["signatory_designation", "Signatory designation"], ["bank_account", "Bank account"], ["bank_ifsc", "IFSC"]];
 
