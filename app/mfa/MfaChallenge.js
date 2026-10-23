@@ -36,7 +36,7 @@ export default function MfaChallenge() {
       <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" autoComplete="one-time-code"
         maxLength={6} placeholder="123456" required style={{ fontSize: 22, letterSpacing: 6, textAlign: "center" }} />
       {error && <p className="error">{error}</p>}
-      <button disabled={busy}>{busy ? "Checking…" : "Verify"}</button>
+      <button aria-busy={!!busy} disabled={busy}>{busy ? "Checking…" : "Verify"}</button>
     </form>
   );
 }

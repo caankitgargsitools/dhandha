@@ -48,7 +48,7 @@ export default function TwoFactor({ enabled }) {
   );
 
   if (!step) return (
-    <div className="row"><span className="chip bad">Off</span><button onClick={start} disabled={busy}>{busy ? "Starting…" : "Turn on"}</button>{error && <span className="error">{error}</span>}</div>
+    <div className="row"><span className="chip bad">Off</span><button aria-busy={!!busy} onClick={start} disabled={busy}>{busy ? "Starting…" : "Turn on"}</button>{error && <span className="error">{error}</span>}</div>
   );
 
   return (
@@ -59,7 +59,7 @@ export default function TwoFactor({ enabled }) {
       <p className="small" style={{ margin: 0 }}>2. Enter the 6-digit code it shows.</p>
       <input value={code} onChange={(e) => setCode(e.target.value)} inputMode="numeric" maxLength={6} required placeholder="123456" style={{ maxWidth: 200, fontSize: 20, letterSpacing: 4 }} />
       {error && <p className="error">{error}</p>}
-      <div className="row"><button disabled={busy}>{busy ? "Checking…" : "Verify and turn on"}</button><button type="button" className="ghost" onClick={() => setStep(null)}>Cancel</button></div>
+      <div className="row"><button aria-busy={!!busy} disabled={busy}>{busy ? "Checking…" : "Verify and turn on"}</button><button type="button" className="ghost" onClick={() => setStep(null)}>Cancel</button></div>
     </form>
   );
 }

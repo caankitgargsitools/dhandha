@@ -89,6 +89,7 @@ It covers:
   - Colours: madder #8c1d2f, marigold #f0a202, ink #1b2240.
   - Fonts: Bricolage Grotesque, Manrope, Tiro Devanagari Hindi.
   - Charts are hand-drawn SVG in `components/Charts.js`.
+  - Working indicators (owner's rule: every running process shows it is working): `components/ActivityBar.js` (root layout) shows a top bar while any same-site request runs (server actions, page loads, API routes; database polling excluded; appears after 200 ms). `components/Progress.js`: `<Spinner />` when the time is unknown, `<TimedProgress seconds label />` when it is roughly known (fills to 95%, "about N s left"). Busy buttons get `aria-busy` (CSS spinner); `FormState` does it automatically; `loading.js` in `/app` and `/admin`. New long actions must use one of these.
 - Tests: `node --test tests/` and `cd crawler && npm test`.
 
 ## Done so far

@@ -20,7 +20,7 @@ export default function AuthForm({ mode, email, name }) {
       </div>
       {state?.error && <p className="error">{state.error}</p>}
       {state?.message && <p className="notice small">{state.message}</p>}
-      <button disabled={pending}>{pending ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}</button>
+      <button aria-busy={!!pending} disabled={pending}>{pending ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}</button>
     </form>
   );
 }

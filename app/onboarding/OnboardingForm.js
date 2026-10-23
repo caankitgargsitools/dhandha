@@ -22,7 +22,7 @@ export default function OnboardingForm() {
         <input id="company" name="company" required />
       </div>
       {state?.error && <p className="error">{state.error}</p>}
-      <button disabled={pending}>{pending ? "Creating…" : "Create workspace"}</button>
+      <button aria-busy={!!pending} disabled={pending}>{pending ? "Creating…" : "Create workspace"}</button>
     </form>
   );
 }

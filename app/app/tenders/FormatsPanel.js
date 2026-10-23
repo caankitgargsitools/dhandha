@@ -29,8 +29,8 @@ export default function FormatsPanel({ matchId, plan, gaps, canEdit, paidAi, has
       {canEdit && hasFormats && (
         <form action={action} className="row" style={{ gap: 8 }}>
           <input type="hidden" name="match_id" value={matchId} />
-          <button name="ai" value="0" className="ghost sm" disabled={pending}>{pending ? "Working…" : plan.length ? "Re-match formats (free)" : "Match formats (free)"}</button>
-          {custom.length > 0 && <button name="ai" value="1" className="sm" disabled={pending || !paidAi} title={paidAi ? "" : "Needs a paid AI key"}>{pending ? "Filling…" : `Fill ${custom.length} custom with AI · 49 credits`}</button>}
+          <button aria-busy={!!pending} name="ai" value="0" className="ghost sm" disabled={pending}>{pending ? "Working…" : plan.length ? "Re-match formats (free)" : "Match formats (free)"}</button>
+          {custom.length > 0 && <button aria-busy={!!pending} name="ai" value="1" className="sm" disabled={pending || !paidAi} title={paidAi ? "" : "Needs a paid AI key"}>{pending ? "Filling…" : `Fill ${custom.length} custom with AI · 49 credits`}</button>}
         </form>
       )}
       {custom.length > 0 && !paidAi && <p className="tiny faint" style={{ margin: 0 }}>Custom formats contain your company data, so they are never sent to free AI. Add a paid AI key (Claude) to fill them, or type them in after downloading the draft.</p>}

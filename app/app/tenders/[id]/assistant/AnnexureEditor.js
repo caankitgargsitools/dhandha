@@ -57,7 +57,7 @@ export default function AnnexureEditor({ title, segments: initial, busy, onSave,
         <textarea id="ax-extra" rows={2} value={extra} onChange={(e) => setExtra(e.target.value)} placeholder="Another paragraph, a note, a detail…" />
       </div>
       <div className="row" style={{ gap: 8 }}>
-        <button disabled={busy} onClick={save}>{busy ? "Saving…" : missing ? `Save (${missing} still blank)` : "Save this annexure"}</button>
+        <button aria-busy={!!busy} disabled={busy} onClick={save}>{busy ? "Saving…" : missing ? `Save (${missing} still blank)` : "Save this annexure"}</button>
         {onCancel && <button type="button" className="ghost" disabled={busy} onClick={onCancel}>Close</button>}
         <span className="tiny faint">You can edit any wording — tap the text.</span>
       </div>

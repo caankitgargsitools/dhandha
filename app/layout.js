@@ -3,6 +3,7 @@ import "@fontsource-variable/manrope";
 import "@fontsource/tiro-devanagari-hindi/devanagari-400.css";
 import "./globals.css";
 import PwaRegister from "@/components/PwaRegister";
+import ActivityBar from "@/components/ActivityBar";
 
 export const metadata = {
   title: "Dhandha — Business Generation Suite",
@@ -17,7 +18,7 @@ export const viewport = { themeColor: "#8c1d2f", width: "device-width", initialS
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}<PwaRegister /></body>
+      <body><ActivityBar />{children}<PwaRegister /></body>
     </html>
   );
 }

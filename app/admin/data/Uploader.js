@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { TimedProgress } from "@/components/Progress";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { processDataset } from "./actions";
@@ -8,6 +9,7 @@ import { processDataset } from "./actions";
 export default function Uploader() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+  const [eta, setEta] = useState(null); // seconds expected for this file (upload + reading + loading rows)
   const [msg, setMsg] = useState(null);
   const [audience, setAudience] = useState("business");
   async function submit(e) {
@@ -16,7 +18,7 @@ export default function Uploader() {
     const file = f.get("file");
     if (!file?.size) return setMsg({ error: "Choose a file." });
     if (file.size > 50 * 1024 * 1024) return setMsg({ error: "Keep the file under 50 MB; split bigger databases." });
-    setBusy(true); setMsg({ note: "Uploading…" });
+    setBusy(true); setMsg({ note: "Uploading…" }); setEta(Math.round(8 + (file.size / (1024 * 1024)) * 4));
     const path = `${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const { error } = await createClient().storage.from("datasets").upload(path, file, { contentType: file.type || "text/csv" });
     if (error) { setBusy(false); return setMsg({ error: error.message }); }
@@ -49,7 +51,8 @@ export default function Uploader() {
       {msg?.error && <p className="error small">{msg.error}</p>}
       {msg?.note && <p className="small muted">{msg.note}</p>}
       {msg?.message && <p className="success small">{msg.message}</p>}
-      <div><button disabled={busy}>{busy ? "Working…" : "Upload as draft"}</button></div>
+      {busy && eta && <TimedProgress seconds={eta} label="Uploading and loading the records…" />}
+      <div><button aria-busy={!!busy} disabled={busy}>{busy ? "Working…" : "Upload as draft"}</button></div>
     </form>
   );
 }
