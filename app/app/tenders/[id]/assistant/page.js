@@ -23,7 +23,7 @@ const STANDARD = [
 // needs on the way. Every answer goes into the Vault, so the next tender asks less.
 export default async function TenderAssistant({ params }) {
   const { id } = await params;
-  const { supabase, company, role } = await getContext();
+  const { supabase, company, role, isPlatformAdmin } = await getContext();
   const { data: m } = await supabase.from("tender_matches").select("*, tenders(*)").eq("id", id).eq("company_id", company.id).maybeSingle();
   if (!m) notFound();
   const t = m.tenders;
@@ -59,8 +59,8 @@ export default async function TenderAssistant({ params }) {
   // 1. documents: fetched from the portal by the crawler (captcha typed here), or uploaded
   const pdfs = (files || []).filter((x) => /\.pdf$/i.test(x.file_name));
   if (pdfs.length) done.push(`I have ${files.length} tender document${files.length === 1 ? "" : "s"}: ${files.map((x) => x.file_name).join(", ").slice(0, 200)}.`);
-  else steps.push({ id: "fetch", kind: "fetch", job: job && ["queued", "running", "captcha", "fetched", "failed"].includes(job.status) ? job : null, portal: t.portal, aiReady: aiTiers().length > 0,
-    say: files?.length ? `I have ${files.map((x) => x.file_name).join(", ")} but not the tender's PDF yet, so I'll fetch again from ${t.portal}.` : `First I'll fetch the tender documents from ${t.portal}. If the portal shows a captcha, I'll put the picture here for you to type.` });
+  else steps.push({ id: "fetch", kind: "fetch", job: job && ["queued", "running", "captcha", "fetched", "failed"].includes(job.status) ? job : null, portal: t.portal, aiReady: aiTiers().length > 0, typer: isPlatformAdmin,
+    say: files?.length ? `I have ${files.map((x) => x.file_name).join(", ")} but not the tender's PDF yet, so I'll fetch again from ${t.portal}.` : `First I'll fetch the tender documents from ${t.portal}. This usually takes a few minutes — you can leave this page; I'll notify you when they're in.` });
 
   // 2. read them, then 3. the brief — nothing is prepared until you say it looks good
   if (pdfs.length && !read) steps.push({ id: "read", kind: "read", auto: true, say: "Reading the documents now…", aiReady: aiTiers().length > 0 });

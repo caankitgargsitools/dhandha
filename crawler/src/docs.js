@@ -1,7 +1,8 @@
 // Tender document fetcher. The tender assistant in Dhandha queues a job; this worker claims it, finds the tender
 // on its GePNIC portal (organisation list → organisation → tender), reads the detail page, and downloads the
-// tender documents. Where the portal asks for a captcha, the picture is shown in the assistant chat and a person
-// types it; nothing reads or solves captchas here. Files go back to Dhandha in chunks (doc_job_put_chunk).
+// tender documents. Where the portal asks for a captcha, the picture goes to Dhandha's platform admins (captcha desk
+// and a phone notification) and a person types it; nothing reads or solves captchas here. Shortlisted and strongly
+// matching tenders are queued in advance (auto jobs). Files go back to Dhandha in chunks (doc_job_put_chunk).
 //   node src/docs.js --until-idle [--wait 90]   process queued jobs, waiting up to 90 s for the first one
 import { chromium } from "playwright";
 import { readFile } from "node:fs/promises";
@@ -41,7 +42,7 @@ async function captchaFromPerson(page, job) {
     const img = await visible(page, CAPTCHA_IMG), input = await visible(page, CAPTCHA_INPUT);
     if (!img || !input) return true;
     const png = await img.screenshot({ type: "png" });
-    const r0 = await update(job, { status: "captcha", step: attempt === 1 ? "The portal asks for a captcha — type it below" : "The portal did not accept that; here is a new picture", image: `data:image/png;base64,${png.toString("base64")}` });
+    const r0 = await update(job, { status: "captcha", step: attempt === 1 ? "The portal asked for a captcha; waiting for it to be typed" : "The portal did not accept that; a new picture is waiting", image: `data:image/png;base64,${png.toString("base64")}` });
     const seq = r0.captcha_seq;
     const until = Date.now() + 9 * 60000;
     let answer = null;
@@ -186,11 +187,28 @@ async function upload(job, files) {
   return list;
 }
 
+// One browser session per portal, kept between jobs: after a person has typed a captcha, the portal often lets the
+// same session download the next tenders without asking again. Where it does ask, the person is asked as usual.
+const SESSION_IDLE_MS = 20 * 60000;
+const sessions = new Map(); // portal -> { ctx, page, last }
+async function sessionFor(browser, portal) {
+  for (const [p, s] of sessions) if (Date.now() - s.last > SESSION_IDLE_MS) { await s.ctx.close().catch(() => {}); sessions.delete(p); }
+  let s = sessions.get(portal);
+  if (!s || s.page.isClosed()) {
+    const ctx = await browser.newContext({ locale: "en-IN", acceptDownloads: true });
+    s = { ctx, page: await ctx.newPage(), last: Date.now() };
+    sessions.set(portal, s);
+  }
+  s.last = Date.now();
+  return s;
+}
+async function dropSession(portal) { const s = sessions.get(portal); if (s) { sessions.delete(portal); await s.ctx.close().catch(() => {}); } }
+
 async function runJob(browser, job) {
   const site = GEPNIC.find((s) => s.portal === job.portal);
   if (!site || site.skip) { await update(job, { status: "failed", error: `Fetching documents from ${job.portal} is not supported yet. Download them from the portal and upload here.` }); return; }
-  const ctx = await browser.newContext({ locale: "en-IN", acceptDownloads: true });
-  const page = await ctx.newPage();
+  const { page } = await sessionFor(browser, job.portal);
+  let broken = false;
   try {
     log(`job ${job.id}: ${job.portal} ${job.tender_ref}`);
     if (!(await openTender(page, site, job))) {
@@ -206,10 +224,11 @@ async function runJob(browser, job) {
     await update(job, { status: "fetched", step: `Fetched ${list.length} document${list.length === 1 ? "" : "s"}`, files: list });
     log(`job ${job.id}: fetched ${list.length}`);
   } catch (e) {
+    broken = true;
     log(`job ${job.id} failed: ${e.message}`);
     await update(job, { status: "failed", error: e.message === "stopped" ? "Stopped." : e.message.split("\n")[0] }).catch(() => {});
   } finally {
-    await ctx.close();
+    if (broken) await dropSession(job.portal); else if (sessions.get(job.portal)) sessions.get(job.portal).last = Date.now();
   }
 }
 
@@ -220,10 +239,11 @@ const stopAt = args.includes("--hours") ? Date.now() + Number(args[args.indexOf(
 const browser = await chromium.launch();
 try {
   const start = Date.now();
-  let did = 0;
+  let did = 0, lastPortal = null;
   for (;;) {
-    const job = await rpc("doc_job_claim", { p_runner: RUNNER });
-    if (job) { await runJob(browser, job); did++; continue; }
+    // jobs people wait for come first; otherwise stay on the portal whose session is already open
+    const job = await rpc("doc_job_claim", { p_runner: RUNNER, p_portal: lastPortal });
+    if (job) { await runJob(browser, job); did++; lastPortal = job.portal; continue; }
     if (!did && Date.now() - start < waitFirst * 1000) { await sleep(5000); continue; }
     if (args.includes("--forever") && Date.now() < stopAt) { await sleep(3000); continue; }
     break;
