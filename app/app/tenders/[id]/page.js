@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { prerequisiteList } from "@/lib/prereq";
+import GetReady from "@/components/GetReady";
 import { mandatoryUnmet } from "@/lib/conditions";
 import { notFound } from "next/navigation";
 import { getContext, daysLeft, lakh, fmtDate } from "@/lib/session";
@@ -38,7 +40,7 @@ export default async function TenderDetail({ params }) {
   ]);
   const read = reads?.[0];
   const fileLinks = await Promise.all((files || []).map(async (f) => ({ ...f, url: (await supabase.storage.from("tender-docs").createSignedUrl(f.storage_path, 3600)).data?.signedUrl })));
-  const ENGINE = { rules: "Free reader (no AI)", "gemini-free": "Gemini Flash (free tier)", "gemini-lite": "Gemini Flash-Lite (free tier)", "claude-haiku-5": "Claude Haiku 5.5", "claude-haiku": "Claude Haiku 4.5", "claude-sonnet": "Claude Sonnet" };
+  const ENGINE = { precheck: "Automatic pre-check (free reader)", rules: "Free reader (no AI)", "gemini-free": "Gemini Flash (free tier)", "gemini-lite": "Gemini Flash-Lite (free tier)", "claude-haiku-5": "Claude Haiku 5.5", "claude-haiku": "Claude Haiku 4.5", "claude-sonnet": "Claude Sonnet" };
   const msme = ["micro", "small"].includes(c.msme_category) && c.udyam_no;
   const due = new Date(t.due_at);
   const checklist = requiredDocs(t.industry_pack, msme, t.req_docs).map((code) => {
@@ -86,6 +88,8 @@ export default async function TenderDetail({ params }) {
           <div key={l} className="panel ledger"><div className="kpi-label">{l}</div><div className="kpi" style={{ fontSize: 22 }}>{v}</div></div>
         ))}
       </div>
+
+      <GetReady items={prerequisiteList({ found: read?.fields?.prereq || t.prereq || [], fields: read?.fields || {}, tender: t, unmet: mandatoryUnmet(m.reasons), checklist, msme: !!msme, aiLines: read?.fields?.prepare_before })} />
 
       <div className="grid-2" style={{ alignItems: "start" }}>
         <div className="stack">

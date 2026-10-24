@@ -49,7 +49,7 @@ export async function generateBidPack(prev, formData) {
     supabase.from("tender_reads").select("fields, risks, summary, formats").eq("tender_id", match.tender_id).order("created_at", { ascending: false }).limit(1),
     supabase.from("tender_doc_jobs").select("detail").eq("tender_id", match.tender_id).order("created_at", { ascending: false }).limit(1),
   ]);
-  const ctx = { price: { quoted_price: match.quoted_price, price_note: match.price_note, cost_sheet: match.cost_sheet }, read: reads?.[0], detail: jobs?.[0]?.detail, reasons: match.reasons || [], formats: match.filled_formats || [], tender: match.tenders, company: c, facts: facts || [], works: works || [], people: people || [], docs: docs || [], docTypes: docTypes || [], draft: kind === "draft" };
+  const ctx = { price: { quoted_price: match.quoted_price, price_note: match.price_note, cost_sheet: match.cost_sheet }, read: reads?.[0], detail: jobs?.[0]?.detail, reasons: match.reasons || [], unmet: mandatoryUnmet(match.reasons || []), formats: match.filled_formats || [], tender: match.tenders, company: c, facts: facts || [], works: works || [], people: people || [], docs: docs || [], docTypes: docTypes || [], draft: kind === "draft" };
   if (lh) {
     ctx.letterheadBytes = await download(supabase, lh.storage_path);
     ctx.letterheadType = lh.storage_path.endsWith(".pdf") ? "pdf" : lh.storage_path.endsWith(".png") ? "png" : "jpg";

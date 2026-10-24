@@ -7,6 +7,7 @@ import { aiReadTender } from "@/lib/tenderAi";
 import { aiTiers } from "@/lib/ai";
 import { aiDocument } from "@/lib/tenderPdf";
 import { extractConditions, conditionsFromLines } from "@/lib/conditions";
+import { findPrerequisites } from "@/lib/prereq";
 
 export async function recordTenderFile({ tenderId, path, name, size }) {
   const { supabase, user } = await getContext();
@@ -51,6 +52,7 @@ export async function readTender(prev, formData) {
   }
   const rules = readTenderText(pages);
   let fields = { ...rules.fields }, docs = rules.required_docs, formats = rules.formats, risks = rules.risks, summary = null;
+  fields.prereq = findPrerequisites(pages); // "Get ready before you file", free
   let engine = "rules", confidence = rules.confidence, note = null;
 
   if (mode === "basic" && scanned && rules.confidence < 40) return { error: "These look like scanned pages, which the free reader cannot read. Use “Read with AI”." };
@@ -73,6 +75,7 @@ export async function readTender(prev, formData) {
     for (const k of ["work_scope", "highlights"]) if (Array.isArray(d[k])) fields[k] = d[k].map(String).slice(0, 12);
     if (typeof d.mse_emd_exempt === "boolean") fields.mse_emd_exempt = d.mse_emd_exempt;
     if (Array.isArray(d.other_eligibility)) fields.other_eligibility = d.other_eligibility.slice(0, 15);
+    if (Array.isArray(d.prepare_before)) fields.prepare_before = d.prepare_before.map(String).slice(0, 12);
     if (Array.isArray(d.required_docs) && d.required_docs.length) docs = [...new Set([...docs, ...d.required_docs])];
     if (Array.isArray(d.formats) && d.formats.length) {
       // keep the wording the free reader captured, matched by identifier ("Annexure C") or title

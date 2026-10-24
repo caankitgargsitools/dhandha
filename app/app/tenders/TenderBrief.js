@@ -1,10 +1,12 @@
 import Icon from "@/components/Icon";
 import { mandatoryUnmet } from "@/lib/conditions";
 import { lakh, fmtDate, daysLeft } from "@/lib/session";
+import { prerequisiteList } from "@/lib/prereq";
+import GetReady from "@/components/GetReady";
 
 // One-page brief of a tender: what it is, the numbers, the dates, the work, who can bid, what to submit,
 // and the clauses to watch. Built from the portal page, the reading of the documents and the company's Vault.
-export default function TenderBrief({ t, m, read, detail = {}, checklist = [], files = [] }) {
+export default function TenderBrief({ t, m, read, detail = {}, checklist = [], files = [], msme = false }) {
   const f = read?.fields || {};
   const msmeExempt = f.mse_emd_exempt ?? t.mse_emd_exempt;
   const left = daysLeft(t.due_at);
@@ -24,6 +26,7 @@ export default function TenderBrief({ t, m, read, detail = {}, checklist = [], f
     ["Bid closes", t.due_at || sane(f.due_at)], ["Bids opened", t.opening_at || detail.opening_at || sane(f.opening_at)],
   ].filter(([, d]) => d);
   const reasons = m.reasons || [];
+  const ready = prerequisiteList({ found: f.prereq || t.prereq || [], fields: f, tender: t, detail, unmet: mandatoryUnmet(reasons), checklist, msme: !!msme, aiLines: f.prepare_before });
   const Section = ({ icon, title, children }) => (
     <section style={{ borderTop: "1px solid var(--line-soft)", paddingTop: 12 }}>
       <h4 className="row" style={{ gap: 8, margin: "0 0 8px", fontSize: 14 }}><Icon name={icon} size={16} style={{ color: "var(--madder)" }} />{title}</h4>
@@ -51,6 +54,8 @@ export default function TenderBrief({ t, m, read, detail = {}, checklist = [], f
           </div>
         ))}
       </div>
+
+      <GetReady items={ready} />
 
       {dates.length > 0 && (
         <div className="row" style={{ gap: 0, flexWrap: "wrap" }}>

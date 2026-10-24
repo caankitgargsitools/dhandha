@@ -22,7 +22,7 @@ const form = (o) => { const f = new FormData(); for (const [k, v] of Object.entr
 // The chat (each question with its answer) is kept per tender in tender_chat, so it stays when the page is opened again.
 // Tabs: the chat, the tender summary (brief) and the fetched documents. The chat scrolls inside its own box, so the
 // page itself never jumps while answering.
-export default function Assistant({ matchId, tenderId, portal, files = [], history = [], done, steps, brief, formats, redo, canAnswer, canPrepare }) {
+export default function Assistant({ matchId, tenderId, portal, files = [], history = [], balance = Infinity, done, steps, brief, formats, redo, canAnswer, canPrepare }) {
   const router = useRouter();
   const [log, setLog] = useState(history);
   const [tab, setTab] = useState("chat");
@@ -49,7 +49,7 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
   // documents present but not read yet: read them straight away (AI when available, else the free reader)
   const autoRead = useRef(false);
   useEffect(() => {
-    if (current?.kind !== "read" || !current.auto || autoRead.current || !canAnswer) return;
+    if (current?.kind !== "read" || !current.auto || autoRead.current || !canAnswer || balance < (current.aiReady ? 99 : 10)) return;
     autoRead.current = true;
     run(null, () => readTender({}, form({ match_id: matchId, mode: current.aiReady ? "ai" : "basic" })), (r) => r.message, { label: "Reading every page of the tender…", seconds: current.aiReady ? 60 : 15 });
   }, [current?.kind]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -177,6 +177,13 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
       </div>
       {current && canAnswer && current.kind !== "fetch" && (
         <div style={{ borderTop: "1px solid var(--line)", padding: 14, background: "var(--paper-2, transparent)" }} className="stack-sm">
+          {(() => {
+            // say up front when the next paid step needs more credits than are left
+            const need = { read: current.aiReady ? 99 : 10, fill_ai: 49, tech_eval: 29 }[current.kind];
+            return need && balance < need ? (
+              <div className="notice warn small" style={{ margin: 0 }}>This step needs {need} credits and you have {Number(balance).toLocaleString("en-IN")}. <Link href="/app/wallet">Top up credits</Link> first.</div>
+            ) : null;
+          })()}
           {current.kind === "yes_no" && (
             <div className="row" style={{ gap: 8 }}>
               <button disabled={busy} onClick={() => run("Yes", () => answerQuestion({ key: current.key, value: "yes", label: current.label, matchId }), "Noted and saved to your Vault. Every tender that asks this now counts it as met.")}>Yes</button>
@@ -244,7 +251,7 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
       {canAnswer && (
         <form onSubmit={askNow} className="row" style={{ gap: 8, flexWrap: "nowrap", borderTop: "1px solid var(--line)", padding: "10px 14px" }}>
           <input value={ask} onChange={(e) => setAsk(e.target.value)} placeholder="Ask anything about this tender or this question…" aria-label="Ask the assistant" style={{ flex: 1, width: "auto" }} />
-          <button aria-busy={!!asking} className="ghost" disabled={asking || !ask.trim()}>{asking ? "Thinking…" : "Ask · 3 credits"}</button>
+          <button aria-busy={!!asking} className="ghost" disabled={asking || !ask.trim() || balance < 3} title={balance < 3 ? "Needs 3 credits — top up in Credits & plan" : ""}>{asking ? "Thinking…" : "Ask · 3 credits"}</button>
         </form>
       )}
       </div>
