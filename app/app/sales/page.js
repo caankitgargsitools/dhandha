@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getContext } from "@/lib/session";
-import { local, addDays, hhmm, at } from "@/lib/scheduling";
+import { local, addDays, hhmm, at, leadAddress } from "@/lib/scheduling";
+import BookForLead from "@/components/BookForLead";
 import { setMeetingStatus } from "./actions";
 
 const STATUS = { booked: ["info", "Booked"], done: ["ok", "Done"], cancelled: ["mute", "Cancelled"], no_show: ["bad", "No-show"] };
@@ -11,9 +12,11 @@ export default async function TeamCalendar({ searchParams }) {
   const today = local(new Date()).day;
   const day = /^\d{4}-\d{2}-\d{2}$/.test(sp?.date || "") ? sp.date : today;
   const { supabase, company, role } = await getContext();
-  const [{ data: reps }, { data: meetings }] = await Promise.all([
+  const [{ data: reps }, { data: meetings }, { data: types }, { data: leads }] = await Promise.all([
     supabase.from("sales_reps").select("*").eq("company_id", company.id).eq("active", true).order("name"),
     supabase.from("meetings").select("*, leads(id, name, contact_person, phone)").eq("company_id", company.id).gte("starts_at", at(day, 0).toISOString()).lt("starts_at", at(day, 1440).toISOString()).order("starts_at"),
+    supabase.from("meeting_types").select("id, name, mode, duration_min, buffer_min").eq("company_id", company.id).eq("active", true).order("name"),
+    supabase.from("leads").select("id, name, contact_person, phone, city, state, address, notes").eq("company_id", company.id).order("updated_at", { ascending: false }).limit(300),
   ]);
   const canWrite = role !== "viewer";
   const label = new Date(`${day}T00:00:00+05:30`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
@@ -27,6 +30,16 @@ export default async function TeamCalendar({ searchParams }) {
           <Link className="btn sm ghost" href={`/app/sales?date=${addDays(day, 1)}`}>Next →</Link>
         </div>
       </div>
+      {canWrite && (
+        <details className="panel" open={!!reps?.length && !!types?.length}>
+          <summary style={{ cursor: "pointer" }}><strong>Book a meeting</strong> <span className="small muted">— find a free time, or send the client a link to pick one</span></summary>
+          <div style={{ marginTop: 12 }}>
+            {!types?.length || !reps?.length
+              ? <p className="small muted" style={{ margin: 0 }}>First add {!types?.length ? <Link href="/app/sales/types">a meeting type</Link> : null}{!types?.length && !reps?.length ? " and " : ""}{!reps?.length ? <Link href="/app/sales/team">a salesperson</Link> : null}.</p>
+              : <BookForLead leads={(leads || []).map((l) => ({ id: l.id, name: l.name, contact_person: l.contact_person, phone: l.phone, city: l.city, address: leadAddress(l) }))} types={types} business={company.name} />}
+          </div>
+        </details>
+      )}
       {!reps?.length && <div className="panel small muted">No salespeople yet. <Link href="/app/sales/team">Add your sales team</Link> and their working hours, then book meetings from any lead.</div>}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
         {(reps || []).map((r) => {
