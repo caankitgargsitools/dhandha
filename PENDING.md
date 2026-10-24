@@ -2,7 +2,7 @@
 
 Checked and sent to the owner every morning (09:23 IST) by the Dhandha development session. Items move to
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
-Last checked: 23 Oct 2026.
+Last checked: 24 Oct 2026.
 
 ## Waiting on you (only you can do these)
 
@@ -39,6 +39,8 @@ Last checked: 23 Oct 2026.
 | K | AI tender check (scope of work, not just the title) | Waiting on #18 |
 
 ## Done (recent)
+
+- 24 Oct: Google Maps confirmed working (6 leads added); West Bengal and UP tenders read after the timeout fix; second free AI step (Gemini Flash-Lite) added because Gemini Flash was busy on every try.
 
 - 23 Oct: Google Maps key added by the owner (Production + Preview) — Generate leads → Google Maps is on.
 
