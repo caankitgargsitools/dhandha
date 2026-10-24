@@ -4,46 +4,40 @@ Checked and sent to the owner every morning (09:23 IST) by the Dhandha developme
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
 Last checked: 24 Oct 2026.
 
-## Waiting on you (only you can do these)
+## The queue — one by one, in this order
 
-| # | Item | Why it needs you | How to tell me it's done |
-|---|------|------------------|--------------------------|
-| 1 | **Indian server (Oracle Mumbai VM)** | Needs your Oracle account. Unlocks GeM tenders, faster document fetching, a proper home for the always-on fetcher. | Say "server ready" — I'll check it reports in. |
-| 2 | **Open Settings → Phone app once, install the app, turn on notifications** | Your first visit creates the notification keys and saves the site address (needs you signed in as platform admin). | I can see it in the database. |
-| 6 | **Apollo API key** (paste in Generate leads → Apollo) | Your Apollo account / plan with API access. | I can see it connected. |
-| 7 | **Razorpay switch-on** (keys in Vercel, webhook in Razorpay, secret in Supabase Vault, seller GSTIN in Admin → Billing) | Your Razorpay account and KYC. | I can see the webhook secret and GSTIN. |
-| 8 | **Email sending (Resend)**: account, `RESEND_API_KEY` and `OUTREACH_FROM_EMAIL` in Vercel, verify your domain | Your domain's DNS. | Outreach emails go out. |
-| 9 | **Facebook / Instagram (Meta app)**: Business app, `META_APP_ID`, `META_APP_SECRET`, `META_VERIFY_TOKEN` in Vercel, app secret in Vault, App Review | Meta requires the business owner. | I can see the app secret in Vault. |
-| 10 | **Google Drive**: OAuth client (Web), `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` in Vercel | Your Google Cloud account. | Drive connect button works. |
-| 11 | **MCA new companies**: upload this month's file at Admin → New companies | MCA's site blocks automated downloads. | I see new rows (last upload 17 Oct). |
-| 12 | **Supabase: turn on leaked-password protection** (Authentication → Policies) | A dashboard switch my tools cannot reach. | Supabase security check clears. |
-| 13 | **Make the crawler image public on GitHub** (Packages → dhandha-crawler → visibility) | Needs your GitHub login. Only matters for the Indian server. | The server pulls the image. |
-| 15 | **Decide Phase 4 video style**: template videos / talking avatar / both | Your call. | Tell me A, B or both. |
-| 16 | **Older Dhandha session "Ponytail GitHub installation"** is waiting for a reply from you | Started by you earlier. | Reply there, or tell me to close it. |
-| 17 | **Upload your first database** at Admin → Data marketplace (CSV/Excel), declare its source, set a price, Go live | Only you know where the data comes from and that it is lawful (business data, or consumers who consented). | I see a live database. |
-| 19 | **AI calling: choose the provider** — Bolna (recommended: Indian, Hindi/Hinglish, Exotel/Plivo numbers), Exotel + Vapi, or Twilio + Retell; then a DLT-registered calling number from that provider | Your account, KYC and TRAI registration. Parked on your instruction (24 Oct). | Tell me the provider; I build it. |
-| 20 | **Link Saurabh (and each salesperson) to a Dhandha login** at Sales team → Salespeople | Only you know who is who. Without it they get no phone alerts or "My day". | I can see the link. |
-| 21 | **Switch on the Lead autopilot** at Generate leads → Lead autopilot (daily budget, sources, Google Maps searches) | Your budget and targeting. | I see it on and the first run. |
-| 22 | **Google Ads lead forms**: Generate leads → Google Ads → create the webhook key, paste URL + key into your lead form, press "Send test data" | Your Google Ads account. | I see the test lead arrive. |
-| 23 | **Link your Google Business Profile** at Generate leads → Google Business Profile ("This is us") | Only you know which listing is yours. | I see it linked. |
-| 24 | **Turn off the Google Route Optimization API** in Google Cloud (it refuses API keys; Dhandha plans routes with the Routes API instead) | Your Google Cloud console. Avoids charges. | Optional — no check needed. |
-| 18 | **Say when to add the AI tender check** (AI reads each candidate tender's scope and keeps only work you can do; about ₹0.10 a tender, paid AI) | Your call on the cost. | Tell me "add the AI check". |
+Who: **You** = only the owner can do it · **Claude** = I build it · **Both** = you decide or set up an account, then I build.
+Old item numbers (#) are kept in brackets so earlier messages still make sense.
 
-## I'm doing (no action from you)
-
-| # | Item | Status |
-|---|------|--------|
-| A | Tender winners: results pages return nothing after the captcha — find the new layout and fix | Next |
-| B | Cost planner: read the portal's BOQ Excel (.xls) into the items list | Planned |
-| D | More tender detail pages per run (value, EMD) and a Haryana re-test | Planned |
-| E | GeM tenders and winners — after the Indian server | Waiting on #1 |
-| F | Desktop helper for DSC-assisted submission | Planned |
-| G | AI calling (Phase 3) | Parked — waiting on #19 |
-| M | IndiaMART / JustDial buyer enquiries as an automatic lead source | When you have a seller account |
-| H | Social posts and AI video (Phase 4) | Waiting on #15 |
-| I | Play Store version of the phone app | When you want it |
-| J | Before launch: remove demo data (152 rows), move pg_net out of the public schema | At launch |
-| K | AI tender check (scope of work, not just the title) | Waiting on #18 |
+| Step | Item | Who | What "done" looks like | Status |
+|------|------|-----|------------------------|--------|
+| 1 | **AI tender check** — AI reads each candidate tender's scope and keeps only work you can do (cheapest AI first, about ₹0.10 a tender) (#18 / K) | Both | You say Yes; I build it and show before/after on your list | Waiting for your Yes / No |
+| 2 | **Link Saurabh to his Dhandha login** — Sales team → Salespeople → Saurabh → pick his login → Save (#20) | You | Phone alerts and "My day" work for him | Open |
+| 3 | **Link your Google Business Profile** — Generate leads → Google Business Profile → search → "This is us" (#23) | You | I see the listing, score and checklist | Open |
+| 4 | **Switch on the Lead autopilot** — daily budget, sources, Google Maps searches (#21) | You | I see it on and the first morning run | Open |
+| 5 | **Phone app** — open Settings → Phone app once as platform admin, install, turn on notifications (#2) | You | Notification keys exist; a test alert reaches your phone | Open |
+| 6 | **Email sending (Resend)** — account, verify your domain, `RESEND_API_KEY` + `OUTREACH_FROM_EMAIL` in Vercel (#8) | You | The daily self-check shows email ready; review requests and sequences start emailing | Open |
+| 7 | **Google Ads lead forms** — create the webhook key, paste URL + key into your lead form, "Send test data" (#22) | You | The test lead appears in Leads | Open |
+| 8 | **This month's MCA file** — Admin → New companies (#11) | You | New rows (last upload 17 Oct) | Open |
+| 9 | **Turn off Google Route Optimization API** in Google Cloud — it refuses API keys, so it only adds cost (#24) | You | Optional, no check needed | Open |
+| 10 | **Supabase leaked-password protection** — Authentication → Policies (#12) | You | Supabase security check clears | Open |
+| 11 | **Tender winners after the captcha** — results pages return nothing; find the new layout and fix (A) | Claude | Real award results arrive in Tender winners | Next for Claude |
+| 12 | **More tender detail per crawl** (value, EMD) and a Haryana portal re-test (D) | Claude | Values / EMD filled on new tenders; Haryana tenders arrive | Planned |
+| 13 | **BOQ Excel (.xls) into the cost planner** (B) | Claude | Upload the portal's BOQ and its items fill the planner | Planned |
+| 14 | **Razorpay switch-on** — keys in Vercel, webhook in Razorpay, secret in Supabase Vault, seller GSTIN in Admin → Billing (#7) | You | Webhook secret + GSTIN present; a test top-up adds credits | Open |
+| 15 | **Facebook / Instagram (Meta app)** — Business app, keys in Vercel, app secret in Vault, App Review (#9) | You | A test lead-ad lead arrives | Open |
+| 16 | **Google Drive** — OAuth client (Web), `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` in Vercel (#10) | You | Drive connect button works | Open |
+| 17 | **Apollo API key** — Generate leads → Apollo (#6) | You | Apollo connected | Open |
+| 18 | **First database for the data marketplace** — upload, declare source and lawful basis, set a price, Go live (#17) | You | A live database | Open |
+| 19 | **Indian server (Oracle Mumbai VM)** + make the crawler image public on GitHub (#1, #13) | You | The server reports in | Open |
+| 20 | **GeM tenders and winners** — runs on the Indian server (E) | Claude | GeM tenders and awards arrive | After step 19 |
+| 21 | **AI calling** — choose the provider: Bolna (recommended), Exotel + Vapi, or Twilio + Retell; a DLT-registered calling number (#19) | Both | You name the provider; I build calls that move deals to "Called" | Parked on your instruction |
+| 22 | **Social posts and AI video (Phase 4)** — choose the style: template videos / talking avatar / both (#15) | Both | You choose; I build | Waiting for your choice |
+| 23 | **IndiaMART / JustDial buyer enquiries** as an automatic lead source (M) | Both | You get a seller account; I connect its lead API | When you have the account |
+| 24 | **Desktop helper for DSC-assisted submission** (F) | Claude | Bid files submitted with your DSC from your computer | Planned |
+| 25 | **Play Store version of the phone app** (I) | Claude | Listed on the Play Store | When you want it |
+| 26 | **Older session "Ponytail GitHub installation"** is waiting for your reply (#16) | You | Reply there, or tell me to close it | Open |
+| 27 | **Before launch** — remove demo data (`demo_seed`), move pg_net out of the public schema (J) | Claude | No demo rows; Supabase lint clean | At launch |
 
 ## Done (recent)
 
