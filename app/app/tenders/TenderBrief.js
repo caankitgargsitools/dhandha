@@ -17,9 +17,11 @@ export default function TenderBrief({ t, m, read, detail = {}, checklist = [], f
     ["Bid validity", f.bid_validity_days ? `${f.bid_validity_days} days` : detail.bid_validity || "—"],
     ["Performance security", f.performance_security_pct ? `${f.performance_security_pct}%` : "—"],
   ];
+  // the portal's dates win; a date read from the documents only fills a gap, and never one before publishing
+  const sane = (d) => d && !(t.published_on && new Date(d) < new Date(t.published_on)) ? d : null;
   const dates = [
-    ["Published", t.published_on], ["Pre-bid meeting", f.prebid_on || t.prebid_on || detail.prebid_on],
-    ["Bid closes", f.due_at || t.due_at], ["Bids opened", f.opening_at || t.opening_at || detail.opening_at],
+    ["Published", t.published_on], ["Pre-bid meeting", t.prebid_on || detail.prebid_on || sane(f.prebid_on)],
+    ["Bid closes", t.due_at || sane(f.due_at)], ["Bids opened", t.opening_at || detail.opening_at || sane(f.opening_at)],
   ].filter(([, d]) => d);
   const reasons = m.reasons || [];
   const Section = ({ icon, title, children }) => (
@@ -35,7 +37,7 @@ export default function TenderBrief({ t, m, read, detail = {}, checklist = [], f
       <header>
         <div className="row" style={{ gap: 8, marginBottom: 6 }}>
           <span className={`chip ${mandatoryUnmet(m.reasons).length || m.pending ? "warn" : "ok"}`}>{mandatoryUnmet(m.reasons).length ? (m.forced_at ? "Filing despite a warning" : "⚠ Mandatory condition not met") : m.pending ? `Qualifies if you answer ${m.pending}` : "Qualified"}</span>
-          <span className={`chip ${left < 0 ? "mute" : left <= 5 ? "bad" : "info"}`}>{left < 0 ? "Closed" : `${left} day${left === 1 ? "" : "s"} left`}</span>
+          <span className={`chip ${left === null ? "mute" : left < 0 ? "mute" : left <= 5 ? "bad" : "info"}`}>{left === null ? "Closing date not known yet" : left < 0 ? "Closed" : `${left} day${left === 1 ? "" : "s"} left`}</span>
           <span className="tiny faint">{t.portal} · Tender ID {t.tender_ref}</span>
         </div>
         <h3 style={{ margin: 0, fontSize: 18, lineHeight: 1.3 }}>{t.title}</h3>
@@ -44,7 +46,7 @@ export default function TenderBrief({ t, m, read, detail = {}, checklist = [], f
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 8 }}>
         {tiles.map(([l, v]) => (
-          <div key={l} className="ledger" style={{ border: "1px solid var(--line-soft)", borderRadius: 10, padding: "8px 10px" }}>
+          <div key={l} className="ledger tight" style={{ border: "1px solid var(--line-soft)", borderRadius: 10, padding: "8px 10px 8px 20px" }}>
             <div className="kpi-label">{l}</div><div style={{ fontWeight: 700, fontSize: 15 }}>{v}</div>
           </div>
         ))}

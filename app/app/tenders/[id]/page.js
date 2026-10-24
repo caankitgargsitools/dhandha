@@ -82,7 +82,7 @@ export default async function TenderDetail({ params }) {
       )}
 
       <div className="grid">
-        {[["Estimated value", t.value_inr ? lakh(t.value_inr) : "Not stated"], ["EMD", t.emd_inr ? (msme && t.mse_emd_exempt ? `${lakh(t.emd_inr)} · exempt` : lakh(t.emd_inr)) : "Nil"], ["Bid closes", `${fmtDate(t.due_at)}${left >= 0 ? ` · ${left} d` : " · closed"}`], ["Pre-bid meeting", t.prebid_on ? fmtDate(t.prebid_on) : "—"]].map(([l, v]) => (
+        {[["Estimated value", t.value_inr ? lakh(t.value_inr) : "Not stated"], ["EMD", t.emd_inr ? (msme && t.mse_emd_exempt ? `${lakh(t.emd_inr)} · exempt` : lakh(t.emd_inr)) : "Nil"], ["Bid closes", t.due_at ? `${fmtDate(t.due_at)}${left >= 0 ? ` · ${left} d` : " · closed"}` : "Not known yet (re-checking the portal)"], ["Pre-bid meeting", t.prebid_on ? fmtDate(t.prebid_on) : "—"]].map(([l, v]) => (
           <div key={l} className="panel ledger"><div className="kpi-label">{l}</div><div className="kpi" style={{ fontSize: 22 }}>{v}</div></div>
         ))}
       </div>
