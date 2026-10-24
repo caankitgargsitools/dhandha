@@ -1,6 +1,7 @@
 import { anonClient } from "@/lib/supabase/anon";
 import { runJson } from "@/lib/ai";
 import { firmProfile, buildPrompt, validateAnswer, mapAnswer } from "@/lib/tenderCheck";
+import { SERVICE_INDEX } from "@/lib/taxonomy";
 
 export const maxDuration = 300;
 
@@ -17,7 +18,9 @@ export async function POST(request) {
   let checked = 0;
   const runs = [];
   for (const c of due || []) {
-    const profile = firmProfile(c.services || [], c.custom || []);
+    // built-in services plus the company's own ones ("x.<id>")
+    const index = { ...SERVICE_INDEX, ...Object.fromEntries((c.own || []).map((o) => [o.id, { label: o.label, kw: o.kw?.length ? o.kw : [o.label] }])) };
+    const profile = firmProfile(c.services || [], c.custom || [], index);
     for (let i = 0; i < c.items.length && Date.now() < until - 30000; i += 20) {
       const items = c.items.slice(i, i + 20);
       const r = await runJson({
