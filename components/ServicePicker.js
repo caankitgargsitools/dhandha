@@ -49,9 +49,9 @@ export default function ServicePicker({ initial = [] }) {
                       </label>
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 6, paddingLeft: 24 }}>
                         {sub.services.map((v) => (
-                          <label key={v.id} className="row" style={{ gap: 8, margin: 0, color: "var(--ink)", fontWeight: 500, alignItems: "flex-start", flexWrap: "nowrap" }} title={v.kw.join(", ")}>
+                          <label key={v.id} className="row" style={{ gap: 8, margin: 0, color: "var(--ink)", fontWeight: 500, alignItems: "flex-start", flexWrap: "nowrap" }} title={v.kw.map((w) => w.replace(/^!/, "")).join(", ")}>
                             <input type="checkbox" checked={sel.has(v.id)} onChange={(e) => toggle([v.id], e.target.checked)} style={{ width: 16, height: 16, marginTop: 3, flex: "none" }} />
-                            <span>{v.label}<span className="tiny faint" style={{ display: "block" }}>{v.kw.slice(0, 4).join(", ")}…</span></span>
+                            <span>{v.label}<span className="tiny faint" style={{ display: "block" }}>{v.kw.slice(0, 4).map((w) => w.replace(/^!/, "")).join(", ")}…</span></span>
                           </label>
                         ))}
                       </div>

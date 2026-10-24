@@ -39,7 +39,6 @@ Last checked: 24 Oct 2026.
 | E | GeM tenders and winners — after the Indian server | Waiting on #1 |
 | F | Desktop helper for DSC-assisted submission | Planned |
 | G | AI calling (Phase 3) | Parked — waiting on #19 |
-| L | Spend outside Dhandha (ad spend, IndiaMART fee) in Results by source | Next — the database change waited on your approval |
 | M | IndiaMART / JustDial buyer enquiries as an automatic lead source | When you have a seller account |
 | H | Social posts and AI video (Phase 4) | Waiting on #15 |
 | I | Play Store version of the phone app | When you want it |
@@ -47,6 +46,8 @@ Last checked: 24 Oct 2026.
 | K | AI tender check (scope of work, not just the title) | Waiting on #18 |
 
 ## Done (recent)
+
+- 24 Oct: strict tender matching — GSC 58 → 50 open matches, all with a CA word; 21 irrelevant ones hidden (IT/police PMUs, tech consultant, engineering DPRs, closed and demo leftovers) and 14 missed CA tenders added (techno-financial audits, financial consultant / transaction adviser on works projects, revenue-assurance and CBS audits, accounting outsourcing). Spend outside Dhandha in Results by source.
 
 - 24 Oct: Lead autopilot (daily budget → leads a day, sources, morning run), automatic CRM stages (New → Messaged → Called → Link sent → Meeting → Won), Results by source, tender filters, route-aware salesperson matching + Plan visits, Google Ads lead forms → Leads, Google Business Profile check + automatic review requests to won customers, live self-check (Google Routes working).
 
