@@ -26,7 +26,7 @@ export default function PayButton({ getOrder, label, className = "gold", disable
     if (o.error) return setState({ error: o.error });
     const rzp = new window.Razorpay({
       key: o.keyId, order_id: o.orderId, amount: o.amount, currency: "INR", name: o.name, description: o.description,
-      prefill: o.prefill, theme: { color: "#8c1d2f" },
+      prefill: o.prefill, theme: { color: "#4f46e5" },
       handler: () => {
         setState({ done: true });
         // the webhook usually lands within seconds; refresh a few times to show the new balance

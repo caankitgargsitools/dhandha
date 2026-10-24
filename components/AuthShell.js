@@ -28,7 +28,7 @@ function TenderStack() {
       <g opacity=".6"><rect x="58" y="14" width="200" height="132" rx="10" fill="#fff" transform="rotate(-2 158 80)" /></g>
       <g>
         <rect x="80" y="12" width="200" height="140" rx="10" fill="#fff" />
-        <rect x="98" y="30" width="110" height="9" rx="4" fill="#1b2240" />
+        <rect x="98" y="30" width="110" height="9" rx="4" fill="#1e1b4b" />
         <rect x="98" y="50" width="160" height="6" rx="3" fill="#dde2ea" />
         <rect x="98" y="63" width="140" height="6" rx="3" fill="#dde2ea" />
         <rect x="98" y="76" width="150" height="6" rx="3" fill="#dde2ea" />
@@ -36,10 +36,10 @@ function TenderStack() {
         <rect x="98" y="128" width="64" height="2" fill="#dde2ea" />
       </g>
       <g transform="translate(250 104) rotate(-14)">
-        <circle r="34" fill="none" stroke="#f0a202" strokeWidth="3" />
-        <circle r="27" fill="none" stroke="#f0a202" strokeWidth="1.2" />
-        <text y="-3" textAnchor="middle" fontSize="11" fontWeight="800" fill="#f0a202" style={{ letterSpacing: 1 }}>BID</text>
-        <text y="11" textAnchor="middle" fontSize="11" fontWeight="800" fill="#f0a202" style={{ letterSpacing: 1 }}>READY</text>
+        <circle r="34" fill="none" stroke="#a5b4fc" strokeWidth="3" />
+        <circle r="27" fill="none" stroke="#a5b4fc" strokeWidth="1.2" />
+        <text y="-3" textAnchor="middle" fontSize="11" fontWeight="800" fill="#a5b4fc" style={{ letterSpacing: 1 }}>BID</text>
+        <text y="11" textAnchor="middle" fontSize="11" fontWeight="800" fill="#a5b4fc" style={{ letterSpacing: 1 }}>READY</text>
       </g>
     </svg>
   );
