@@ -9,7 +9,10 @@ export const metadata = { title: "Dhandha Admin" };
 
 export default async function AdminLayout({ children }) {
   const { user, supabase } = await getAdminContext();
-  const { data: open } = await supabase.from("tickets").select("id").in("status", ["open", "in_progress"]);
+  const [{ data: open }, { count: newTax }] = await Promise.all([
+    supabase.from("tickets").select("id").in("status", ["open", "in_progress"]),
+    supabase.from("taxonomy_custom").select("id", { count: "exact", head: true }).eq("status", "pending"),
+  ]);
   const sections = [
     { items: [{ href: "/admin", label: "Overview", icon: "home" }] },
     { title: "Customers", items: [
@@ -20,6 +23,7 @@ export default async function AdminLayout({ children }) {
       { href: "/admin/crawler", label: "Crawler", icon: "tender" },
       { href: "/admin/mca", label: "New companies", icon: "building" },
       { href: "/admin/data", label: "Data marketplace", icon: "people" },
+      { href: "/admin/taxonomy", label: "Industries & services", icon: "briefcase", tag: newTax ? String(newTax) : undefined },
       { href: "/admin/ai", label: "AI engines", icon: "sparkle" },
       { href: "/admin/pricing", label: "Pricing", icon: "rupee" },
       { href: "/admin/billing", label: "Billing", icon: "wallet" },

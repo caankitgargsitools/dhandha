@@ -3,7 +3,8 @@ import { revalidatePath } from "next/cache";
 import { getContext } from "@/lib/session";
 import { buildBidPack } from "@/lib/bidpack";
 import { mandatoryUnmet } from "@/lib/conditions";
-import { keywordsFor, rulesFor, parseRule, SERVICE_INDEX } from "@/lib/taxonomy";
+import { keywordsFor, rulesFor, parseRule } from "@/lib/taxonomy";
+import { loadCatalog } from "@/lib/catalog";
 
 async function download(supabase, path) {
   const { data, error } = await supabase.storage.from("brand").download(path);
@@ -87,7 +88,8 @@ export async function savePreferences(prev, formData) {
   const { supabase, tenant, company } = await getContext();
   const list = (k) => String(formData.get(k) || "").split(",").map((s) => s.trim()).filter(Boolean);
   const num = (k) => { const v = String(formData.get(k) || "").replace(/,/g, "").trim(); return v ? Number(v) * (formData.get(`${k}_unit`) === "cr" ? 1e7 : 1e5) : null; };
-  const services = formData.getAll("services").map(String).filter((id) => SERVICE_INDEX[id]);
+  const { index } = await loadCatalog(supabase, tenant.id);
+  const services = formData.getAll("services").map(String).filter((id) => index[id]);
   const custom = list("keywords");
   const { data: old } = await supabase.from("tender_preferences").select("muted").eq("company_id", company.id).maybeSingle();
   // the switched-off words come from the form when it shows them (removing one switches it back on)
@@ -98,8 +100,8 @@ export async function savePreferences(prev, formData) {
     services, custom_keywords: custom,
     // matching is by the chosen services' own words, so "roads" does not pull in every construction tender
     packs: [],
-    allowed_packs: [...new Set(services.map((id) => SERVICE_INDEX[id].pack || "any"))],
-    keywords: [...new Set([...keywordsFor(services), ...custom.map((c) => parseRule(c).k)])], rules: rulesFor(services, custom, muted), muted, exclude_keywords: list("exclude_keywords"), states: formData.getAll("states").map(String),
+    allowed_packs: [...new Set(services.map((id) => index[id].pack || "any"))],
+    keywords: [...new Set([...keywordsFor(services, index), ...custom.map((c) => parseRule(c).k)])], rules: rulesFor(services, custom, muted, index), muted, exclude_keywords: list("exclude_keywords"), states: formData.getAll("states").map(String),
     min_value: num("min_value"), max_value: num("max_value"), max_emd: num("max_emd"),
     min_days_left: Number(formData.get("min_days_left") || 5), ai_check: formData.get("ai_check") === "on", updated_at: new Date().toISOString(),
   };
@@ -133,12 +135,13 @@ export async function rescore() {
 
 // "Never match this word": the word stops counting for this company; its tenders are hidden on re-score.
 export async function muteTenderWord(formData) {
-  const { supabase, company } = await getContext();
+  const { supabase, company, tenant } = await getContext();
   const word = String(formData.get("word") || "").trim().toLowerCase();
   if (!word) return;
   const { data: p } = await supabase.from("tender_preferences").select("services, custom_keywords, muted").eq("company_id", company.id).maybeSingle();
   if (!p) return;
-  const rules = rulesFor(p.services || [], p.custom_keywords || [], [...(p.muted || []), word]);
+  const { index } = await loadCatalog(supabase, tenant.id);
+  const rules = rulesFor(p.services || [], p.custom_keywords || [], [...(p.muted || []), word], index);
   await supabase.rpc("mute_tender_word", { p_company: company.id, p_word: word, p_rules: rules });
   revalidatePath("/app/tenders");
 }

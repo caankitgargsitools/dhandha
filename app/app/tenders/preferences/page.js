@@ -4,13 +4,17 @@ import FormState from "../../FormState";
 import { savePreferences } from "../bidActions";
 import ServicePicker from "@/components/ServicePicker";
 import WordChips from "@/components/WordChips";
+import { loadCatalog } from "@/lib/catalog";
 
 const STATES = ["Andhra Pradesh","Assam","Bihar","Chandigarh","Chhattisgarh","Delhi","Goa","Gujarat","Haryana","Himachal Pradesh","Jammu and Kashmir","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Odisha","Punjab","Rajasthan","Tamil Nadu","Telangana","Uttar Pradesh","Uttarakhand","West Bengal"];
 
 export default async function Preferences({ searchParams }) {
   const params = await searchParams;
-  const { supabase, company, role } = await getContext();
-  const { data: p } = await supabase.from("tender_preferences").select("*").eq("company_id", company.id).maybeSingle();
+  const { supabase, company, tenant, role } = await getContext();
+  const [{ data: p }, { tree }] = await Promise.all([
+    supabase.from("tender_preferences").select("*").eq("company_id", company.id).maybeSingle(),
+    loadCatalog(supabase, tenant.id),
+  ]);
   const lakhs = (v) => (v ? String(v / 1e5) : "");
   return (
     <div className="stack">
@@ -21,7 +25,7 @@ export default async function Preferences({ searchParams }) {
         <fieldset disabled={role === "viewer"} style={{ border: 0, padding: 0, margin: 0 }} className="stack">
           <div className="panel stack-sm">
             <h3>Industry, sub-industry and services</h3>
-            <ServicePicker initial={p?.services || []} />
+            <ServicePicker initial={p?.services || []} tree={tree} />
             <div className="form-grid" style={{ alignItems: "start" }}>
               <WordChips name="keywords" label="Also match these words" initial={p?.custom_keywords || []} placeholder="e.g. kiosk, valuation + land|property"
                 hint={<>Type a word and press Add. To stay precise, add “+” and words that must also appear: <em>certification + chartered|utilisation|net worth</em>.</>} empty="No extra words." />
