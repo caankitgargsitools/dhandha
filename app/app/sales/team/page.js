@@ -1,6 +1,7 @@
 import { getContext } from "@/lib/session";
 import FormState from "../../FormState";
 import { saveRep } from "../actions";
+import InviteRep from "./InviteRep";
 
 const DAYS = [[1, "Mon"], [2, "Tue"], [3, "Wed"], [4, "Thu"], [5, "Fri"], [6, "Sat"], [0, "Sun"]];
 
@@ -14,6 +15,7 @@ function RepFields({ r = {}, members }) {
         <div><label>Their Dhandha login (for “My day” and alerts)</label>
           <select name="user_id" defaultValue={r.user_id || ""}><option value="">— none —</option>{members.map((m) => <option key={m.user_id} value={m.user_id}>{m.profiles?.full_name || m.profiles?.email} ({m.role})</option>)}</select></div>
         <div><label>Phone</label><input name="phone" defaultValue={r.phone || ""} inputMode="tel" /></div>
+        <div><label>Email</label><input name="email" type="email" defaultValue={r.email || ""} /></div>
         <div><label>Day starts</label><input name="day_start" type="time" defaultValue={String(r.day_start || "09:30").slice(0, 5)} /></div>
         <div><label>Day ends</label><input name="day_end" type="time" defaultValue={String(r.day_end || "18:30").slice(0, 5)} /></div>
         <div><label>Start point (office or home — field visits start here)</label><input name="start_address" defaultValue={r.start_address || ""} placeholder="Full address" /></div>
@@ -31,7 +33,7 @@ function RepFields({ r = {}, members }) {
 
 // The sales team: who takes online calls and who visits, their hours, working days and start point.
 export default async function SalesTeam() {
-  const { supabase, tenant, company, role } = await getContext();
+  const { supabase, tenant, company, role, isAdmin } = await getContext();
   const [{ data: reps }, { data: members }] = await Promise.all([
     supabase.from("sales_reps").select("*").eq("company_id", company.id).order("active", { ascending: false }).order("name"),
     supabase.from("tenant_members").select("user_id, role, profiles(full_name, email)").eq("tenant_id", tenant.id).neq("role", "disabled"),
@@ -44,9 +46,15 @@ export default async function SalesTeam() {
       {(reps || []).map((r) => (
         <details key={r.id} className="panel" style={{ opacity: r.active ? 1 : 0.6 }}>
           <summary style={{ cursor: "pointer" }} className="row between">
-            <span><strong>{r.name}</strong> <span className="tiny faint">{String(r.day_start).slice(0, 5)}–{String(r.day_end).slice(0, 5)} · {r.modes.map((m) => (m === "field" ? "visits" : "online")).join(" + ")}{r.active ? "" : " · not scheduling"}</span></span>
+            <span><strong>{r.name}</strong> <span className="tiny faint">{String(r.day_start).slice(0, 5)}–{String(r.day_end).slice(0, 5)} · {r.modes.map((m) => (m === "field" ? "visits" : "online")).join(" + ")}{r.active ? "" : " · not scheduling"}{r.user_id ? "" : " · no login yet"}</span></span>
             {can && <span className="tiny">Edit</span>}
           </summary>
+          {isAdmin && !r.user_id && (
+            <div style={{ marginTop: 12 }} className="stack-sm">
+              <span className="small"><strong>{r.name} has no Dhandha login yet</strong> — invite them so they get “My day” and phone alerts. If they already have a login, pick it below instead.</span>
+              <InviteRep repId={r.id} email={r.email} name={r.name} />
+            </div>
+          )}
           {can && <div style={{ marginTop: 12 }}><FormState action={saveRep} submit="Save"><RepFields r={r} members={members || []} /></FormState></div>}
         </details>
       ))}
