@@ -15,7 +15,7 @@ export default async function MyDay({ searchParams }) {
   const { data: meetings } = await supabase.from("meetings").select("*, leads(id, name, contact_person, phone)").eq("rep_id", rep.id).neq("status", "cancelled")
     .gte("starts_at", at(day, 0).toISOString()).lt("starts_at", at(day, 1440).toISOString()).order("starts_at");
   const plan = dayPlan({ day, rep: { ...rep, day_start: String(rep.day_start).slice(0, 5) }, meetings: meetings || [] });
-  const label = new Date(`${day}T00:00:00+05:30`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
+  const label = new Date(`${day}T12:00:00+05:30`).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long" });
   const q = (o) => new URLSearchParams({ rep: rep.id, date: day, ...o }).toString();
   return (
     <>
