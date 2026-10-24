@@ -9,6 +9,8 @@ import { Timeline, LogActivity } from "@/components/CrmTimeline";
 import { SOURCES, LEAD_STATUS, STAGES, telLink, waLink, fillTemplate, DEFAULT_TEMPLATE } from "@/lib/leads";
 import { updateLead, createDealFromLead } from "../actions";
 import { sendOne, enrollOne } from "../../outreach/actions";
+import BookMeeting from "@/components/BookMeeting";
+import { leadAddress, local, hhmm } from "@/lib/scheduling";
 
 const toDate = (d) => (d ? new Date(new Date(d).getTime() + 330 * 60000).toISOString().slice(0, 10) : "");
 
@@ -17,7 +19,7 @@ export default async function LeadDetail({ params }) {
   const { supabase, tenant, company, user, role } = await getContext();
   const { data: l } = await supabase.from("leads").select("*").eq("id", id).eq("company_id", company.id).maybeSingle();
   if (!l) notFound();
-  const [{ data: acts }, { data: deals }, { data: members }, { data: ideal }, { data: wins }, { data: seqs }, { data: msgs }] = await Promise.all([
+  const [{ data: acts }, { data: deals }, { data: members }, { data: ideal }, { data: wins }, { data: seqs }, { data: msgs }, { data: mtypes }, { data: meets }] = await Promise.all([
     supabase.from("crm_activities").select("*").eq("lead_id", l.id).order("created_at", { ascending: false }).limit(100),
     supabase.from("deals").select("id, title, stage, value_inr").eq("lead_id", l.id).order("created_at", { ascending: false }),
     supabase.from("tenant_members").select("user_id, role, profiles(full_name, email)").eq("tenant_id", tenant.id).neq("role", "disabled"),
@@ -28,6 +30,8 @@ export default async function LeadDetail({ params }) {
       : Promise.resolve({ data: [] }),
     supabase.from("sequences").select("id, name").eq("company_id", company.id).eq("active", true).order("name"),
     supabase.from("outreach_messages").select("id, channel, subject, wa_template, status, error, created_at").eq("lead_id", l.id).order("created_at", { ascending: false }).limit(10),
+    supabase.from("meeting_types").select("id, name, mode, duration_min, buffer_min").eq("company_id", company.id).eq("active", true).order("name"),
+    supabase.from("meetings").select("id, title, mode, starts_at, status, sales_reps(name)").eq("lead_id", l.id).order("starts_at", { ascending: false }).limit(5),
   ]);
   const findContact = `https://www.google.com/search?q=${encodeURIComponent(`${l.name} ${l.city || l.state || ""} contact number`)}`;
   const name = (uid) => { const m = (members || []).find((x) => x.user_id === uid); return m ? (uid === user.id ? "You" : m.profiles?.full_name || m.profiles?.email) : "Former member"; };
@@ -128,6 +132,16 @@ export default async function LeadDetail({ params }) {
         </div>
 
         <div className="stack-sm">
+          <div className="panel stack-sm">
+            <div className="panel-head"><h3>Meetings</h3><Link className="tiny" href="/app/sales">Team calendar</Link></div>
+            {(meets || []).map((m) => (
+              <div key={m.id} className="row between small" style={{ borderTop: "1px solid var(--line-soft)", paddingTop: 6 }}>
+                <span>{new Date(m.starts_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" })} {hhmm(local(m.starts_at).min)} · {m.title}{m.sales_reps ? ` · ${m.sales_reps.name}` : ""}</span>
+                <span className={`chip ${m.status === "booked" ? "info" : m.status === "done" ? "ok" : "mute"}`}>{m.status.replace("_", "-")}</span>
+              </div>
+            ))}
+            {canWrite && <BookMeeting leadId={l.id} types={mtypes || []} address={leadAddress(l)} phone={l.phone} contact={l.contact_person} business={company.name} />}
+          </div>
           <div className="panel">
             <div className="panel-head"><h3>Deals</h3>{l.last_contacted_at && <span className="tiny faint">last contact {fmtDate(l.last_contacted_at)}</span>}</div>
             {(deals || []).map((x) => (

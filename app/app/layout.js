@@ -18,6 +18,7 @@ export default async function AppLayout({ children }) {
     { title: "Win the business", items: [
       { href: "/app/crm", label: "CRM pipeline", icon: "crm" },
       { href: "/app/outreach", label: "Outreach", icon: "mail" },
+      { href: "/app/sales", label: "Sales team", icon: "calendar" },
     ] },
     { items: [{ href: "/app/vault", label: "Business Vault", icon: "vault", match: ["/app/vault", "/app/brand", "/app/tenders/preferences"] }] },
     { title: "Account", items: [
