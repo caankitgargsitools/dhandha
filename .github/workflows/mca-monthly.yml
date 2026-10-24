@@ -1,0 +1,41 @@
+# Fetches MCA's monthly list of newly incorporated companies and LLPs into Dhandha (New companies leads).
+# Runs daily; a file already loaded is skipped, so the new month's file is picked up the day MCA publishes it.
+# If MCA's site shows a bot check, nothing is attempted and the admin is alerted to upload the file by hand.
+name: mca monthly
+
+on:
+  schedule:
+    - cron: "25 5 * * *"   # 10:55 IST
+  workflow_dispatch:
+
+concurrency:
+  group: mca-monthly
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-jammy
+      options: --shm-size=1g
+    env:
+      SUPABASE_URL: https://umyesrpibsdgzsrqfvqf.supabase.co
+      SUPABASE_PUBLISHABLE_KEY: sb_publishable_b1_jKTEARE2OINvUDaM62g_Q5JxoB6w
+      INGEST_KEY: ${{ secrets.INGEST_KEY }}
+      RUNNER_NAME: github-actions-mca
+      TZ: Asia/Kolkata
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            crawler
+            lib
+      - name: Install
+        working-directory: crawler
+        run: npm install --omit=dev --no-audit --no-fund
+      - name: Fetch MCA monthly file
+        working-directory: crawler
+        run: |
+          echo '{"type":"module"}' > ../lib/package.json   # the shared readers are ES modules
+          node src/mca.js

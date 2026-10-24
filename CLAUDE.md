@@ -72,7 +72,7 @@ It covers:
 - Leads and CRM: `lib/leads.js` (CSV import, phone clean-up, free fit score, WhatsApp/tel links; tested in `tests/leads.test.mjs`).
   - Pages: `app/app/leads/*`, `app/app/crm/*`. Actions in `leads/actions.js` and `crm/actions.js`. Timeline and log form in `components/CrmTimeline.js`.
   - Tender winners (`/app/leads/winners`): award results from our crawler (`crawler/src/adapters/gepnicResults.js` and `gemResults.js` → `ingest_awards` → `tender_awards`), filtered per company by `winner_prospects`. Adding a winner as a lead costs `lead_found` credits.
-  - New companies (`/app/leads/new-companies`): MCA's monthly registrations, uploaded by the platform admin at Admin → New companies (`lib/mca.js` parses .xlsx/.csv; `lib/xlsx.js` is a dependency-free Excel reader, also used by lead import). Filtered per company by `mca_prospects`; adding costs `lead_found` credits.
+  - New companies (`/app/leads/new-companies`): MCA's monthly registrations — fetched automatically by `crawler/src/mca.js` (GitHub Actions `mca-monthly.yml`, daily 10:55 IST: opens MCA's "incorporated during the month" page (`MCA_PAGES`), `pickLatest` in `crawler/src/mcaPick.js` (tested) picks the newest file, skips one already loaded (`mca_fetch_seen`), reads it with `lib/xlsx.js` + `lib/mca.js`, `ingest_mca` in batches; `mca_fetch_report` → `mca_fetches` + phone alert; a bot check is never worked around — status `blocked`, alert to upload by hand, at most weekly) or uploaded by the platform admin at Admin → New companies (`lib/mca.js` parses .xlsx/.csv; `lib/xlsx.js` is a dependency-free Excel reader, also used by lead import). Filtered per company by `mca_prospects`; adding costs `lead_found` credits.
   - Social (`lib/social.js`, permitted routes only — no scraping of LinkedIn/Facebook/Instagram):
     - LinkedIn: the user's own Connections.csv export, recognised automatically by Leads → Import (free, matched on profile URL).
     - Facebook/Instagram Lead Ads (`lib/meta.js`, `/api/meta/start|callback|webhook|run`, `/app/settings/facebook`): admin connects Pages; Meta's webhook → `meta_webhook` (signature checked in SQL) → worker fetches the lead → Leads with a timeline note.
@@ -137,7 +137,7 @@ It covers:
 - Google Drive switch-on: owner creates a Google Cloud OAuth client (Web; redirect `https://<domain>/api/google/callback`; consent screen with the `drive.file` scope) and adds `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` in Vercel. Later: save signed bid packs to Drive too.
 - Razorpay: switch on (owner adds keys in Vercel, webhook in Razorpay, secret in Supabase Vault, seller GSTIN in Admin → Billing). Later: auto-renewing subscriptions (Razorpay mandates), credit notes/refunds.
 - Outreach switch-on: Admin → Outreach site address; Resend account + `RESEND_API_KEY` / `OUTREACH_FROM_EMAIL` in Vercel. Later: delivery/bounce webhooks, inbound reply detection.
-- MCA: the owner uploads each month's file at Admin → New companies (MCA's portal sits behind bot protection; no captcha is bypassed). An automated feed can post to `ingest_mca` later.
+- MCA: fetched automatically each month by `mca-monthly.yml`; if MCA's site shows a bot check the owner uploads the file at Admin → New companies (no captcha or bot check is bypassed). Later options: data.gov.in API, API Setu.
 - Before launch:
   - Remove dummy data using `demo_seed`.
   - Enable leaked-password protection in Supabase.
