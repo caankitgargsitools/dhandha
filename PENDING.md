@@ -33,12 +33,15 @@ Last checked: 24 Oct 2026.
 | E | GeM tenders and winners — after the Indian server | Waiting on #1 |
 | F | Desktop helper for DSC-assisted submission | Planned |
 | G | AI calling (Phase 3) | Planned |
+| L | Lead autopilot: one-click sourcing + scoring → WhatsApp/file sequence → AI call → pay link or booked meeting | Next |
 | H | Social posts and AI video (Phase 4) | Waiting on #15 |
 | I | Play Store version of the phone app | When you want it |
 | J | Before launch: remove demo data (152 rows), move pg_net out of the public schema | At launch |
 | K | AI tender check (scope of work, not just the title) | Waiting on #18 |
 
 ## Done (recent)
+
+- 24 Oct: Sales team scheduling — salespeople with hours, work days and start point; meeting types (length + break); team calendar; "My day" route with Google travel times and directions; book from any lead or send the client a booking link.
 
 - 24 Oct: Google Maps confirmed working (6 leads added); West Bengal and UP tenders read after the timeout fix; second free AI step (Gemini Flash-Lite) added because Gemini Flash was busy on every try.
 
