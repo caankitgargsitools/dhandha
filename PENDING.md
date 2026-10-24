@@ -11,7 +11,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 
 | Step | Item | Who | What "done" looks like | Status |
 |------|------|-----|------------------------|--------|
-| 1 | **AI tender check** — AI reads each candidate tender's scope and keeps only work you can do (cheapest AI first, about ₹0.10 a tender) (#18 / K) | Both | You say Yes; I build it and show before/after on your list | Waiting for your Yes / No |
+| 1 | **AI tender check** — AI reads each candidate tender's scope and keeps only work you can do (cheapest AI first, about ₹0.10 a tender) (#18 / K) | Both | You said Yes (24 Oct); built and on for GSC | Done — checking the first run |
 | 2 | **Link Saurabh to his Dhandha login** — Sales team → Salespeople → Saurabh → pick his login → Save (#20) | You | Phone alerts and "My day" work for him | Open |
 | 3 | **Link your Google Business Profile** — Generate leads → Google Business Profile → search → "This is us" (#23) | You | I see the listing, score and checklist | Open |
 | 4 | **Switch on the Lead autopilot** — daily budget, sources, Google Maps searches (#21) | You | I see it on and the first morning run | Open |

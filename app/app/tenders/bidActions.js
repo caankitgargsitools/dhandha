@@ -99,7 +99,7 @@ export async function savePreferences(prev, formData) {
     allowed_packs: [...new Set(services.map((id) => SERVICE_INDEX[id].pack || "any"))],
     keywords: [...new Set([...keywordsFor(services), ...custom.map((c) => parseRule(c).k)])], rules: rulesFor(services, custom, muted), muted, exclude_keywords: list("exclude_keywords"), states: formData.getAll("states").map(String),
     min_value: num("min_value"), max_value: num("max_value"), max_emd: num("max_emd"),
-    min_days_left: Number(formData.get("min_days_left") || 5), updated_at: new Date().toISOString(),
+    min_days_left: Number(formData.get("min_days_left") || 5), ai_check: formData.get("ai_check") === "on", updated_at: new Date().toISOString(),
   };
   if (!row.keywords.length) return { error: "Choose at least one service, or type a few words to match." };
   const { error } = await supabase.from("tender_preferences").upsert(row, { onConflict: "company_id" });
@@ -108,6 +108,18 @@ export async function savePreferences(prev, formData) {
   if (re) return { error: re.message };
   revalidatePath("/app/tenders");
   return { message: `Saved. ${n} open tenders re-scored for ${company.legal_name}.` };
+}
+
+// AI tender check: start a run now (it also runs every hour), and a person's word on one tender.
+export async function aiCheckNow() {
+  const { supabase, company } = await getContext();
+  await supabase.rpc("ai_check_now", { p_company: company.id });
+  revalidatePath("/app/tenders");
+}
+export async function setAiFit(formData) {
+  const { supabase } = await getContext();
+  await supabase.rpc("set_ai_fit", { p_match: String(formData.get("id")), p_fit: formData.get("fit") === "no" ? "no" : "yes" });
+  revalidatePath("/app/tenders");
 }
 
 export async function rescore() {

@@ -47,6 +47,13 @@ export default async function Preferences({ searchParams }) {
               <div><label htmlFor="min_days_left">Hide tenders closing within (days)</label><input id="min_days_left" name="min_days_left" type="number" min={0} max={30} defaultValue={p?.min_days_left ?? 5} /></div>
             </div>
           </div>
+          <div className="panel stack-sm">
+            <h3>AI tender check</h3>
+            <label className="row" style={{ gap: 10, margin: 0, fontWeight: 500, alignItems: "flex-start", flexWrap: "nowrap" }}>
+              <input type="checkbox" name="ai_check" defaultChecked={!!p?.ai_check} style={{ width: "auto", marginTop: 3 }} />
+              <span>After the word match, AI reads what each new tender is actually for and hides the ones that are not your work (you can bring any back). Free AI first; 0.1 credit (₹0.10) a tender. Only the tender's public text and your service names are sent.</span>
+            </label>
+          </div>
         </fieldset>
       </FormState>
     </div>
