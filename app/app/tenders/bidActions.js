@@ -90,7 +90,9 @@ export async function savePreferences(prev, formData) {
   const services = formData.getAll("services").map(String).filter((id) => SERVICE_INDEX[id]);
   const custom = list("keywords");
   const { data: old } = await supabase.from("tender_preferences").select("muted").eq("company_id", company.id).maybeSingle();
-  const muted = (old?.muted || []).filter((m) => !custom.some((c) => parseRule(c).k.toLowerCase() === m));
+  // the switched-off words come from the form when it shows them (removing one switches it back on)
+  const mutedIn = formData.has("muted") ? list("muted").map((m) => m.toLowerCase()) : old?.muted || [];
+  const muted = mutedIn.filter((m) => !custom.some((c) => parseRule(c).k.toLowerCase() === m));
   const row = {
     company_id: company.id, tenant_id: tenant.id,
     services, custom_keywords: custom,
