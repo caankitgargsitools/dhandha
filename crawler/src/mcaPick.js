@@ -21,5 +21,18 @@ export function pickLatest(links) {
   return files[0] || null;
 }
 
+// the newest `months` monthly files, one per month (xlsx preferred), oldest first so the newest is loaded last
+export function pickRecent(links, months = 6) {
+  const out = [];
+  let rest = links;
+  while (out.length < months) {
+    const f = pickLatest(rest);
+    if (!f) break;
+    out.push(f);
+    rest = rest.filter((l) => monthOf(`${l.text} ${decodeURIComponent(String(l.href).split("/").pop())}`) !== f.month);
+  }
+  return out.reverse();
+}
+
 // MCA's site answers a bot check instead of the page
 export const looksBlocked = (status, text) => status === 403 || status === 429 || /access denied|request unsuccessful|verify you are (a )?human|are you a robot|captcha|incapsula|akamai/i.test(String(text || "").slice(0, 5000));
