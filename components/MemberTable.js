@@ -1,9 +1,10 @@
 import { ROLES } from "@/lib/roles";
 import { changeRole, disableMember, revokeInvite } from "@/app/app/settings/team/actions";
 import { fmtDate } from "@/lib/session";
+import InviteShare from "./InviteShare";
 
 // People and pending invites of one workspace; editable when canManage.
-export default function MemberTable({ members, invites, canManage, tenantId, selfId }) {
+export default function MemberTable({ members, invites, canManage, tenantId, selfId, origin }) {
   return (
     <div className="table-wrap">
       <table>
@@ -33,7 +34,7 @@ export default function MemberTable({ members, invites, canManage, tenantId, sel
           ))}
           {invites.map((i) => (
             <tr key={i.id}>
-              <td><strong>{i.full_name || i.email}</strong><div className="tiny faint">{i.email}</div></td>
+              <td><strong>{i.full_name || i.email}</strong><div className="tiny faint">{i.email} · not signed up yet — they sign up with this email, or use the link</div>{canManage && origin && i.token && <div style={{ marginTop: 4 }}><InviteShare url={`${origin}/login?invite=${i.token}`} name={i.full_name} /></div>}</td>
               <td><span className="chip warn">Invited · {ROLES[i.role]?.label}</span></td>
               <td className="small faint">{fmtDate(i.created_at)}</td>
               {canManage && <td><form action={revokeInvite}><input type="hidden" name="tenant_id" value={tenantId} /><input type="hidden" name="invite_id" value={i.id} /><button className="danger">Cancel invite</button></form></td>}
