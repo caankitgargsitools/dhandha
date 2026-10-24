@@ -4,7 +4,7 @@ import { ScoreRing, Donut } from "@/components/Charts";
 import Icon from "@/components/Icon";
 import PreviewNote from "@/components/PreviewNote";
 import { setTenderStatus } from "./actions";
-import { rescore, muteTenderWord } from "./bidActions";
+import { rescore, muteTenderWord, aiCheckNow, setAiFit } from "./bidActions";
 import QuestionCards from "./QuestionCards";
 import { openQuestions, mandatoryUnmet } from "@/lib/conditions";
 import { parseFilters, applyFilters, activeCount, facets, STAGES, LEFT, WORK, SORTS, ELIG } from "@/lib/tenderFilters";
@@ -17,10 +17,14 @@ export default async function Tenders({ searchParams }) {
   const tab = TABS.some(([k]) => k === params?.tab) ? params.tab : "open";
   const { supabase, company, role } = await getContext();
   const { data: all } = await supabase.from("tender_matches")
-    .select("id, score, eligible, pending, reasons, status, matched_on, unfit, forced_at, tenders(*)").eq("company_id", company.id).order("score", { ascending: false });
+    .select("id, score, eligible, pending, reasons, status, matched_on, unfit, forced_at, ai_fit, ai_reason, ai_by, tenders(*)").eq("company_id", company.id).order("score", { ascending: false });
   // matches that no longer fit the search are hidden unless someone already acted on them
-  const rows = (all || []).filter((m) => m.tenders && !(m.unfit && ["new", "skipped"].includes(m.status)));
-  const { data: pref } = await supabase.from("tender_preferences").select("services, custom_keywords").eq("company_id", company.id).maybeSingle();
+  const kept = (all || []).filter((m) => m.tenders && !(m.unfit && ["new", "skipped"].includes(m.status)));
+  // the AI check hides tenders whose work is not yours (unless someone already acted on them); they can be brought back
+  const aiHidden = kept.filter((m) => m.ai_fit === "no" && ["new", "skipped"].includes(m.status));
+  const showAiHidden = params?.ai === "hidden";
+  const rows = showAiHidden ? aiHidden : kept.filter((m) => !aiHidden.includes(m));
+  const { data: pref } = await supabase.from("tender_preferences").select("services, custom_keywords, ai_check").eq("company_id", company.id).maybeSingle();
   const noPrefs = !pref || (!(pref.services || []).length && !(pref.custom_keywords || []).length);
   const live = (m) => daysLeft(m.tenders.due_at) >= 0;
   const f = parseFilters(params);
@@ -55,6 +59,7 @@ export default async function Tenders({ searchParams }) {
         </div>
         <div className="row">
           <Link href="/app/tenders/preferences" className="btn ghost">What to look for</Link>
+          {pref?.ai_check && canWrite && <form action={aiCheckNow}><button className="ghost">Run AI check now</button></form>}
           <form action={rescore}><button className="gold">Re-score now</button></form>
         </div>
       </div>
@@ -73,6 +78,11 @@ export default async function Tenders({ searchParams }) {
         </div>
       </div>
 
+      {(aiHidden.length > 0 || showAiHidden) && (
+        <div className="notice info"><span>{showAiHidden
+          ? <>Showing the <strong>{aiHidden.length}</strong> tenders the AI check hid because the work is not yours. Bring back any it got wrong. <Link href="/app/tenders">Back to your tenders</Link></>
+          : <>The AI check hid <strong>{aiHidden.length}</strong> tender{aiHidden.length === 1 ? "" : "s"} whose work is not yours. <Link href="/app/tenders?ai=hidden&tab=all">See them</Link></>}</span></div>
+      )}
       <div className="row" role="tablist">
         {TABS.map(([k, label]) => (
           <Link key={k} href={`/app/tenders?${new URLSearchParams({ ...Object.fromEntries(Object.entries(params || {}).filter(([x]) => x !== "tab").map(([x, v]) => [x, String(v)])), tab: k })}`} role="tab" aria-selected={tab === k} className={`btn sm ${tab === k ? "" : "ghost"}`}>{label}</Link>
@@ -114,6 +124,11 @@ export default async function Tenders({ searchParams }) {
                 <div className="row" style={{ gap: 8, marginBottom: 4 }}>
                   <span className={`chip ${cls}`}>{label}</span>
                   {m.unfit && <span className="chip mute" title="Kept because someone already acted on it. Skip it to hide it.">No longer matches what you do</span>}
+                  {m.ai_fit === "yes" && <span className="chip ok plain" title={m.ai_reason || ""}>{m.ai_by === "you" ? "Kept by you" : "✓ AI: your kind of work"}</span>}
+                  {m.ai_fit === "maybe" && <span className="chip warn plain" title={m.ai_reason || ""}>AI unsure{m.ai_reason ? `: ${m.ai_reason}` : ""}</span>}
+                  {m.ai_fit === "no" && <span className="chip mute" title={m.ai_reason || ""}>AI: not your work{m.ai_reason ? ` — ${m.ai_reason}` : ""}</span>}
+                  {m.ai_fit === "no" && canWrite && <form action={setAiFit} style={{ display: "inline" }}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="fit" value="yes" /><button className="sm ghost" style={{ padding: "2px 8px" }}>Bring back</button></form>}
+                  {m.ai_fit !== "no" && m.ai_fit && canWrite && m.status === "new" && <form action={setAiFit} style={{ display: "inline" }}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="fit" value="no" /><button className="sm ghost" style={{ padding: "2px 8px" }} title="Hide it and tell the AI check it was wrong">Not my work</button></form>}
                   {mandatoryUnmet(m.reasons).length ? <span className="chip warn" title={mandatoryUnmet(m.reasons).join("; ")}>{m.forced_at ? "Filing despite a warning" : "⚠ Mandatory condition not met"}</span> : !m.eligible ? <span className="chip mute">Outside your preferences</span> : m.pending ? <Link href={`/app/tenders/${m.id}/assistant`} className="chip warn">Qualifies if you answer {m.pending}</Link> : <span className="chip ok">Qualified</span>}
                   <span className="tiny faint">{t.portal} · {t.tender_ref}</span>
                 </div>
