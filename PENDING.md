@@ -22,6 +22,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 9 | **Turn off Google Route Optimization API** in Google Cloud — it refuses API keys, so it only adds cost (#24) | You | Optional, no check needed | Open |
 | 10 | **Supabase leaked-password protection** — Authentication → Policies (#12) | You | Supabase security check clears | Open |
 | 10a | **Daily captcha session** — Admin → Captcha session → "Start today's session" each morning (reminder 09:31 IST), type each portal's captcha; re-verify a portal when its alert comes. Needs the phone app (step 5) for alerts | You | Portals show Live; tenders show "✓ Pre-checked" before anyone opens them; the page learns each portal's session length | From 25 Oct |
+| 10b | **Big document hand-over time-outs** — 2 fetches on 24 Oct failed at `doc_job_put_chunk` (database statement time-out); make the chunk writes smaller/faster and retry (G) | Claude | No fetch fails at "Handing over" | First thing 25 Oct |
 | 11 | **Tender winners after the captcha** — results pages return nothing; find the new layout and fix (A) | Claude | Real award results arrive in Tender winners | Next for Claude |
 | 12 | **More tender detail per crawl** (value, EMD) and a Haryana portal re-test (D) | Claude | Values / EMD filled on new tenders; Haryana tenders arrive | Planned |
 | 13 | **BOQ Excel (.xls) into the cost planner** (B) | Claude | Upload the portal's BOQ and its items fill the planner | Planned |
