@@ -55,7 +55,7 @@ async function slotsFor(supabase, tenant, company, type, address, { days = 7, fr
   const list = (reps || []).map((r) => ({ ...r, day_start: String(r.day_start).slice(0, 5), day_end: String(r.day_end).slice(0, 5) }));
   if (!list.some((r) => r.modes.includes(type.mode))) return { error: `No active salesperson takes ${type.mode === "field" ? "field visits" : "online calls"} yet. Add one under Sales team → Salespeople.` };
   const out = [];
-  let estimated = false;
+  let estimated = false, travelError = null;
   for (let i = 0; i < days; i++) {
     const day = addDays(from, i);
     if (type.mode === "online") { out.push(...onlineSlots({ day, reps: list, meetings: meetings || [], duration: type.duration_min, buffer: type.buffer_min, all })); continue; }
@@ -64,17 +64,18 @@ async function slotsFor(supabase, tenant, company, type, address, { days = 7, fr
       const dayM = (meetings || []).filter((m) => m.rep_id === rep.id && local(m.starts_at).day === day);
       const t = await travelMinutes(supabase, tenant.id, travelPairs(rep, dayM, address));
       estimated ||= t.estimated;
+      travelError ||= t.error;
       out.push(...fieldSlots({ day, rep, meetings: meetings || [], address, duration: type.duration_min, buffer: type.buffer_min, travel: t.travel }));
     }
   }
-  if (all) return { slots: out.sort((a, b) => a.start - b.start || (a.travel_in ?? 0) - (b.travel_in ?? 0)), estimated };
+  if (all) return { slots: out.sort((a, b) => a.start - b.start || (a.travel_in ?? 0) - (b.travel_in ?? 0)), estimated, travelError };
   // field: one rep per time — the shortest drive in
   const best = new Map();
   for (const x of out) { const k = x.start.toISOString(); if (!best.has(k) || (x.travel_in ?? 0) < (best.get(k).travel_in ?? 0)) best.set(k, x); }
-  return { slots: [...best.values()].sort((a, b) => a.start - b.start), estimated };
+  return { slots: [...best.values()].sort((a, b) => a.start - b.start), estimated, travelError };
 }
 
-export async function findSlots({ typeId, leadId, address, days = 7 }) {
+export async function findSlots({ typeId, leadId, address, days = 7, limit = 160 }) {
   const { supabase, tenant, company } = await getContext();
   const { data: type } = await supabase.from("meeting_types").select("*").eq("id", typeId).eq("company_id", company.id).single();
   if (!type) return { error: "Choose a meeting type." };
@@ -84,7 +85,7 @@ export async function findSlots({ typeId, leadId, address, days = 7 }) {
   if (r.error) return r;
   const { data: reps } = await supabase.from("sales_reps").select("id, name").eq("company_id", company.id);
   const name = Object.fromEntries((reps || []).map((x) => [x.id, x.name]));
-  return { address: addr, estimated: r.estimated, slots: r.slots.slice(0, 120).map((x) => ({ ...x, start: x.start.toISOString(), end: x.end.toISOString(), leave_at: x.leave_at?.toISOString() || null, rep: name[x.rep_id] })) };
+  return { address: addr, estimated: r.estimated, travelError: r.travelError, slots: r.slots.slice(0, limit).map((x) => ({ ...x, start: x.start.toISOString(), end: x.end.toISOString(), leave_at: x.leave_at?.toISOString() || null, rep: name[x.rep_id] })) };
 }
 
 // Staff book a slot directly (re-checked against the latest calendar).
@@ -93,7 +94,7 @@ export async function bookSlot({ typeId, leadId, start, repId, address, notes })
   if (role === "viewer") return { error: "Viewers cannot book meetings." };
   const { data: type } = await supabase.from("meeting_types").select("*").eq("id", typeId).eq("company_id", company.id).single();
   if (!type) return { error: "Choose a meeting type." };
-  const r = await findSlots({ typeId, leadId, address, days: 14 });
+  const r = await findSlots({ typeId, leadId, address, days: 14, limit: Infinity });
   if (r.error) return r;
   const slot = r.slots.find((x) => x.start === start && (!repId || x.rep_id === repId)) || r.slots.find((x) => x.start === start);
   if (!slot) return { error: "That time was just taken — pick another." };
@@ -101,8 +102,8 @@ export async function bookSlot({ typeId, leadId, start, repId, address, notes })
     starts_at: slot.start, ends_at: slot.end, buffer_min: type.buffer_min, address: type.mode === "field" ? r.address : null, travel_min: slot.travel_in ?? null, leave_at: slot.leave_at, notes: s(notes, 500) }).select("id").single();
   if (error) return { error: error.message };
   if (leadId && type.mode === "field" && r.address) await supabase.from("leads").update({ address: r.address }).eq("id", leadId).is("address", null);
-  if (leadId) await supabase.from("crm_activities").insert({ tenant_id: tenant.id, company_id: company.id, lead_id: leadId, kind: "meeting", outcome: "interested", body: `${type.name} booked with ${slot.rep} for ${new Date(slot.start).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}.` });
-  done(); revalidatePath(`/app/leads/${leadId}`);
+  // the CRM entry (timeline naming the salesperson, deal moved to "Meeting") is written by trigger t_meeting_crm
+  done(); revalidatePath(`/app/leads/${leadId}`); revalidatePath("/app/crm");
   return { ok: true, id: m.id, message: `Booked with ${slot.rep} — ${new Date(slot.start).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}.` };
 }
 

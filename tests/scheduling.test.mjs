@@ -41,8 +41,9 @@ test("field visits fit between meetings with travel both ways", () => {
   // leave office 9:30, drive 45 → 10:15–10:45, then 10 min + 20 min drive reaches Client A by 11:15 (< 12:00)
   assert.equal(hhmm(t(slots[0])), "10:15");
   assert.equal(hhmm(local(slots[0].leave_at).min), "09:30");
-  // after Client A: 12:30 + 10 + 20 drive = 13:00
-  assert.equal(hhmm(t(slots[1])), "13:00");
+  // before Client A the choice is 10:15 or 10:45 (11:15 would miss the drive to Client A); after it, 12:30 + 10 + 20 drive = 13:00, then every 30 min
+  assert.deepEqual(slots.slice(0, 4).map((s) => hhmm(t(s))), ["10:15", "10:45", "13:00", "13:30"]);
+  assert.equal(hhmm(t(slots.at(-1))), "18:00");
   // a 2-hour visit cannot fit before Client A
   assert.equal(fieldSlots({ day: DAY, rep, meetings, address: "New", duration: 120, travel, now: BEFORE }).map((s) => hhmm(t(s)))[0], "13:00");
   assert.equal(travelPairs(rep, meetings, "New").length, 4);
@@ -79,4 +80,11 @@ test("booking links keep every free rep per time, so a time stays open while any
   const at1050 = all.filter((s) => hhmm(t(s)) === "10:50").map((s) => s.rep_id);
   assert.equal(at1050.length, 2);
   assert.equal(at1050[0], "c"); // least-loaded first
+});
+
+test("an empty field day offers a choice of visit times, not just the first", () => {
+  const rep = reps[1]; // 10:00-11:30, start point set
+  const out = fieldSlots({ day: DAY, rep, address: "Client, Noida", duration: 30, buffer: 10, travel: {}, fallback: 15, now: BEFORE });
+  assert.deepEqual(out.map((s) => hhmm(t(s))), ["10:15", "10:45"]); // 11:15 would end after 11:30
+  assert.ok(out.every((s) => s.travel_in === 15));
 });

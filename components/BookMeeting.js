@@ -72,7 +72,7 @@ export default function BookMeeting({ leadId, types, address: initialAddress, ph
       )}
       {res && (
         <div className="stack-sm">
-          {res.estimated && <p className="tiny faint" style={{ margin: 0 }}>Some drive times are estimates (45 min) — Google could not price every trip.</p>}
+          {res.estimated && <p className="tiny faint" style={{ margin: 0 }}>Some drive times are estimates (45 min) — Google could not price every trip.{res.travelError ? ` Google said: ${res.travelError}` : ""}</p>}
           {!res.slots.length && <p className="small muted" style={{ margin: 0 }}>No free times in the next 7 days.</p>}
           {groupSlots(res.slots.map((x) => ({ ...x, start: new Date(x.start) }))).map((g) => (
             <div key={g.day}>
