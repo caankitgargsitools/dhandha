@@ -64,3 +64,4 @@ Social lead sources:
 41. `taxonomy_custom` (execute_sql) — table (kind industry/sub/service, parent, label, keywords, status pending/approved/rejected; RLS approved-or-own), `review_taxonomy`, trigger `t_taxonomy_added` (push platform admins); `ai_check_claim` returns the company's own services (`own`)
 42. `invite_confirm_and_rep_link` (execute_sql) — `confirm_invited_signup(token, email)` (anon), `sales_reps.email`, trigger `t_link_rep_on_join` on `tenant_members`
 43. `tender_read_keeps_portal_dates` (execute_sql) — `apply_tender_read` fills `due_at` / `prebid_on` only when the portal gave none, never before `published_on`; two tenders whose end date had been overwritten were cleared (`due_at`, `source_hash` null) so the next crawl restores the portal date
+44. `tender_chat` (execute_sql) — the tender assistant chat per match (who me/bot, body, error; RLS members read, writers insert for their own match), written by `saveChat`

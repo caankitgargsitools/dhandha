@@ -13,15 +13,19 @@ import { MasterAnswer, WorkAnswer, PersonAnswer, FormatPicker } from "./Question
 import AnnexureEditor from "./AnnexureEditor";
 import EvalPanel from "./EvalPanel";
 import { Spinner, TimedProgress } from "@/components/Progress";
-import { forceFiling, techMarking, askAssistant, saveAnnexure, annexureSegments } from "../../assistantActions";
+import { forceFiling, techMarking, askAssistant, saveAnnexure, annexureSegments, saveChat } from "../../assistantActions";
 
 const form = (o) => { const f = new FormData(); for (const [k, v] of Object.entries(o)) f.append(k, v); return f; };
 
 // Chat for one tender: the assistant's earlier messages (what is done), then one question at a time.
 // Answers are saved to the Vault by server actions; the page re-loads its steps after each one.
-export default function Assistant({ matchId, tenderId, done, steps, brief, formats, redo, canAnswer, canPrepare }) {
+// The chat (each question with its answer) is kept per tender in tender_chat, so it stays when the page is opened again.
+// Tabs: the chat, the tender summary (brief) and the fetched documents. The chat scrolls inside its own box, so the
+// page itself never jumps while answering.
+export default function Assistant({ matchId, tenderId, portal, files = [], history = [], done, steps, brief, formats, redo, canAnswer, canPrepare }) {
   const router = useRouter();
-  const [log, setLog] = useState([]);
+  const [log, setLog] = useState(history);
+  const [tab, setTab] = useState("chat");
   const [skipped, setSkipped] = useState(() => new Set());
   const [busy, setBusy] = useState(false);
   const [working, setWorking] = useState(null); // { label, seconds } of what is running, for the progress bar
@@ -30,11 +34,18 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, forma
   const [asking, setAsking] = useState(false);
   const [editing, setEditing] = useState(null); // { idx, title, segments } — an annexure opened again from "Your formats"
   const [forceNote, setForceNote] = useState("");
-  const end = useRef(null);
+  const box = useRef(null);
+  const anchor = useRef(null);
   const current = steps.find((s) => !skipped.has(s.id));
   const waiting = steps.filter((s) => skipped.has(s.id));
 
-  useEffect(() => { end.current?.scrollIntoView({ behavior: "smooth", block: "end" }); }, [log.length, current?.id]);
+  // scroll inside the chat box only (never the page): new messages → bottom; a new question → its top
+  const toBottom = () => { const el = box.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }); };
+  useEffect(() => { toBottom(); }, [log.length, !!working, asking]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const el = box.current, a = anchor.current;
+    if (el && a) el.scrollTo({ top: Math.max(0, a.offsetTop - el.offsetTop - 12), behavior: "smooth" });
+  }, [current?.id, tab]);
   // documents present but not read yet: read them straight away (AI when available, else the free reader)
   const autoRead = useRef(false);
   useEffect(() => {
@@ -43,9 +54,21 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, forma
     run(null, () => readTender({}, form({ match_id: matchId, mode: current.aiReady ? "ai" : "basic" })), (r) => r.message, { label: "Reading every page of the tender…", seconds: current.aiReady ? 60 : 15 });
   }, [current?.kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const say = (who, msg, extra) => setLog((l) => [...l, { who, text: msg, ...extra }]);
+  const keep = (entries) => { if (canAnswer) saveChat({ matchId, entries }).catch(() => {}); };
+  const say = (who, msg, extra) => {
+    const e = { who, text: typeof msg === "string" ? msg : String(msg ?? ""), ...extra };
+    setLog((l) => [...l, e]);
+    keep([e]);
+  };
+  // the question on screen goes into the chat with its answer, so it stays visible after the next one appears
+  const askedNow = () => {
+    if (!current?.say || ["fetch", "read", "draft"].includes(current.kind)) return;
+    if (log[log.length - 1]?.text !== current.say) say("bot", current.kind === "brief" ? "Here is the brief of this tender — does it look right to you?" : current.say);
+  };
   // roughly how long the slow steps take, for a progress bar instead of a bare spinner
-  async function run(mine, fn, ok, eta) {
+  // run() answers the question on screen; other() is for actions that are not an answer (read again, edit a format)
+  const run = (mine, fn, ok, eta) => { if (mine) askedNow(); return other(mine, fn, ok, eta); };
+  async function other(mine, fn, ok, eta) {
     if (mine) say("me", mine);
     else if (mine === null) say("bot", "Reading the documents…");
     setBusy(true);
@@ -76,17 +99,33 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, forma
     const r = await annexureSegments({ matchId, idx });
     if (r.error) say("bot", r.error, { error: true }); else setEditing({ idx, ...r });
   }
-  const skip = () => { say("me", "Skip for now"); say("bot", "Okay, I'll ask that again later."); setSkipped((s) => new Set(s).add(current.id)); setText(""); };
+  const skip = () => { askedNow(); say("me", "Skip for now"); say("bot", "Okay, I'll ask that again later."); setSkipped((s) => new Set(s).add(current.id)); setText(""); };
 
   return (
-    <div className="panel" style={{ padding: 0, display: "flex", flexDirection: "column", minHeight: "60vh" }}>
-      <div style={{ flex: 1, padding: "18px 18px 8px", display: "flex", flexDirection: "column", gap: 10 }} aria-live="polite">
+    <div className="panel" style={{ padding: 0, display: "flex", flexDirection: "column" }}>
+      <div className="row" role="tablist" style={{ gap: 4, padding: "8px 10px 0", borderBottom: "1px solid var(--line)" }}>
+        {[["chat", "Assistant"], brief && ["brief", "Tender summary"], files.length && ["docs", `Documents (${files.length})`]].filter(Boolean).map(([k, l]) => (
+          <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className="ghost sm"
+            style={{ border: 0, borderRadius: "8px 8px 0 0", borderBottom: `2px solid ${tab === k ? "var(--primary)" : "transparent"}`, color: tab === k ? "var(--primary)" : "var(--ink-2)", fontWeight: tab === k ? 700 : 500 }}>{l}</button>
+        ))}
+      </div>
+      {tab === "brief" && <div style={{ padding: 16 }}>{brief}</div>}
+      {tab === "docs" && (
+        <div style={{ padding: 16 }} className="stack-sm">
+          <span className="small muted">Fetched from {portal}. Click a file to download it.</span>
+          <ul className="small" style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 6 }}>
+            {files.map((x) => <li key={x.id} style={{ overflowWrap: "anywhere" }}>{x.url ? <a href={x.url} download={x.file_name} target="_blank" rel="noreferrer">{x.file_name}</a> : x.file_name}</li>)}
+          </ul>
+        </div>
+      )}
+      <div style={{ display: tab === "chat" ? "flex" : "none", flexDirection: "column" }}>
+      <div ref={box} style={{ height: "min(62vh, 640px)", overflowY: "auto", overscrollBehavior: "contain", padding: "18px 18px 8px", display: "flex", flexDirection: "column", gap: 10 }} aria-live="polite">
         <Bubble>Namaste! I'll prepare this tender with you. I'll ask only what I can't find in your Vault, and save every answer so the next tender asks less.</Bubble>
         {done.map((d, i) => <Bubble key={`d${i}`}>{d}</Bubble>)}
         {redo && (redo.read || redo.tech) && (
           <div className="row" style={{ gap: 8, alignSelf: "flex-start" }}>
-            {redo.read && <button className="ghost sm" aria-busy={busy} disabled={busy} onClick={() => run("Read the tender again with AI", () => readTender({}, form({ match_id: matchId, mode: "ai" })), (r) => r.message, { label: "AI is reading the tender again…", seconds: 60 })}>↻ Read again with AI · 99 credits</button>}
-            {redo.tech && <button className="ghost sm" aria-busy={busy} disabled={busy} onClick={() => run("Redo the technical marking", () => techMarking({ matchId }), (r) => r.message, { label: "Reading the evaluation criteria and marking your firm again…", seconds: 50 })}>↻ Redo technical marking · 29 credits</button>}
+            {redo.read && <button className="ghost sm" aria-busy={busy} disabled={busy} onClick={() => other("Read the tender again with AI", () => readTender({}, form({ match_id: matchId, mode: "ai" })), (r) => r.message, { label: "AI is reading the tender again…", seconds: 60 })}>↻ Read again with AI · 99 credits</button>}
+            {redo.tech && <button className="ghost sm" aria-busy={busy} disabled={busy} onClick={() => other("Redo the technical marking", () => techMarking({ matchId }), (r) => r.message, { label: "Reading the evaluation criteria and marking your firm again…", seconds: 50 })}>↻ Redo technical marking · 29 credits</button>}
           </div>
         )}
         {log.map((x, i) => (
@@ -110,11 +149,9 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, forma
         )}
         {editing && (
           <AnnexureEditor key={`e${editing.idx}`} title={editing.title} segments={editing.segments} busy={busy} onCancel={() => setEditing(null)}
-            onSave={(segs) => run(`Saved “${editing.title}”`, () => saveAnnexure({ matchId, idx: editing.idx, segments: segs }), (r) => { setEditing(null); return r.message; })} />
+            onSave={(segs) => other(`Saved “${editing.title}”`, () => saveAnnexure({ matchId, idx: editing.idx, segments: segs }), (r) => { setEditing(null); return r.message; })} />
         )}
-        {brief && current?.kind !== "brief" && (
-          <details style={{ alignSelf: "stretch" }}><summary className="small" style={{ cursor: "pointer" }}>Tender brief</summary><div style={{ marginTop: 8 }}>{brief}</div></details>
-        )}
+        <div ref={anchor} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {current?.kind === "brief" && brief}
         {current ? (
           <Bubble>
@@ -131,14 +168,13 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, forma
         ) : (
           <Bubble>{waiting.length ? `That's all for now. You skipped ${waiting.length} question${waiting.length === 1 ? "" : "s"}; open this page again to answer ${waiting.length === 1 ? "it" : "them"}.` : "All done for this tender. Download the pack from the tender page, check it, and sign it when ready."}</Bubble>
         )}
-        <div ref={end} />
-      </div>
-
-      {(working || asking) && (
-        <div style={{ borderTop: "1px solid var(--line)", padding: "10px 14px" }} aria-live="polite">
-          {asking ? <TimedProgress key="ask" seconds={20} label="Looking through the tender for your answer…" /> : working?.seconds ? <TimedProgress key={working.label} seconds={working.seconds} label={working.label} /> : <Spinner label={working?.label || "Working…"} />}
         </div>
-      )}
+        {(working || asking) && (
+          <div style={{ alignSelf: "stretch", padding: "4px 2px" }}>
+            {asking ? <TimedProgress key="ask" seconds={20} label="Looking through the tender for your answer…" /> : working?.seconds ? <TimedProgress key={working.label} seconds={working.seconds} label={working.label} /> : <Spinner label={working?.label || "Working…"} />}
+          </div>
+        )}
+      </div>
       {current && canAnswer && current.kind !== "fetch" && (
         <div style={{ borderTop: "1px solid var(--line)", padding: 14, background: "var(--paper-2, transparent)" }} className="stack-sm">
           {current.kind === "yes_no" && (
@@ -196,7 +232,7 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, forma
             </div>
           )}
           {current.kind === "price" && current.ev && <EvalPanel ev={current.ev} estimate={current.estimate} cost={current.cost} quote={current.quote} />}
-          {current.kind === "price" && <CostPlanner matchId={matchId} initial={current.sheet} estimate={current.estimate} fresh={current.fresh} onDone={(label) => { say("me", label); say("bot", "Price saved for this tender. It goes on the preparation sheet; you enter it in the portal's price bid."); router.refresh(); }} />}
+          {current.kind === "price" && <CostPlanner matchId={matchId} initial={current.sheet} estimate={current.estimate} fresh={current.fresh} onDone={(label) => { askedNow(); say("me", label); say("bot", "Price saved for this tender. It goes on the preparation sheet; you enter it in the portal's price bid."); router.refresh(); }} />}
           {current.kind === "draft" && (
             <div className="row" style={{ gap: 8 }}>
               <button disabled={busy} onClick={() => run("Make the draft", () => generateBidPack({}, form({ match_id: matchId, kind: "draft" })), (r) => r.message || "Draft ready.", { label: "Putting the bid file together…", seconds: 20 })}>{busy ? "Preparing…" : "Make draft bid pack"}</button>
@@ -211,6 +247,7 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, forma
           <button aria-busy={!!asking} className="ghost" disabled={asking || !ask.trim()}>{asking ? "Thinking…" : "Ask · 3 credits"}</button>
         </form>
       )}
+      </div>
     </div>
   );
 }

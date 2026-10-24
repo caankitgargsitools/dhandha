@@ -30,7 +30,7 @@ export default async function TenderAssistant({ params }) {
   const { data: m } = await supabase.from("tender_matches").select("*, tenders(*)").eq("id", id).eq("company_id", company.id).maybeSingle();
   if (!m) notFound();
   const t = m.tenders;
-  const [{ data: c }, { data: files }, { data: reads }, { data: facts }, { data: workRows }, { data: peopleRows }, { data: packs }, { data: jobs }, { data: docs }, { data: types }] = await Promise.all([
+  const [{ data: c }, { data: files }, { data: reads }, { data: facts }, { data: workRows }, { data: peopleRows }, { data: packs }, { data: jobs }, { data: docs }, { data: types }, { data: chat }] = await Promise.all([
     supabase.from("companies").select("*").eq("id", company.id).single(),
     supabase.from("tender_files").select("id, file_name, storage_path").eq("tender_id", t.id).order("file_name"),
     supabase.from("tender_reads").select("engine, fields, formats, risks, summary, created_at").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
@@ -41,7 +41,9 @@ export default async function TenderAssistant({ params }) {
     supabase.from("tender_doc_jobs").select("id, status, step, detail, error, created_at").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
     supabase.from("documents").select("type_code, valid_until").eq("company_id", company.id).eq("status", "active"),
     supabase.from("document_types").select("code, name"),
+    supabase.from("tender_chat").select("who, body, error").eq("match_id", id).order("id", { ascending: false }).limit(300),
   ]);
+  const history = (chat || []).reverse().map((x) => ({ who: x.who, text: x.body, error: x.error }));
   // download links for the fetched documents (one signing call for all of them)
   const paths = (files || []).map((x) => x.storage_path).filter(Boolean);
   const { data: signed } = paths.length ? await supabase.storage.from("tender-docs").createSignedUrls(paths, 3600) : { data: [] };
@@ -76,7 +78,7 @@ export default async function TenderAssistant({ params }) {
   }
   if (!confirmed) {
     const left = daysLeft(t.due_at);
-    return page({ m, t, left, done, steps, role, canPrepare, files, redo: canPrepare && read ? { read: aiTiers().length > 0 } : null, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} /> : null });
+    return page({ m, t, left, done, steps, role, canPrepare, files, history, redo: canPrepare && read ? { read: aiTiers().length > 0 } : null, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} /> : null });
   }
   if (read) done.push("You approved the brief — preparing the bid.");
 
@@ -90,7 +92,7 @@ export default async function TenderAssistant({ params }) {
     steps.push({ id: "mandatory", kind: "mandatory", unmet, conds: cond.failed.map((x) => ({ key: x.key, label: x.label })),
       say: `Warning: ${unmet.length === 1 ? "a mandatory condition of this tender is" : `${unmet.length} mandatory conditions of this tender are`} not met according to your Vault. A bid that misses a mandatory condition is usually rejected at the technical stage.` });
     const left = daysLeft(t.due_at);
-    return page({ m, t, left, done, steps, role, canPrepare, files, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} /> : null });
+    return page({ m, t, left, done, steps, role, canPrepare, files, history, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} /> : null });
   }
   if (unmet.length) done.push(`⚠ Filing although: ${unmet.join("; ")} — you chose to file anyway on ${fmtDate(m.forced_at)}${m.forced_note ? ` (“${m.forced_note}”)` : ""}.`);
 
@@ -157,10 +159,10 @@ export default async function TenderAssistant({ params }) {
   const left = daysLeft(t.due_at);
   // results can be redone (e.g. after a bad read of a big scanned document)
   const redo = canPrepare && read ? { read: aiTiers().length > 0, tech: !!m.tech_eval && paidAi } : null;
-  return page({ m, t, left, done, steps, role, canPrepare, files, formatsView, redo, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} /> : null });
+  return page({ m, t, left, done, steps, role, canPrepare, files, history, formatsView, redo, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} /> : null });
 }
 
-function page({ m, t, left, done, steps, role, canPrepare, files, brief, formatsView = null, redo = null }) {
+function page({ m, t, left, done, steps, role, canPrepare, files, history, brief, formatsView = null, redo = null }) {
   return (
     <div className="stack" style={{ maxWidth: 1040 }}>
       <Link href={`/app/tenders/${m.id}`} className="small">Back to the tender</Link>
@@ -174,15 +176,7 @@ function page({ m, t, left, done, steps, role, canPrepare, files, brief, formats
         </div>
         <span className={`chip ${mandatoryUnmet(m.reasons).length || m.pending ? "warn" : "ok"}`}>{mandatoryUnmet(m.reasons).length ? (m.forced_at ? "Filing despite a warning" : "⚠ Mandatory condition not met") : m.pending ? `Qualifies if you answer ${m.pending}` : "Qualified"}</span>
       </div>
-      {!!files?.length && (
-        <details className="panel" style={{ padding: "10px 14px" }}>
-          <summary className="small" style={{ cursor: "pointer" }}><strong>Tender documents ({files.length})</strong> <span className="muted">— download what was fetched from {t.portal}</span></summary>
-          <ul className="small" style={{ margin: "10px 0 0", paddingLeft: 18, display: "grid", gap: 4 }}>
-            {files.map((x) => <li key={x.id} style={{ overflowWrap: "anywhere" }}>{x.url ? <a href={x.url} download={x.file_name} target="_blank" rel="noreferrer">{x.file_name}</a> : x.file_name}</li>)}
-          </ul>
-        </details>
-      )}
-      <Assistant matchId={m.id} tenderId={t.id} done={done} steps={steps} brief={brief} formats={formatsView} redo={redo} canAnswer={role !== "viewer"} canPrepare={canPrepare} />
+      <Assistant matchId={m.id} tenderId={t.id} portal={t.portal} files={files} history={history} done={done} steps={steps} brief={brief} formats={formatsView} redo={redo} canAnswer={role !== "viewer"} canPrepare={canPrepare} />
     </div>
   );
 }

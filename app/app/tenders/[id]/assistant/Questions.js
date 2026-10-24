@@ -1,6 +1,9 @@
 "use client";
 import { useState } from "react";
 
+// focus the first box without scrolling the page (autoFocus would jump the window)
+const focusOnce = (el) => { if (el && !el.dataset.f) { el.dataset.f = "1"; el.focus({ preventScroll: true }); } };
+
 // Answer widgets for the assistant's master questions. Each calls `send(myText, action)`; the assistant shows
 // the answer as the person's bubble, saves it to the masters and moves to the next question.
 
@@ -18,8 +21,8 @@ export function MasterAnswer({ step, busy, send, skip }) {
   const money = step.type === "money";
   return (
     <form className="row" style={{ gap: 8, flexWrap: "nowrap" }} onSubmit={submit}>
-      {step.long ? <textarea value={v} onChange={(e) => setV(e.target.value)} rows={2} autoFocus style={{ flex: 1 }} aria-label={step.label} />
-        : <input value={v} onChange={(e) => setV(money ? e.target.value.replace(/[^\d.]/g, "") : e.target.value)} autoFocus aria-label={step.label} placeholder={step.hint || (money ? "Amount in rupees" : "")}
+      {step.long ? <textarea value={v} onChange={(e) => setV(e.target.value)} rows={2} ref={focusOnce} style={{ flex: 1 }} aria-label={step.label} />
+        : <input value={v} onChange={(e) => setV(money ? e.target.value.replace(/[^\d.]/g, "") : e.target.value)} ref={focusOnce} aria-label={step.label} placeholder={step.hint || (money ? "Amount in rupees" : "")}
           type={step.type === "date" ? "date" : step.type === "email" ? "email" : "text"} inputMode={money || step.type === "tel" ? "numeric" : undefined} style={{ flex: 1, width: "auto" }} />}
       {money && Number(v) > 0 && <span className="tiny faint" style={{ alignSelf: "center", whiteSpace: "nowrap" }}>₹{Number(v).toLocaleString("en-IN")}</span>}
       <button disabled={busy || !String(v).trim()}>Send</button>
@@ -35,7 +38,7 @@ export function WorkAnswer({ busy, send, skip }) {
   return (
     <form className="stack-sm" onSubmit={(e) => { e.preventDefault(); send(`${w.work_name} for ${w.client}, ₹${Number(w.value_inr || 0).toLocaleString("en-IN")}${w.end_date ? `, completed ${w.end_date}` : ""}`, w); }}>
       <div className="form-grid">
-        <div><label htmlFor="wn">What was the work?</label><input id="wn" value={w.work_name} onChange={f("work_name")} autoFocus /></div>
+        <div><label htmlFor="wn">What was the work?</label><input id="wn" value={w.work_name} onChange={f("work_name")} ref={focusOnce} /></div>
         <div><label htmlFor="wc">For which client?</label><input id="wc" value={w.client} onChange={f("client")} /></div>
         <div><label htmlFor="wv">Contract value (₹)</label><input id="wv" inputMode="numeric" value={w.value_inr} onChange={f("value_inr")} /></div>
         <div><label htmlFor="we">Completed on</label><input id="we" type="date" value={w.end_date} onChange={f("end_date")} /></div>
@@ -51,7 +54,7 @@ export function PersonAnswer({ busy, send, skip }) {
   return (
     <form className="stack-sm" onSubmit={(e) => { e.preventDefault(); send(`${p.name}${p.designation ? `, ${p.designation}` : ""}${p.qualification ? ` (${p.qualification})` : ""}${p.years ? `, ${p.years} years` : ""}`, p); }}>
       <div className="form-grid">
-        <div><label htmlFor="pnm">Name</label><input id="pnm" value={p.name} onChange={f("name")} autoFocus /></div>
+        <div><label htmlFor="pnm">Name</label><input id="pnm" value={p.name} onChange={f("name")} ref={focusOnce} /></div>
         <div><label htmlFor="pds">Designation</label><input id="pds" value={p.designation} onChange={f("designation")} /></div>
         <div><label htmlFor="pq">Qualification</label><input id="pq" value={p.qualification} onChange={f("qualification")} placeholder="e.g. FCA, B.E. Civil" /></div>
         <div><label htmlFor="py">Years of experience</label><input id="py" inputMode="numeric" value={p.years} onChange={f("years")} /></div>
