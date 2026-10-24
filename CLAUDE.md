@@ -85,9 +85,9 @@ It covers:
 - Database logic lives mostly in SQL. The migrations list is in `supabase/README.md`.
   - Key functions: `score_tender` (CPWD norms), `tender_fits`, `kw_rx` (whole-word matching, plurals allowed), `allowed_packs`, `rescore_company`, `ingest_tenders`, `spend_credits`, `add_team_member`, `claim_invites`, `import_leads`, `escalate_overdue_deals` (pg_cron, hourly), `sees_all_leads`.
 - Roles: admin, manager, bid_preparer, telecaller, field, viewer, disabled.
-- Design system ("bahi-khata" ledger look):
-  - Colours: madder #8c1d2f, marigold #f0a202, ink #1b2240.
-  - Fonts: Bricolage Grotesque, Manrope, Tiro Devanagari Hindi.
+- Design system (owner chose "clean SaaS", 24 Oct): slate neutrals, one indigo accent, flat white cards with thin borders and soft shadows, sticky white top bar, white menu drawer (admin drawer dark), light and dark mode. All in `app/globals.css` tokens.
+  - Colours: primary indigo #4f46e5 (`--primary`; old name `--madder` points to it), violet #7c3aed for gradients, amber #f59e0b (`--marigold`) only for warnings/highlights, slate ink #0f172a, page #f8fafc. Use tokens, never hex, in pages.
+  - Fonts: Inter (variable) for everything; Tiro Devanagari Hindi for the धंधा wordmark.
   - Charts are hand-drawn SVG in `components/Charts.js`.
   - Working indicators (owner's rule: every running process shows it is working): `components/ActivityBar.js` (root layout) shows a top bar while any same-site request runs (server actions, page loads, API routes; database polling excluded; appears after 200 ms). `components/Progress.js`: `<Spinner />` when the time is unknown, `<TimedProgress seconds label />` when it is roughly known (fills to 95%, "about N s left"). Busy buttons get `aria-busy` (CSS spinner); `FormState` does it automatically; `loading.js` in `/app` and `/admin`. New long actions must use one of these.
 - Tests: `node --test tests/` and `cd crawler && npm test`.

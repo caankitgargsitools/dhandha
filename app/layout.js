@@ -1,5 +1,4 @@
-import "@fontsource-variable/bricolage-grotesque";
-import "@fontsource-variable/manrope";
+import "@fontsource-variable/inter";
 import "@fontsource/tiro-devanagari-hindi/devanagari-400.css";
 import "./globals.css";
 import PwaRegister from "@/components/PwaRegister";
@@ -13,7 +12,7 @@ export const metadata = {
   icons: { icon: "/icons/icon-192.png", apple: "/icons/apple-180.png" },
 };
 
-export const viewport = { themeColor: "#8c1d2f", width: "device-width", initialScale: 1 };
+export const viewport = { themeColor: "#4f46e5", width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }) {
   return (

@@ -218,7 +218,7 @@ export default function Assistant({ matchId, tenderId, done, steps, brief, forma
 function Bubble({ me, error, children }) {
   return (
     <div style={{ alignSelf: me ? "flex-end" : "flex-start", maxWidth: "85%", padding: "10px 14px", borderRadius: me ? "14px 14px 4px 14px" : "14px 14px 14px 4px",
-      background: me ? "var(--ink)" : error ? "rgba(140,29,47,.08)" : "var(--line-soft)", color: me ? "#fff" : error ? "var(--blood)" : "inherit", fontSize: 14, lineHeight: 1.45 }}>
+      background: me ? "var(--primary)" : error ? "var(--blood-soft)" : "var(--line-soft)", color: me ? "#fff" : error ? "var(--blood)" : "inherit", fontSize: 14, lineHeight: 1.45 }}>
       {children}
     </div>
   );
