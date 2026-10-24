@@ -89,6 +89,7 @@ a.panel:hover { border-color: color-mix(in srgb, var(--primary) 40%, var(--line)
 /* headline figures (was the ledger margin): a quiet accent line on the left */
 .ledger { position: relative; padding-left: 26px; }
 .ledger::before { content: ""; position: absolute; left: 14px; top: 18px; bottom: 18px; width: 3px; border-radius: 3px; background: linear-gradient(var(--primary), var(--violet)); opacity: .85; }
+.ledger.tight::before { left: 8px; top: 10px; bottom: 10px; }
 
 .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 4px; }
 .page-head p { margin: 0; color: var(--ink-2); max-width: 70ch; }
