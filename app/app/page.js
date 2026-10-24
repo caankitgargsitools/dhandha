@@ -5,7 +5,7 @@ import Icon from "@/components/Icon";
 
 const CORE_DOCS = ["REG-PAN", "REG-GST", "REG-INC", "FIN-AUDIT", "FIN-ITR", "EXP-CC"];
 const CORE_FIELDS = ["legal_name", "constitution", "pan", "gstin", "registered_address", "state", "pincode", "email", "phone", "signatory_name", "signatory_designation", "bank_account", "bank_ifsc"];
-const STAGES = [["new", "New"], ["contacted", "Contacted"], ["qualified", "Qualified"], ["meeting", "Meeting"], ["proposal", "Proposal"], ["negotiation", "Negotiation"], ["won", "Won"]];
+const STAGES = [["new", "New"], ["contacted", "Messaged"], ["called", "Called"], ["qualified", "Qualified"], ["link_sent", "Link sent"], ["meeting", "Meeting"], ["proposal", "Proposal"], ["negotiation", "Negotiation"], ["won", "Won"]];
 
 export default async function Dashboard() {
   const { supabase, tenant, company, user } = await getContext();
