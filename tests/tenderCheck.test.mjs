@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { firmProfile, buildPrompt, validateAnswer, mapAnswer } from "../lib/tenderCheck.js";
+import { parseJson } from "../lib/json.js";
 
 test("profile names the services with plain words, never rule syntax", () => {
   const p = firmProfile(["pro.consult.pmc", "pro.audit.statutory"], ["GST refund"]);
@@ -22,4 +23,11 @@ test("answers are checked and mapped back to the matches", () => {
   assert.equal(validateAnswer({ results: [{ fit: "yes" }, { fit: "no" }, { fit: "perhaps" }] }, 3), "unknown fit value");
   assert.equal(validateAnswer({ results: [{ fit: "YES" }, { fit: "no" }, { fit: "maybe" }] }, 3), null);
   assert.deepEqual(mapAnswer({ results: [{ key: "t2", fit: "No", reason: "Civil works" }, { key: "t9", fit: "yes" }] }, items), [{ id: "b", fit: "no", reason: "Civil works" }]);
+});
+
+test("a list given as one JSON object per line is still read", () => {
+  const d = parseJson('{"key":"t1","fit":"yes","reason":"CA firm"}\n{"key":"t2","fit":"no","reason":"road works"}');
+  assert.equal(validateAnswer(d, 2), null);
+  assert.deepEqual(mapAnswer(d, [{ id: "a" }, { id: "b" }]).map((x) => x.fit), ["yes", "no"]);
+  assert.deepEqual(parseJson('```json\n{"results":[]}\n```'), { results: [] });
 });

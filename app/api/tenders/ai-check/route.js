@@ -21,7 +21,7 @@ export async function POST(request) {
     for (let i = 0; i < c.items.length && Date.now() < until - 30000; i += 20) {
       const items = c.items.slice(i, i + 20);
       const r = await runJson({
-        supabase, tenantId: c.tenant_id, task: "tender_ai_check", private: false, maxTokens: 2500,
+        supabase, tenantId: c.tenant_id, task: "tender_ai_check", private: false, maxTokens: 2500, fast: true, freeWaitMs: 60000,
         prompt: buildPrompt(profile, items), validate: (d) => validateAnswer(d, items.length),
         budgetMs: Math.min(120000, until - Date.now() - 10000),
       });
