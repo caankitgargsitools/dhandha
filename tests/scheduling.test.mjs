@@ -68,3 +68,15 @@ test("lead address and client-facing grouping", () => {
   assert.equal(g[0].parts.Afternoon[0].label, "14:00");
   assert.equal(g[1].parts.Evening.length, 1);
 });
+
+test("booking links keep every free rep per time, so a time stays open while anyone is free", () => {
+  const two = [reps[0], { ...reps[0], id: "c" }];
+  const busyA = [{ rep_id: "a", starts_at: at(DAY, 570), ends_at: at(DAY, 600), status: "booked" }]; // a is busy 09:30-10:00
+  const one = onlineSlots({ day: DAY, reps: two, duration: 30, buffer: 10, now: BEFORE });
+  const all = onlineSlots({ day: DAY, reps: two, meetings: busyA, duration: 30, buffer: 10, now: BEFORE, all: true });
+  assert.equal(new Set(one.map((s) => s.start.toISOString())).size, one.length); // one rep per time
+  assert.deepEqual(all.filter((s) => hhmm(t(s)) === "09:30").map((s) => s.rep_id), ["c"]); // 09:30 still offered: c is free
+  const at1050 = all.filter((s) => hhmm(t(s)) === "10:50").map((s) => s.rep_id);
+  assert.equal(at1050.length, 2);
+  assert.equal(at1050[0], "c"); // least-loaded first
+});

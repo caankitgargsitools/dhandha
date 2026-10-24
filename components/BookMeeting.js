@@ -40,7 +40,7 @@ export default function BookMeeting({ leadId, types, address: initialAddress, ph
     setBusy("");
     if (r.error) return setMsg({ error: r.error });
     const url = `${window.location.origin}/book/${r.token}`;
-    setLink({ url, wa: waLink(phone, `Namaste${contact ? ` ${contact}` : ""}, please pick a convenient time for our ${type?.name?.toLowerCase() || "meeting"}${business ? ` with ${business}` : ""}: ${url}`) });
+    setLink({ url, count: r.count, wa: waLink(phone, `Namaste${contact ? ` ${contact}` : ""}, please pick a convenient time for our ${type?.name?.toLowerCase() || "meeting"}${business ? ` with ${business}` : ""}: ${url}`) });
   }
 
   return (
@@ -54,15 +54,15 @@ export default function BookMeeting({ leadId, types, address: initialAddress, ph
         {type?.mode === "field" && <div><label htmlFor="bm-addr">Client's address</label><input id="bm-addr" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Full address for the visit" /></div>}
       </div>
       <div className="row" style={{ gap: 8 }}>
-        <button className="sm" aria-busy={busy === "find"} disabled={!!busy} onClick={find}>Find free times</button>
-        <button className="sm ghost" aria-busy={busy === "link"} disabled={!!busy} onClick={sendLink}>Send booking link</button>
+        <button className="sm" aria-busy={busy === "link"} disabled={!!busy} onClick={sendLink}>Send booking link to client</button>
+        <button className="sm ghost" aria-busy={busy === "find"} disabled={!!busy} onClick={find}>Pick a time myself</button>
       </div>
-      {busy === "find" && <Spinner label={type?.mode === "field" ? "Checking every salesperson's route and travel times…" : "Checking everyone's calendar…"} />}
+      {busy && <Spinner label={busy === "link" ? "Collecting the team's free times for the next 14 days…" : type?.mode === "field" ? "Checking every salesperson's route and travel times…" : "Checking everyone's calendar…"} />}
       {msg?.error && <p className="error small" style={{ margin: 0 }}>{msg.error}</p>}
       {msg?.ok && <p className="success small" style={{ margin: 0 }}>{msg.ok}</p>}
       {link && (
         <div className="notice info small" style={{ display: "block" }}>
-          <div>Booking link ready — the client picks a time, and the meeting is booked with a free salesperson.</div>
+          <div>Booking link ready ({link.count} free times over 14 days). The client picks a date, then a time; they see the company's free times only, never who is coming. The meeting goes to whichever salesperson is free.</div>
           <div className="row" style={{ gap: 8, marginTop: 8 }}>
             <input readOnly value={link.url} onFocus={(e) => e.target.select()} style={{ flex: 1, minWidth: 180 }} aria-label="Booking link" />
             <button className="sm ghost" onClick={() => navigator.clipboard?.writeText(link.url)}>Copy</button>

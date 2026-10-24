@@ -5,7 +5,8 @@ import { groupSlots } from "@/lib/scheduling";
 
 const dayLabel = (d) => new Date(`${d}T00:00:00+05:30`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" });
 
-// The client picks a day, then a time in the part of the day they prefer.
+// The client picks a date (only dates with a free time are listed), then a free time. Times are the whole
+// company's; who takes the meeting is decided when they book.
 export default function Picker({ token, slots, contact, mode }) {
   const groups = groupSlots(slots.map((s) => ({ ...s, start: new Date(s.start) })));
   const [day, setDay] = useState(groups[0]?.day || null);
@@ -29,18 +30,21 @@ export default function Picker({ token, slots, contact, mode }) {
   }
   return (
     <div className="stack-sm">
-      <p className="small" style={{ margin: 0 }}>{contact ? `Hello ${contact}, p` : "P"}ick a day and a time that suits you.</p>
-      <div className="row" style={{ gap: 6, overflowX: "auto", flexWrap: "nowrap", paddingBottom: 4 }}>
-        {groups.map((x) => <button key={x.day} className={`sm ${x.day === g.day ? "" : "ghost"}`} onClick={() => { setDay(x.day); setPick(null); }} style={{ whiteSpace: "nowrap" }}>{dayLabel(x.day)}</button>)}
-      </div>
-      {Object.entries(g.parts).filter(([, l]) => l.length).map(([part, list]) => (
-        <div key={part}>
-          <div className="tiny faint" style={{ margin: "6px 0 4px" }}>{part}</div>
-          <div className="row" style={{ gap: 6 }}>
-            {list.map((x) => { const iso = x.start.toISOString(); return <button key={iso} className={`sm ${pick === iso ? "" : "ghost"}`} onClick={() => setPick(iso)}>{x.label}</button>; })}
+      <p className="small" style={{ margin: 0 }}>{contact ? `Hello ${contact}, p` : "P"}ick a date, then a time that suits you.</p>
+      <div><label htmlFor="bk-day">Date</label>
+        <select id="bk-day" value={g.day} onChange={(e) => { setDay(e.target.value); setPick(null); }}>
+          {groups.map((x) => { const n = Object.values(x.parts).reduce((t, l) => t + l.length, 0); return <option key={x.day} value={x.day}>{dayLabel(x.day)} — {n} free time{n === 1 ? "" : "s"}</option>; })}
+        </select></div>
+      <div><label>Time</label>
+        {Object.entries(g.parts).filter(([, l]) => l.length).map(([part, list]) => (
+          <div key={part}>
+            <div className="tiny faint" style={{ margin: "6px 0 4px" }}>{part}</div>
+            <div className="row" style={{ gap: 6 }}>
+              {list.map((x) => { const iso = x.start.toISOString(); return <button key={iso} className={`sm ${pick === iso ? "" : "ghost"}`} aria-pressed={pick === iso} onClick={() => setPick(iso)}>{x.label}</button>; })}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
       {pick && (
         <div className="stack-sm">
           <div><label htmlFor="bk-note">Anything we should know? (optional)</label><input id="bk-note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} placeholder={mode === "field" ? "Landmark, floor, whom to ask for…" : "Topic, best number to call…"} /></div>
