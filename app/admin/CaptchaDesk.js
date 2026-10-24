@@ -16,13 +16,17 @@ export default function CaptchaDesk() {
 
   const load = useCallback(async () => {
     supabase.current ||= createClient();
-    const [{ data }, { data: docs }] = await Promise.all([
+    const [{ data }, { data: docs }, { data: sess }] = await Promise.all([
       supabase.current.from("crawler_captchas").select("id, portal, purpose, image, runner, asked_at, expires_at")
         .eq("status", "waiting").gt("expires_at", new Date().toISOString()).order("asked_at").limit(5),
       supabase.current.rpc("admin_doc_captchas"),
+      supabase.current.rpc("portal_sessions_view"),
     ]);
     // document fetches waiting at a portal captcha (the fetcher waits about 9 minutes for an answer)
-    const list = [...(data || []), ...(docs || []).filter((d) => !hidden.current.has(d.id)).map((d) => ({ id: d.id, doc: true, portal: d.portal, purpose: `${d.auto ? "Fetching in advance" : "A customer is waiting"}: ${d.title}`, image: d.image, asked_at: d.asked_at, expires_at: new Date(Date.parse(d.asked_at) + 9 * 60000).toISOString() }))];
+    const list = [...(data || []), ...(docs || []).filter((d) => !hidden.current.has(d.id)).map((d) => ({ id: d.id, doc: true, portal: d.portal, purpose: `${d.auto ? "Fetching in advance" : "A customer is waiting"}: ${d.title}`, image: d.image, asked_at: d.asked_at, expires_at: new Date(Date.parse(d.asked_at) + 9 * 60000).toISOString() })),
+      // the admin's captcha session (Admin → Captcha session)
+      ...(sess || []).filter((r) => r.state === "captcha" && r.captcha_image).map((r) => ({ id: `s:${r.portal}:${r.captcha_seq}`, session: r.portal, portal: r.portal, purpose: "Captcha session", image: r.captcha_image, asked_at: r.updated_at, expires_at: new Date(Date.parse(r.updated_at) + 9 * 60000).toISOString() }))];
+    for (let i = list.length - 1; i >= 0; i--) if (list[i].session && hidden.current.has(list[i].id)) list.splice(i, 1);
     const fresh = list.filter((c) => !seen.current.has(c.id));
     if (fresh.length) {
       fresh.forEach((c) => seen.current.add(c.id));
@@ -44,7 +48,8 @@ export default function CaptchaDesk() {
     setBusy(id); setErr("");
     let error = null;
     // skipping a document fetch only hides it here; the fetcher gives up after its wait and can be asked again
-    if (c.doc && answer === null) hidden.current.add(id);
+    if ((c.doc || c.session) && answer === null) hidden.current.add(id);
+    else if (c.session) ({ error } = await supabase.current.rpc("answer_session_captcha", { p_portal: c.session, p_answer: answer }));
     else if (c.doc) ({ error } = await supabase.current.rpc("answer_doc_captcha", { p_job: id, p_answer: answer }));
     else ({ error } = answer === null ? await supabase.current.rpc("skip_captcha", { p_id: id }) : await supabase.current.rpc("answer_captcha", { p_id: id, p_answer: answer }));
     if (error) setErr(error.message);

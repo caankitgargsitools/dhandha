@@ -36,21 +36,33 @@ const update = (job, o) => rpc("doc_job_update", { p_job: job.id, p_status: o.st
 const visible = async (page, sel) => { for (const h of await page.$$(sel)) if (await h.isVisible()) return h; return null; };
 const hasCaptcha = async (page) => !!(await visible(page, CAPTCHA_IMG)) && !!(await visible(page, CAPTCHA_INPUT));
 
-// Show the captcha picture in the assistant and wait for the person's answer; fill it and press the visible button.
-async function captchaFromPerson(page, job) {
+// Where a captcha picture goes and its answer comes from: a document job (captcha desk) or a portal's captcha
+// session (Admin → Captcha session). A person types it; nothing here reads or solves it.
+const jobChannel = (job) => ({
+  post: async (step, image) => (await update(job, { status: "captcha", step, image })).captcha_seq,
+  poll: async () => { const s = await rpc("doc_job_poll", { p_job: job.id }); return { stop: ["cancelled", "failed", "collected"].includes(s.status), answer: s.captcha_answer, seq: s.captcha_seq }; },
+  accepted: () => { job.asked = true; },
+});
+const sessionChannel = (portal) => ({
+  post: async (step, image) => (await rpc("session_update", { p_portal: portal, p_state: "captcha", p_step: step, p_image: image })).captcha_seq,
+  poll: async () => { const s = await rpc("session_poll", { p_portal: portal }); return { stop: s.state !== "captcha", answer: s.captcha_answer, seq: s.captcha_seq }; },
+  accepted: () => {},
+});
+
+// Show the captcha picture to a person and wait for the answer; fill it and press the visible button.
+async function captchaFromPerson(page, job, channel = jobChannel(job)) {
   for (let attempt = 1; attempt <= 3; attempt++) {
     const img = await visible(page, CAPTCHA_IMG), input = await visible(page, CAPTCHA_INPUT);
     if (!img || !input) return true;
     const png = await img.screenshot({ type: "png" });
-    const r0 = await update(job, { status: "captcha", step: attempt === 1 ? "The portal asked for a captcha; waiting for it to be typed" : "The portal did not accept that; a new picture is waiting", image: `data:image/png;base64,${png.toString("base64")}` });
-    const seq = r0.captcha_seq;
+    const seq = await channel.post(attempt === 1 ? "The portal asked for a captcha; waiting for it to be typed" : "The portal did not accept that; a new picture is waiting", `data:image/png;base64,${png.toString("base64")}`);
     const until = Date.now() + 9 * 60000;
     let answer = null;
     while (Date.now() < until) {
       await sleep(2000);
-      const s = await rpc("doc_job_poll", { p_job: job.id });
-      if (["cancelled", "failed", "collected"].includes(s.status)) throw new Error("stopped");
-      if (s.captcha_answer && s.captcha_seq === seq) { answer = s.captcha_answer; break; }
+      const s = await channel.poll();
+      if (s.stop) throw new Error("stopped");
+      if (s.answer && s.seq === seq) { answer = s.answer; break; }
     }
     if (!answer) throw new Error("Nobody typed the captcha in time");
     await input.fill(answer);
@@ -63,20 +75,20 @@ async function captchaFromPerson(page, job) {
     if (btn.asElement()) await btn.asElement().click(); else await input.press("Enter");
     await nav;
     await page.waitForTimeout(2000);
-    if (!(await hasCaptcha(page))) return true;
+    if (!(await hasCaptcha(page))) { channel.accepted(); return true; }
   }
   throw new Error("The portal did not accept the captcha three times");
 }
 
 // Organisation list → this tender's organisation → the tender's row → its detail page.
-async function openTender(page, site, job) {
+async function openTender(page, site, job, say = (step) => update(job, { step })) {
   await page.goto(site.base + "?page=FrontEndTendersByOrganisation&service=page", { waitUntil: "domcontentloaded", timeout: 60000 });
   const orgs = await page.$$eval("table.list_table tr, table#table tr", (trs) => trs
     .map((tr) => ({ name: tr.cells[1]?.innerText.trim(), href: tr.querySelector("td a")?.getAttribute("href") })).filter((r) => r.href && r.name));
   const want = norm(job.authority);
   const ordered = [...orgs.filter((o) => norm(o.name) === want), ...orgs.filter((o) => norm(o.name) !== want && (norm(o.name).includes(want) || want.includes(norm(o.name))))];
   for (const o of ordered.length ? ordered : orgs) {
-    await update(job, { step: `Looking in ${o.name}` });
+    await say(`Looking in ${o.name}`);
     await page.goto(new URL(o.href, site.base + "/").toString(), { waitUntil: "domcontentloaded", timeout: 60000 });
     const href = await page.$$eval("table.list_table tr, table#table tr", (trs, ref) => {
       const row = trs.find((tr) => tr.cells[4]?.innerText.includes(ref));
@@ -197,19 +209,73 @@ async function upload(job, files) {
 // same session download the next tenders without asking again. Where it does ask, the person is asked as usual.
 // Idle sessions are kept alive (the portal's home page every few minutes, like an open browser tab) for 45 minutes,
 // and the twice-daily pre-check batch runs portal by portal, so one typed captcha serves a run of tenders.
-const SESSION_IDLE_MS = 45 * 60000;
+// A session opened by the admin's captcha session (or by a captcha typed in a fetch) is kept for the whole day; its
+// cookies are saved so the next worker run carries on with it. How long each portal really keeps a session is
+// learned from when it asks again or says the session ended (session_event → portal_session_log).
+const SESSION_IDLE_MS = 45 * 60000, LIVE_IDLE_MS = 24 * 3600000;
 const KEEPALIVE_MS = 4 * 60000;
-const sessions = new Map(); // portal -> { ctx, page, last }
+const EXPIRED_RX = /session\s+(?:has\s+)?(?:expired|timed?\s*out)|session\s+time\s*out|invalid\s+session/i;
+const sessions = new Map(); // portal -> { ctx, page, last, live }
+const event = (portal, e, cookies = null) => rpc("session_event", { p_portal: portal, p_event: e, p_runner: RUNNER, p_cookies: cookies }).catch((x) => log("session_event", x.message));
+const saveCookies = async (portal, s) => event(portal, "cookies", await s.ctx.cookies().catch(() => null));
 async function sessionFor(browser, portal) {
-  for (const [p, s] of sessions) if (Date.now() - s.last > SESSION_IDLE_MS) { await s.ctx.close().catch(() => {}); sessions.delete(p); }
+  for (const [p, s] of sessions) {
+    if (Date.now() - s.last > (s.live ? LIVE_IDLE_MS : SESSION_IDLE_MS)) {
+      if (s.live) await event(p, "closed");
+      await s.ctx.close().catch(() => {}); sessions.delete(p);
+    }
+  }
   let s = sessions.get(portal);
   if (!s || s.page.isClosed()) {
     const ctx = await browser.newContext({ locale: "en-IN", acceptDownloads: true });
-    s = { ctx, page: await ctx.newPage(), last: Date.now() };
+    // carry on with a session a previous worker run kept alive
+    const cookies = await rpc("session_cookies", { p_portal: portal }).catch(() => null);
+    if (Array.isArray(cookies) && cookies.length) await ctx.addCookies(cookies).catch(() => {});
+    s = { ctx, page: await ctx.newPage(), last: Date.now(), live: Array.isArray(cookies) && cookies.length > 0 };
     sessions.set(portal, s);
   }
   s.last = Date.now();
   return s;
+}
+
+// Admin → Captcha session: open the portal, go where it asks for a captcha (a tender's page and its documents),
+// let the admin type it, and keep the session. Where the portal asks nothing, the session is simply live.
+async function openSession(browser, req) {
+  const portal = req.portal;
+  const site = GEPNIC.find((x) => x.portal === portal);
+  const say = (step) => rpc("session_update", { p_portal: portal, p_step: step }).catch(() => {});
+  if (!site || site.skip) { await rpc("session_update", { p_portal: portal, p_state: "failed", p_error: "Documents are not fetched from this portal yet" }); return; }
+  await dropSession(portal);
+  const s = await sessionFor(browser, portal);
+  s.live = false;
+  const ch = sessionChannel(portal);
+  let asked = false;
+  try {
+    log(`session ${portal}`);
+    if (req.tender_ref && await openTender(s.page, site, { tender_ref: req.tender_ref, authority: req.authority }, say)) {
+      if (await hasCaptcha(s.page)) { await captchaFromPerson(s.page, null, ch); asked = true; }
+      // the documents usually ask for the captcha: click the first one (the file itself is not kept)
+      const link = (await s.page.$$("a")).length ? await s.page.$("a[id*=docDownoad], a[id*=DirectLink], a:has-text('Download as zip')") : null;
+      if (link) {
+        await say("Checking the documents page");
+        const dl = s.page.waitForEvent("download", { timeout: 20000 }).catch(() => null);
+        await link.click().catch(() => {});
+        const until = Date.now() + 20000;
+        while (Date.now() < until && !(await hasCaptcha(s.page))) { if (await Promise.race([dl, sleep(800).then(() => undefined)]) !== undefined) break; }
+        if (await hasCaptcha(s.page)) { await captchaFromPerson(s.page, null, ch); asked = true; }
+      }
+    } else {
+      await s.page.goto(site.base, { timeout: 60000, waitUntil: "domcontentloaded" });
+      if (await hasCaptcha(s.page)) { await captchaFromPerson(s.page, null, ch); asked = true; }
+    }
+    await rpc("session_update", { p_portal: portal, p_state: "live", p_step: asked ? "Live — fetches go through without a captcha while the portal keeps the session" : "Live — the portal did not ask for a captcha" });
+    s.live = true;
+    await saveCookies(portal, s);
+  } catch (e) {
+    log(`session ${portal} failed: ${e.message}`);
+    await rpc("session_update", { p_portal: portal, p_state: "failed", p_error: e.message === "stopped" ? "Stopped." : e.message.split("\n")[0] }).catch(() => {});
+    await dropSession(portal);
+  }
 }
 async function keepAlive() {
   for (const [portal, s] of sessions) {
@@ -217,6 +283,9 @@ async function keepAlive() {
     s.touched = Date.now();
     const site = GEPNIC.find((x) => x.portal === portal);
     if (site) await s.page.goto(site.base, { timeout: 30000, waitUntil: "domcontentloaded" }).catch(() => {});
+    // the portal says the session ended: learn how long it lasted and tell the admin
+    const text = await s.page.evaluate(() => document.body?.innerText.slice(0, 4000) || "").catch(() => "");
+    if (s.live && EXPIRED_RX.test(text)) { await event(portal, "expired"); await dropSession(portal); }
   }
 }
 async function dropSession(portal) { const s = sessions.get(portal); if (s) { sessions.delete(portal); await s.ctx.close().catch(() => {}); } }
@@ -224,7 +293,8 @@ async function dropSession(portal) { const s = sessions.get(portal); if (s) { se
 async function runJob(browser, job) {
   const site = GEPNIC.find((s) => s.portal === job.portal);
   if (!site || site.skip) { await update(job, { status: "failed", error: `Fetching documents from ${job.portal} is not supported yet. Download them from the portal and upload here.` }); return; }
-  const { page } = await sessionFor(browser, job.portal);
+  const sess = await sessionFor(browser, job.portal);
+  const { page } = sess;
   let broken = false;
   try {
     log(`job ${job.id}: ${job.portal} ${job.tender_ref}`);
@@ -240,6 +310,9 @@ async function runJob(browser, job) {
     const list = await upload(job, files);
     await update(job, { status: "fetched", step: `Fetched ${list.length} document${list.length === 1 ? "" : "s"}`, files: list });
     log(`job ${job.id}: fetched ${list.length}`);
+    // learning: a captcha on a live session means the portal ended it; none means the session carried this fetch
+    if (job.asked) { await event(job.portal, sess.live ? "captcha_again" : "captcha_ok"); sess.live = true; await saveCookies(job.portal, sess); }
+    else if (sess.live) await event(job.portal, "served");
   } catch (e) {
     broken = true;
     log(`job ${job.id} failed: ${e.message}`);
@@ -256,8 +329,14 @@ const stopAt = args.includes("--hours") ? Date.now() + Number(args[args.indexOf(
 const browser = await chromium.launch();
 try {
   const start = Date.now();
-  let did = 0, lastPortal = null;
+  let did = 0, lastPortal = null, lastSessionCheck = 0;
   for (;;) {
+    // the admin's captcha session comes first: open each portal that was asked for
+    if (Date.now() - lastSessionCheck > 10000) {
+      lastSessionCheck = Date.now();
+      const req = await rpc("session_claim", { p_runner: RUNNER }).catch((e) => { log("session_claim", e.message); return null; });
+      if (req) { await openSession(browser, req); lastSessionCheck = 0; continue; }
+    }
     // jobs people wait for come first; otherwise stay on the portal whose session is already open
     const job = await rpc("doc_job_claim", { p_runner: RUNNER, p_portal: lastPortal });
     if (job) { await runJob(browser, job); did++; lastPortal = job.portal; continue; }

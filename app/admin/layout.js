@@ -21,6 +21,7 @@ export default async function AdminLayout({ children }) {
     ] },
     { title: "Platform", items: [
       { href: "/admin/crawler", label: "Crawler", icon: "tender" },
+      { href: "/admin/captcha", label: "Captcha session", icon: "shield" },
       { href: "/admin/mca", label: "New companies", icon: "building" },
       { href: "/admin/data", label: "Data marketplace", icon: "people" },
       { href: "/admin/taxonomy", label: "Industries & services", icon: "briefcase", tag: newTax ? String(newTax) : undefined },
