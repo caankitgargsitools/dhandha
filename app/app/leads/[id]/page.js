@@ -68,6 +68,7 @@ export default async function LeadDetail({ params }) {
             {wa && <a className="btn gold" href={wa} target="_blank" rel="noreferrer">WhatsApp</a>}
             {l.email && <a className="btn ghost" href={`mailto:${l.email}`}><Icon name="mail" size={15} /> Email</a>}
           </>}
+          <a className="btn ghost" href="#meetings"><Icon name="calendar" size={15} /> Book meeting</a>
         </div>
       </div>
 
@@ -132,7 +133,7 @@ export default async function LeadDetail({ params }) {
         </div>
 
         <div className="stack-sm">
-          <div className="panel stack-sm">
+          <div id="meetings" className="panel stack-sm" style={{ scrollMarginTop: 80 }}>
             <div className="panel-head"><h3>Meetings</h3><Link className="tiny" href="/app/sales">Team calendar</Link></div>
             {(meets || []).map((m) => (
               <div key={m.id} className="row between small" style={{ borderTop: "1px solid var(--line-soft)", paddingTop: 6 }}>

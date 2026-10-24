@@ -48,6 +48,7 @@ export default async function DealDetail({ params }) {
           {lead && !lead.dnd && telLink(lead.phone) && <a className="btn" href={telLink(lead.phone)}><Icon name="phone" size={15} /> Call</a>}
           {lead && !lead.dnd && waLink(lead.phone) && <a className="btn gold" href={waLink(lead.phone)} target="_blank" rel="noreferrer">WhatsApp</a>}
           {lead?.email && <a className="btn ghost" href={`mailto:${lead.email}?subject=${encodeURIComponent(d.title)}`}><Icon name="mail" size={15} /> Email</a>}
+          {d.lead_id && <Link className="btn ghost" href={`/app/leads/${d.lead_id}#meetings`}><Icon name="calendar" size={15} /> Book meeting</Link>}
         </div>
       </div>
 
