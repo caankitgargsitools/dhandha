@@ -3,6 +3,7 @@ import { getContext } from "@/lib/session";
 import FormState from "../../FormState";
 import { savePreferences } from "../bidActions";
 import ServicePicker from "@/components/ServicePicker";
+import WordChips from "@/components/WordChips";
 
 const STATES = ["Andhra Pradesh","Assam","Bihar","Chandigarh","Chhattisgarh","Delhi","Goa","Gujarat","Haryana","Himachal Pradesh","Jammu and Kashmir","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Odisha","Punjab","Rajasthan","Tamil Nadu","Telangana","Uttar Pradesh","Uttarakhand","West Bengal"];
 
@@ -21,11 +22,14 @@ export default async function Preferences({ searchParams }) {
           <div className="panel stack-sm">
             <h3>Industry, sub-industry and services</h3>
             <ServicePicker initial={p?.services || []} />
-            <div className="form-grid">
-              <div><label htmlFor="keywords">Also match these words (comma separated)</label><input id="keywords" name="keywords" defaultValue={(p?.custom_keywords || []).join(", ")} placeholder="e.g. dredging, kiosk, valuation + land|property" /><div className="tiny faint">To stay precise, add "+" and words that must also appear: <em>valuation + land|property</em>.</div></div>
-              <div><label htmlFor="exclude_keywords">Never show tenders with</label><input id="exclude_keywords" name="exclude_keywords" defaultValue={(p?.exclude_keywords || []).join(", ")} placeholder="bridge, dredging" /></div>
+            <div className="form-grid" style={{ alignItems: "start" }}>
+              <WordChips name="keywords" label="Also match these words" initial={p?.custom_keywords || []} placeholder="e.g. kiosk, valuation + land|property"
+                hint={<>Type a word and press Add. To stay precise, add “+” and words that must also appear: <em>certification + chartered|utilisation|net worth</em>.</>} empty="No extra words." />
+              <WordChips name="exclude_keywords" label="Never show tenders with" initial={p?.exclude_keywords || []} placeholder="e.g. bridge, dredging" empty="Nothing blocked." />
             </div>
-            {p?.muted?.length > 0 && <p className="tiny faint" style={{ margin: 0 }}>Words you switched off (they no longer find tenders): {p.muted.join(", ")}. Type one in “Also match these words” to switch it back on.</p>}
+            {p?.muted?.length > 0 && (
+              <WordChips name="muted" label="Words you switched off with × on the Tenders page (remove one to switch it back on)" initial={p.muted} placeholder="switch off another word" />
+            )}
           </div>
           <div className="panel stack-sm">
             <h3>Where</h3>
