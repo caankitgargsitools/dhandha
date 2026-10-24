@@ -2,7 +2,7 @@
 
 Checked and sent to the owner every morning (09:23 IST) by the Dhandha development session. Items move to
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
-Last checked: 25 Oct 2026.
+Last checked: 24 Oct 2026.
 
 ## Waiting on you (only you can do these)
 
@@ -47,7 +47,7 @@ Last checked: 25 Oct 2026.
 
 ## Done (recent)
 
-- 25 Oct: strict tender matching — GSC 58 → 50 open matches, all with a CA word; 21 irrelevant ones hidden (IT/police PMUs, tech consultant, engineering DPRs, closed and demo leftovers) and 14 missed CA tenders added (techno-financial audits, financial consultant / transaction adviser on works projects, revenue-assurance and CBS audits, accounting outsourcing). Spend outside Dhandha in Results by source.
+- 24 Oct: strict tender matching — GSC 58 → 50 open matches, all with a CA word; 21 irrelevant ones hidden (IT/police PMUs, tech consultant, engineering DPRs, closed and demo leftovers) and 14 missed CA tenders added (techno-financial audits, financial consultant / transaction adviser on works projects, revenue-assurance and CBS audits, accounting outsourcing). Spend outside Dhandha in Results by source.
 
 - 24 Oct: Lead autopilot (daily budget → leads a day, sources, morning run), automatic CRM stages (New → Messaged → Called → Link sent → Meeting → Won), Results by source, tender filters, route-aware salesperson matching + Plan visits, Google Ads lead forms → Leads, Google Business Profile check + automatic review requests to won customers, live self-check (Google Routes working).
 
