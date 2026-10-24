@@ -56,3 +56,4 @@ Social lead sources:
 33. `assistant_eval_force` (execute_sql) — `tender_matches.forced_at`, `forced_by`, `forced_note`, `tech_eval`; price_book `tech_marking` (29), `assistant_chat` (3)
 34. `sales_scheduling` (execute_sql in parts) — `leads.address`; tables `sales_reps`, `meeting_types`, `meetings`, `booking_links`, `travel_cache` (RLS: members read, writers write); `private.rep_free`; public `booking_view(token)` / `book_by_token(token, start, note)` for the client booking page (anon)
 35. `meeting_to_crm` (execute_sql) — trigger `t_meeting_crm` on `meetings` (insert / status) → `private.meeting_to_crm`: timeline entry with the salesperson, deal moved to or opened at "Meeting"; `book_by_token` no longer writes the timeline itself
+36. `health_checks` (execute_sql) — `private.health_checks`, `public.health_report(key, results)` (worker key), `private.health_run()` (pg_net → `/api/health`); `app_config.app_url` set to the live address
