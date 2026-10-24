@@ -113,6 +113,7 @@ export default async function Tenders({ searchParams }) {
               <div>
                 <div className="row" style={{ gap: 8, marginBottom: 4 }}>
                   <span className={`chip ${cls}`}>{label}</span>
+                  {m.unfit && <span className="chip mute" title="Kept because someone already acted on it. Skip it to hide it.">No longer matches what you do</span>}
                   {mandatoryUnmet(m.reasons).length ? <span className="chip warn" title={mandatoryUnmet(m.reasons).join("; ")}>{m.forced_at ? "Filing despite a warning" : "⚠ Mandatory condition not met"}</span> : !m.eligible ? <span className="chip mute">Outside your preferences</span> : m.pending ? <Link href={`/app/tenders/${m.id}/assistant`} className="chip warn">Qualifies if you answer {m.pending}</Link> : <span className="chip ok">Qualified</span>}
                   <span className="tiny faint">{t.portal} · {t.tender_ref}</span>
                 </div>

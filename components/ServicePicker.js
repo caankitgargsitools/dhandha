@@ -1,6 +1,9 @@
 "use client";
 import { useMemo, useState } from "react";
-import { TAXONOMY } from "@/lib/taxonomy";
+import { TAXONOMY, parseRule } from "@/lib/taxonomy";
+
+// the plain words of a service (rule syntax like "PMU + financ|…" or "- blocker" is not shown)
+const words = (v) => [...new Set(v.kw.map((w) => parseRule(w).k))];
 
 // Industry → sub-industry → service checklist. Posts the chosen service ids as "services".
 export default function ServicePicker({ initial = [] }) {
@@ -9,7 +12,7 @@ export default function ServicePicker({ initial = [] }) {
   const [q, setQ] = useState("");
   const query = q.trim().toLowerCase();
   const toggle = (ids, on) => setSel((prev) => { const n = new Set(prev); ids.forEach((id) => (on ? n.add(id) : n.delete(id))); return n; });
-  const match = (v, s, i) => !query || [v.label, s.label, i.label, ...v.kw].some((t) => t.toLowerCase().includes(query));
+  const match = (v, s, i) => !query || [v.label, s.label, i.label, ...words(v)].some((t) => t.toLowerCase().includes(query));
   const visible = useMemo(() => TAXONOMY.map((i) => ({ ...i, subs: i.subs.map((s) => ({ ...s, services: s.services.filter((v) => match(v, s, i)) })).filter((s) => s.services.length) })).filter((i) => i.subs.length), [query]);
 
   return (
@@ -49,9 +52,9 @@ export default function ServicePicker({ initial = [] }) {
                       </label>
                       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 6, paddingLeft: 24 }}>
                         {sub.services.map((v) => (
-                          <label key={v.id} className="row" style={{ gap: 8, margin: 0, color: "var(--ink)", fontWeight: 500, alignItems: "flex-start", flexWrap: "nowrap" }} title={v.kw.map((w) => w.replace(/^!/, "")).join(", ")}>
+                          <label key={v.id} className="row" style={{ gap: 8, margin: 0, color: "var(--ink)", fontWeight: 500, alignItems: "flex-start", flexWrap: "nowrap" }} title={words(v).join(", ")}>
                             <input type="checkbox" checked={sel.has(v.id)} onChange={(e) => toggle([v.id], e.target.checked)} style={{ width: 16, height: 16, marginTop: 3, flex: "none" }} />
-                            <span>{v.label}<span className="tiny faint" style={{ display: "block" }}>{v.kw.slice(0, 4).map((w) => w.replace(/^!/, "")).join(", ")}…</span></span>
+                            <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>{v.label}<span className="tiny faint" style={{ display: "block" }}>{words(v).slice(0, 4).join(", ")}{words(v).length > 4 ? "…" : ""}</span></span>
                           </label>
                         ))}
                       </div>
