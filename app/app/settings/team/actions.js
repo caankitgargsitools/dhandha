@@ -20,7 +20,7 @@ export async function addMember(prev, formData) {
   revalidatePath("/app/settings/team");
   revalidatePath(`/admin/tenants/${tenantId}`);
   if (data.status === "added") return { message: `${email} already had a Dhandha login and has been added as ${ROLES[role].label}.` };
-  return { message: `Invite ready. Send this link to ${email}:`, link: `${await origin()}/login?invite=${data.token}` };
+  return { message: `Invite ready. Dhandha does not email it yet — send ${email} this link (Copy / WhatsApp under Pending invites), or ask them to sign up at Dhandha with this email; either way they join automatically:`, link: `${await origin()}/login?invite=${data.token}` };
 }
 
 export async function changeRole(formData) {
