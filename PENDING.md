@@ -15,7 +15,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 2 | **Link Saurabh to his Dhandha login** — Sales team → Salespeople → Saurabh → pick his login → Save (#20) | You | Phone alerts and "My day" work for him | Done 24 Oct — Saurabh signed in (Manager) and his sales profile is linked |
 | 3 | **Link your Google Business Profile** — Generate leads → Google Business Profile → search → "This is us" (#23) | You | I see the listing, score and checklist | Skipped for now (24 Oct) — ask again later |
 | 4 | **Switch on the Lead autopilot** — daily budget, sources, Google Maps searches (#21) | You | I see it on and the first morning run | Open |
-| 5 | **Phone app** — open Settings → Phone app once as platform admin, install, turn on notifications (#2) | You | Notification keys exist; a test alert reaches your phone | Open |
+| 5 | **Phone app** — open Settings → Phone app once as platform admin, install, turn on notifications (#2) | You | Notification keys exist; a test alert reaches your phone | Done 24 Oct — Android phone registered; test alerts arrived |
 | 6 | **Email sending (Resend)** — account, verify your domain, `RESEND_API_KEY` + `OUTREACH_FROM_EMAIL` in Vercel (#8) | You | The daily self-check shows email ready; review requests and sequences start emailing | Open |
 | 7 | **Google Ads lead forms** — create the webhook key, paste URL + key into your lead form, "Send test data" (#22) | You | The test lead appears in Leads | Open |
 | 8 | **This month's MCA file** — Admin → New companies (#11) | You | New rows (last upload 17 Oct) | Open |
