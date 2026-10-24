@@ -1,0 +1,128 @@
+"use server";
+import { revalidatePath } from "next/cache";
+import { getContext } from "@/lib/session";
+import { onlineSlots, fieldSlots, travelPairs, addDays, local, leadAddress } from "@/lib/scheduling";
+import { travelMinutes } from "@/lib/routes";
+
+// Sales team: salespeople, meeting types, booking (by staff or by the client through a link) and the day plan.
+const writer = (role) => !["admin", "manager"].includes(role) && { error: "Only admins and managers can change the sales team." };
+const s = (v, n = 200) => String(v ?? "").trim().slice(0, n) || null;
+const done = () => { revalidatePath("/app/sales", "layout"); };
+
+export async function saveRep(prev, formData) {
+  const { supabase, tenant, company, role } = await getContext();
+  if (writer(role)) return writer(role);
+  const id = s(formData.get("id"), 40);
+  const row = {
+    tenant_id: tenant.id, company_id: company.id, name: s(formData.get("name"), 120), phone: s(formData.get("phone"), 20), email: s(formData.get("email"), 120),
+    user_id: s(formData.get("user_id"), 40), modes: formData.getAll("modes").map(String).filter((m) => ["online", "field"].includes(m)),
+    day_start: s(formData.get("day_start"), 5) || "09:30", day_end: s(formData.get("day_end"), 5) || "18:30",
+    work_days: formData.getAll("work_days").map(Number).filter((d) => d >= 0 && d <= 6), start_address: s(formData.get("start_address"), 300),
+    active: formData.get("active") !== "off",
+  };
+  if (!row.name) return { error: "Name is needed." };
+  if (!row.modes.length) return { error: "Tick online calls, field visits or both." };
+  if (!row.work_days.length) return { error: "Tick at least one working day." };
+  if (row.day_end <= row.day_start) return { error: "The day must end after it starts." };
+  if (row.modes.includes("field") && !row.start_address) return { error: "Field visits need a start point (office or home address)." };
+  const { error } = id ? await supabase.from("sales_reps").update(row).eq("id", id).eq("company_id", company.id) : await supabase.from("sales_reps").insert(row);
+  if (error) return { error: error.message };
+  done();
+  return { message: id ? "Saved." : `${row.name} added to the sales team.` };
+}
+
+export async function saveType(prev, formData) {
+  const { supabase, tenant, company, role } = await getContext();
+  if (writer(role)) return writer(role);
+  const id = s(formData.get("id"), 40);
+  const row = { tenant_id: tenant.id, company_id: company.id, name: s(formData.get("name"), 120), mode: formData.get("mode") === "field" ? "field" : "online",
+    duration_min: Math.min(480, Math.max(5, Number(formData.get("duration_min")) || 30)), buffer_min: Math.min(120, Math.max(0, Number(formData.get("buffer_min")) || 0)), active: formData.get("active") !== "off" };
+  if (!row.name) return { error: "Give the meeting type a name, e.g. “Online demo”." };
+  const { error } = id ? await supabase.from("meeting_types").update(row).eq("id", id).eq("company_id", company.id) : await supabase.from("meeting_types").insert(row);
+  if (error) return { error: error.message };
+  done();
+  return { message: "Saved." };
+}
+
+// Free slots for a meeting type over the next `days` days (online: packed days; field: routes with Google travel times).
+async function slotsFor(supabase, tenant, company, type, address, { days = 7, from = local(new Date()).day } = {}) {
+  const [{ data: reps }, { data: meetings }] = await Promise.all([
+    supabase.from("sales_reps").select("*").eq("company_id", company.id).eq("active", true),
+    supabase.from("meetings").select("id, rep_id, mode, address, starts_at, ends_at, buffer_min, status").eq("company_id", company.id).in("status", ["booked", "done"])
+      .gte("starts_at", new Date(Date.now() - 86400000).toISOString()).lte("starts_at", new Date(Date.now() + (days + 2) * 86400000).toISOString()),
+  ]);
+  const list = (reps || []).map((r) => ({ ...r, day_start: String(r.day_start).slice(0, 5), day_end: String(r.day_end).slice(0, 5) }));
+  if (!list.some((r) => r.modes.includes(type.mode))) return { error: `No active salesperson takes ${type.mode === "field" ? "field visits" : "online calls"} yet. Add one under Sales team → Salespeople.` };
+  const out = [];
+  let estimated = false;
+  for (let i = 0; i < days; i++) {
+    const day = addDays(from, i);
+    if (type.mode === "online") { out.push(...onlineSlots({ day, reps: list, meetings: meetings || [], duration: type.duration_min, buffer: type.buffer_min })); continue; }
+    if (!address) return { error: "A field visit needs the client's address." };
+    for (const rep of list.filter((r) => r.modes.includes("field"))) {
+      const dayM = (meetings || []).filter((m) => m.rep_id === rep.id && local(m.starts_at).day === day);
+      const t = await travelMinutes(supabase, tenant.id, travelPairs(rep, dayM, address));
+      estimated ||= t.estimated;
+      out.push(...fieldSlots({ day, rep, meetings: meetings || [], address, duration: type.duration_min, buffer: type.buffer_min, travel: t.travel }));
+    }
+  }
+  // field: one rep per time — the shortest drive in
+  const best = new Map();
+  for (const x of out) { const k = x.start.toISOString(); if (!best.has(k) || (x.travel_in ?? 0) < (best.get(k).travel_in ?? 0)) best.set(k, x); }
+  return { slots: [...best.values()].sort((a, b) => a.start - b.start), estimated };
+}
+
+export async function findSlots({ typeId, leadId, address, days = 7 }) {
+  const { supabase, tenant, company } = await getContext();
+  const { data: type } = await supabase.from("meeting_types").select("*").eq("id", typeId).eq("company_id", company.id).single();
+  if (!type) return { error: "Choose a meeting type." };
+  let addr = s(address, 300);
+  if (type.mode === "field" && !addr && leadId) { const { data: lead } = await supabase.from("leads").select("address, notes, city, state").eq("id", leadId).single(); addr = leadAddress(lead || {}); }
+  const r = await slotsFor(supabase, tenant, company, type, addr, { days });
+  if (r.error) return r;
+  const { data: reps } = await supabase.from("sales_reps").select("id, name").eq("company_id", company.id);
+  const name = Object.fromEntries((reps || []).map((x) => [x.id, x.name]));
+  return { address: addr, estimated: r.estimated, slots: r.slots.slice(0, 120).map((x) => ({ ...x, start: x.start.toISOString(), end: x.end.toISOString(), leave_at: x.leave_at?.toISOString() || null, rep: name[x.rep_id] })) };
+}
+
+// Staff book a slot directly (re-checked against the latest calendar).
+export async function bookSlot({ typeId, leadId, start, repId, address, notes }) {
+  const { supabase, tenant, company, role } = await getContext();
+  if (role === "viewer") return { error: "Viewers cannot book meetings." };
+  const { data: type } = await supabase.from("meeting_types").select("*").eq("id", typeId).eq("company_id", company.id).single();
+  if (!type) return { error: "Choose a meeting type." };
+  const r = await findSlots({ typeId, leadId, address, days: 14 });
+  if (r.error) return r;
+  const slot = r.slots.find((x) => x.start === start && (!repId || x.rep_id === repId)) || r.slots.find((x) => x.start === start);
+  if (!slot) return { error: "That time was just taken — pick another." };
+  const { data: m, error } = await supabase.from("meetings").insert({ tenant_id: tenant.id, company_id: company.id, rep_id: slot.rep_id, lead_id: leadId || null, type_id: type.id, mode: type.mode, title: type.name,
+    starts_at: slot.start, ends_at: slot.end, buffer_min: type.buffer_min, address: type.mode === "field" ? r.address : null, travel_min: slot.travel_in ?? null, leave_at: slot.leave_at, notes: s(notes, 500) }).select("id").single();
+  if (error) return { error: error.message };
+  if (leadId && type.mode === "field" && r.address) await supabase.from("leads").update({ address: r.address }).eq("id", leadId).is("address", null);
+  if (leadId) await supabase.from("crm_activities").insert({ tenant_id: tenant.id, company_id: company.id, lead_id: leadId, kind: "meeting", outcome: "interested", body: `${type.name} booked with ${slot.rep} for ${new Date(slot.start).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}.` });
+  done(); revalidatePath(`/app/leads/${leadId}`);
+  return { ok: true, id: m.id, message: `Booked with ${slot.rep} — ${new Date(slot.start).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}.` };
+}
+
+// A booking link for the client: the free times of the next 7 days are worked out now (travel included) and the
+// client picks one; it is re-checked when they book.
+export async function createBookingLink({ typeId, leadId, address }) {
+  const { supabase, tenant, company, role } = await getContext();
+  if (role === "viewer") return { error: "Viewers cannot send booking links." };
+  const r = await findSlots({ typeId, leadId, address, days: 7 });
+  if (r.error) return r;
+  if (!r.slots.length) return { error: "No free times in the next 7 days — add salespeople or working hours." };
+  const offered = r.slots.map(({ start, end, rep_id, travel_in, leave_at }) => ({ start, end, rep_id, travel_in: travel_in ?? null, leave_at }));
+  const { data, error } = await supabase.from("booking_links").insert({ tenant_id: tenant.id, company_id: company.id, lead_id: leadId || null, type_id: typeId, address: r.address || null, offered }).select("token").single();
+  if (error) return { error: error.message };
+  return { ok: true, token: data.token, count: offered.length };
+}
+
+export async function setMeetingStatus(formData) {
+  const { supabase, company, role } = await getContext();
+  if (role === "viewer") return;
+  const status = String(formData.get("status"));
+  if (!["done", "cancelled", "no_show", "booked"].includes(status)) return;
+  await supabase.from("meetings").update({ status }).eq("id", String(formData.get("id"))).eq("company_id", company.id);
+  done();
+}
