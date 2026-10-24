@@ -21,6 +21,12 @@ Last checked: 24 Oct 2026.
 | 15 | **Decide Phase 4 video style**: template videos / talking avatar / both | Your call. | Tell me A, B or both. |
 | 16 | **Older Dhandha session "Ponytail GitHub installation"** is waiting for a reply from you | Started by you earlier. | Reply there, or tell me to close it. |
 | 17 | **Upload your first database** at Admin → Data marketplace (CSV/Excel), declare its source, set a price, Go live | Only you know where the data comes from and that it is lawful (business data, or consumers who consented). | I see a live database. |
+| 19 | **AI calling: choose the provider** — Bolna (recommended: Indian, Hindi/Hinglish, Exotel/Plivo numbers), Exotel + Vapi, or Twilio + Retell; then a DLT-registered calling number from that provider | Your account, KYC and TRAI registration. Parked on your instruction (24 Oct). | Tell me the provider; I build it. |
+| 20 | **Link Saurabh (and each salesperson) to a Dhandha login** at Sales team → Salespeople | Only you know who is who. Without it they get no phone alerts or "My day". | I can see the link. |
+| 21 | **Switch on the Lead autopilot** at Generate leads → Lead autopilot (daily budget, sources, Google Maps searches) | Your budget and targeting. | I see it on and the first run. |
+| 22 | **Google Ads lead forms**: Generate leads → Google Ads → create the webhook key, paste URL + key into your lead form, press "Send test data" | Your Google Ads account. | I see the test lead arrive. |
+| 23 | **Link your Google Business Profile** at Generate leads → Google Business Profile ("This is us") | Only you know which listing is yours. | I see it linked. |
+| 24 | **Turn off the Google Route Optimization API** in Google Cloud (it refuses API keys; Dhandha plans routes with the Routes API instead) | Your Google Cloud console. Avoids charges. | Optional — no check needed. |
 | 18 | **Say when to add the AI tender check** (AI reads each candidate tender's scope and keeps only work you can do; about ₹0.10 a tender, paid AI) | Your call on the cost. | Tell me "add the AI check". |
 
 ## I'm doing (no action from you)
@@ -32,14 +38,17 @@ Last checked: 24 Oct 2026.
 | D | More tender detail pages per run (value, EMD) and a Haryana re-test | Planned |
 | E | GeM tenders and winners — after the Indian server | Waiting on #1 |
 | F | Desktop helper for DSC-assisted submission | Planned |
-| G | AI calling (Phase 3) | Planned |
-| L | Lead autopilot: one-click sourcing + scoring → WhatsApp/file sequence → AI call → pay link or booked meeting | Next |
+| G | AI calling (Phase 3) | Parked — waiting on #19 |
+| L | Spend outside Dhandha (ad spend, IndiaMART fee) in Results by source | Next — the database change waited on your approval |
+| M | IndiaMART / JustDial buyer enquiries as an automatic lead source | When you have a seller account |
 | H | Social posts and AI video (Phase 4) | Waiting on #15 |
 | I | Play Store version of the phone app | When you want it |
 | J | Before launch: remove demo data (152 rows), move pg_net out of the public schema | At launch |
 | K | AI tender check (scope of work, not just the title) | Waiting on #18 |
 
 ## Done (recent)
+
+- 24 Oct: Lead autopilot (daily budget → leads a day, sources, morning run), automatic CRM stages (New → Messaged → Called → Link sent → Meeting → Won), Results by source, tender filters, route-aware salesperson matching + Plan visits, Google Ads lead forms → Leads, Google Business Profile check + automatic review requests to won customers, live self-check (Google Routes working).
 
 - 24 Oct: Sales team scheduling — salespeople with hours, work days and start point; meeting types (length + break); team calendar; "My day" route with Google travel times and directions; book from any lead or send the client a booking link.
 
