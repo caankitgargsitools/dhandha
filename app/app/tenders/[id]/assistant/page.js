@@ -78,7 +78,7 @@ export default async function TenderAssistant({ params }) {
   }
   if (!confirmed) {
     const left = daysLeft(t.due_at);
-    return page({ m, t, left, done, steps, role, canPrepare, files, history, redo: canPrepare && read ? { read: aiTiers().length > 0 } : null, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} /> : null });
+    return page({ m, t, left, done, steps, role, canPrepare, files, history, redo: canPrepare && read ? { read: aiTiers().length > 0 } : null, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} msme={!!msme} /> : null });
   }
   if (read) done.push("You approved the brief — preparing the bid.");
 
@@ -92,7 +92,7 @@ export default async function TenderAssistant({ params }) {
     steps.push({ id: "mandatory", kind: "mandatory", unmet, conds: cond.failed.map((x) => ({ key: x.key, label: x.label })),
       say: `Warning: ${unmet.length === 1 ? "a mandatory condition of this tender is" : `${unmet.length} mandatory conditions of this tender are`} not met according to your Vault. A bid that misses a mandatory condition is usually rejected at the technical stage.` });
     const left = daysLeft(t.due_at);
-    return page({ m, t, left, done, steps, role, canPrepare, files, history, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} /> : null });
+    return page({ m, t, left, done, steps, role, canPrepare, files, history, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} msme={!!msme} /> : null });
   }
   if (unmet.length) done.push(`⚠ Filing although: ${unmet.join("; ")} — you chose to file anyway on ${fmtDate(m.forced_at)}${m.forced_note ? ` (“${m.forced_note}”)` : ""}.`);
 
@@ -159,7 +159,7 @@ export default async function TenderAssistant({ params }) {
   const left = daysLeft(t.due_at);
   // results can be redone (e.g. after a bad read of a big scanned document)
   const redo = canPrepare && read ? { read: aiTiers().length > 0, tech: !!m.tech_eval && paidAi } : null;
-  return page({ m, t, left, done, steps, role, canPrepare, files, history, formatsView, redo, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} /> : null });
+  return page({ m, t, left, done, steps, role, canPrepare, files, history, formatsView, redo, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} msme={!!msme} /> : null });
 }
 
 function page({ m, t, left, done, steps, role, canPrepare, files, history, brief, formatsView = null, redo = null }) {

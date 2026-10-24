@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { prerequisiteList } from "@/lib/prereq";
+import GetReady from "@/components/GetReady";
 import { mandatoryUnmet } from "@/lib/conditions";
 import { notFound } from "next/navigation";
 import { getContext, daysLeft, lakh, fmtDate } from "@/lib/session";
@@ -86,6 +88,8 @@ export default async function TenderDetail({ params }) {
           <div key={l} className="panel ledger"><div className="kpi-label">{l}</div><div className="kpi" style={{ fontSize: 22 }}>{v}</div></div>
         ))}
       </div>
+
+      <GetReady items={prerequisiteList({ found: read?.fields?.prereq || t.prereq || [], fields: read?.fields || {}, tender: t, unmet: mandatoryUnmet(m.reasons), checklist, msme: !!msme, aiLines: read?.fields?.prepare_before })} />
 
       <div className="grid-2" style={{ alignItems: "start" }}>
         <div className="stack">
