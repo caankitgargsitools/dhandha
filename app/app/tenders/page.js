@@ -7,6 +7,7 @@ import { setTenderStatus } from "./actions";
 import { rescore, muteTenderWord } from "./bidActions";
 import QuestionCards from "./QuestionCards";
 import { openQuestions, mandatoryUnmet } from "@/lib/conditions";
+import { parseFilters, applyFilters, activeCount, facets, STAGES, LEFT, WORK, SORTS, ELIG } from "@/lib/tenderFilters";
 
 const TABS = [["open", "Worth bidding"], ["shortlisted", "Shortlisted"], ["all", "All matches"], ["done", "Results"]];
 const STATUS_CHIP = { new: ["info", "New"], shortlisted: ["warn", "Shortlisted"], preparing: ["warn", "Preparing bid"], submitted: ["info", "Submitted"], won: ["ok", "Won"], lost: ["bad", "Lost"], skipped: ["mute", "Skipped"] };
@@ -22,11 +23,18 @@ export default async function Tenders({ searchParams }) {
   const { data: pref } = await supabase.from("tender_preferences").select("services, custom_keywords").eq("company_id", company.id).maybeSingle();
   const noPrefs = !pref || (!(pref.services || []).length && !(pref.custom_keywords || []).length);
   const live = (m) => daysLeft(m.tenders.due_at) >= 0;
-  const list = rows.filter((m) =>
+  const f = parseFilters(params);
+  const nf = activeCount(f);
+  // a stage or "closed" filter looks across every tab
+  const wide = f.stage.length || f.left === "closed";
+  const tabbed = rows.filter((m) =>
     // a tender that misses a mandatory condition stays in the list with a warning; the person decides
-    tab === "open" ? live(m) && !["skipped", "won", "lost"].includes(m.status)
+    wide ? true
+    : tab === "open" ? live(m) && !["skipped", "won", "lost"].includes(m.status)
     : tab === "shortlisted" ? ["shortlisted", "preparing"].includes(m.status)
     : tab === "done" ? ["won", "lost", "submitted"].includes(m.status) : true);
+  const list = applyFilters(tabbed.map((m) => ({ ...m, unmet: mandatoryUnmet(m.reasons).length > 0 })), f);
+  const fc = facets(rows);
   const byPack = ["construction", "it_services", "ca_audit", "goods_supply"].map((p, i) => ({
     label: { construction: "Construction", it_services: "IT / services", ca_audit: "CA / audit", goods_supply: "Goods supply" }[p],
     value: rows.filter((m) => m.tenders.industry_pack === p).length,
@@ -67,12 +75,36 @@ export default async function Tenders({ searchParams }) {
 
       <div className="row" role="tablist">
         {TABS.map(([k, label]) => (
-          <Link key={k} href={`/app/tenders?tab=${k}`} role="tab" aria-selected={tab === k} className={`btn sm ${tab === k ? "" : "ghost"}`}>{label}</Link>
+          <Link key={k} href={`/app/tenders?${new URLSearchParams({ ...Object.fromEntries(Object.entries(params || {}).filter(([x]) => x !== "tab").map(([x, v]) => [x, String(v)])), tab: k })}`} role="tab" aria-selected={tab === k} className={`btn sm ${tab === k ? "" : "ghost"}`}>{label}</Link>
         ))}
       </div>
 
+      <details className="panel" open={nf > 0}>
+        <summary className="row between" style={{ cursor: "pointer" }}>
+          <strong>Filter and sort {nf ? <span className="chip info">{nf} on</span> : null}</strong>
+          <span className="tiny faint">{list.length} tender{list.length === 1 ? "" : "s"} shown</span>
+        </summary>
+        <form className="stack-sm" style={{ marginTop: 12 }}>
+          <input type="hidden" name="tab" value={tab} />
+          <div className="form-grid">
+            <div><label htmlFor="f-q">Search</label><input id="f-q" name="q" defaultValue={f.q} placeholder="Title, authority or tender no." /></div>
+            <div><label htmlFor="f-stage">Stage</label><select id="f-stage" name="stage" defaultValue={f.stage[0] || ""}><option value="">Any</option>{STAGES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
+            <div><label htmlFor="f-left">Time left</label><select id="f-left" name="left" defaultValue={f.left}><option value="">Any</option>{LEFT.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
+            <div><label htmlFor="f-work">Type of work</label><select id="f-work" name="work" defaultValue={f.work}><option value="">Any</option>{WORK.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
+            <div><label htmlFor="f-vmin">Value from (₹ lakh)</label><input id="f-vmin" name="vmin" type="number" min={0} step="any" defaultValue={f.vmin ?? ""} /></div>
+            <div><label htmlFor="f-vmax">Value up to (₹ lakh)</label><input id="f-vmax" name="vmax" type="number" min={0} step="any" defaultValue={f.vmax ?? ""} /></div>
+            <div><label htmlFor="f-elig">Eligibility</label><select id="f-elig" name="elig" defaultValue={f.elig}><option value="">Any</option>{ELIG.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
+            <div><label htmlFor="f-cat">Category</label><select id="f-cat" name="cat" defaultValue={f.cat}><option value="">Any</option>{fc.cats.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
+            <div><label htmlFor="f-portal">Portal</label><select id="f-portal" name="portal" defaultValue={f.portal}><option value="">Any</option>{fc.portals.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
+            <div><label htmlFor="f-state">State</label><select id="f-state" name="state" defaultValue={f.state}><option value="">Any</option>{fc.states.map((c) => <option key={c} value={c}>{c}</option>)}</select></div>
+            <div><label htmlFor="f-sort">Sort by</label><select id="f-sort" name="sort" defaultValue={f.sort}>{SORTS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
+          </div>
+          <div className="row" style={{ gap: 8 }}><button className="sm">Apply</button>{nf > 0 && <Link className="btn sm ghost" href={`/app/tenders?tab=${tab}`}>Clear filters</Link>}</div>
+        </form>
+      </details>
+
       <div className="panel flush">
-        {!list.length && <p className="muted" style={{ padding: 22 }}>Nothing here yet.</p>}
+        {!list.length && <p className="muted" style={{ padding: 22 }}>{nf ? "No tenders match these filters." : "Nothing here yet."}</p>}
         {list.map((m) => {
           const t = m.tenders, left = daysLeft(t.due_at), [cls, label] = STATUS_CHIP[m.status];
           return (
