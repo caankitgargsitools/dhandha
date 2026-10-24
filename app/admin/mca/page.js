@@ -21,7 +21,7 @@ export default async function AdminMca() {
       </div>
       <div className="panel stack-sm">
         <div className="panel-head" style={{ marginBottom: 0 }}><h3>Automatic monthly fetch</h3><span className="small faint">daily at 10:55 IST · GitHub Actions “mca monthly”</span></div>
-        <p className="small muted" style={{ margin: 0 }}>Dhandha opens MCA&apos;s “incorporated during the month” page every day, loads the newest monthly file once, and sends you a phone alert. If MCA shows a bot check, nothing is attempted — you get an alert and upload the file below.</p>
+        <p className="small muted" style={{ margin: 0 }}>Dhandha opens MCA&apos;s “incorporated during the month” page every day, loads the last six monthly files (each once), and sends you a phone alert. If MCA shows a bot check, nothing is attempted — you get an alert and upload the file below.</p>
         {!(fetches || []).length && <p className="small muted" style={{ margin: 0 }}>No automatic fetch yet.</p>}
         {(fetches || []).map((f) => (
           <div key={f.id} className="row between small" style={{ padding: "6px 0", borderTop: "1px solid var(--line-soft)", gap: 8 }}>
