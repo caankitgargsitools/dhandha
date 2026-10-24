@@ -51,7 +51,7 @@ export default function CostPlanner({ matchId, initial, estimate, saved, fresh, 
     return (
       <form className="stack-sm" onSubmit={(e) => { e.preventDefault(); finish({ price: direct, note }, `My price: ${inr(Number(direct))} + GST`); }}>
         <div className="form-grid">
-          <div><label htmlFor="pr">Price you will quote (₹, before GST)</label><input id="pr" inputMode="numeric" value={direct} onChange={(e) => setDirect(e.target.value.replace(/[^\d.]/g, ""))} autoFocus placeholder="e.g. 540000" /></div>
+          <div><label htmlFor="pr">Price you will quote (₹, before GST)</label><input id="pr" inputMode="numeric" value={direct} onChange={(e) => setDirect(e.target.value.replace(/[^\d.]/g, ""))} ref={(el) => { if (el && !el.dataset.f) { el.dataset.f = "1"; el.focus({ preventScroll: true }); } }} placeholder="e.g. 540000" /></div>
           <div><label htmlFor="pn">Note (optional)</label><input id="pn" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. 12% below estimate" /></div>
         </div>
         {estimate && Number(direct) > 0 && <div className="tiny faint">{Math.abs(((Number(direct) - estimate) / estimate) * 100).toFixed(1)}% {Number(direct) < estimate ? "below" : "above"} the estimate of {lakh(estimate)}</div>}

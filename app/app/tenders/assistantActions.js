@@ -150,3 +150,12 @@ export async function annexureSegments({ matchId, idx }) {
   if (!p) return { error: "Format not found." };
   return { title: p.title, segments: buildSegments(p.edited_text || p.filled_text || p.text || "", { facts: facts || [], people: people || [], works: works || [] }) };
 }
+
+// The chat is kept per tender, so questions and answers stay on screen when the page is opened again.
+export async function saveChat({ matchId, entries }) {
+  const { supabase, tenant, role } = await getContext();
+  if (role === "viewer" || !Array.isArray(entries) || !entries.length) return { ok: false };
+  const rows = entries.slice(0, 10).map((e) => ({ tenant_id: tenant.id, match_id: matchId, who: e.who === "me" ? "me" : "bot", body: String(e.text || "").slice(0, 4000), error: !!e.error })).filter((r) => r.body);
+  const { error } = await supabase.from("tender_chat").insert(rows);
+  return error ? { error: error.message } : { ok: true };
+}
