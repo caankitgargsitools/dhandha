@@ -7,7 +7,10 @@ import { signOut } from "../login/actions";
 import CaptchaDesk from "../admin/CaptchaDesk";
 
 export default async function AppLayout({ children }) {
-  const { tenant, companies, company, user, role, isAdmin, has2fa, isPlatformAdmin, otherWorkspaces } = await getContext();
+  const { supabase, tenant, companies, company, user, role, isAdmin, has2fa, isPlatformAdmin, otherWorkspaces } = await getContext();
+  // credit balance on every page (amber when low, red at zero) — 1 credit = ₹1
+  const { data: wallet } = await supabase.from("wallets").select("balance").eq("tenant_id", tenant.id).maybeSingle();
+  const balance = Number(wallet?.balance || 0);
   const trialLeft = daysLeft(tenant.trial_ends_at);
   const sections = [
     { items: [{ href: "/app", label: "Dashboard", icon: "home" }, { href: "/app/tasks", label: "Tasks", icon: "check" }] },
@@ -59,6 +62,9 @@ export default async function AppLayout({ children }) {
           </div>
           <div className="row">
             {trialLeft !== null && trialLeft >= 0 && <span className="chip warn">Trial · {trialLeft} day{trialLeft === 1 ? "" : "s"} left</span>}
+            <Link href="/app/wallet" className={`chip ${balance <= 0 ? "bad" : balance < 100 ? "warn" : "info"}`} title={balance < 100 ? "Low balance — top up to keep AI reading, bid files and outreach running" : "Credits left (1 credit = ₹1)"} style={{ gap: 6, fontWeight: 700, textDecoration: "none" }}>
+              <Icon name="wallet" size={14} />{balance.toLocaleString("en-IN", { maximumFractionDigits: 2 })} credits{balance < 100 ? " · Top up" : ""}
+            </Link>
             <div className="user-pill">
               <span className="small muted">{user.email}</span>
               <form action={signOut}><button className="ghost sm" title="Sign out" aria-label="Sign out" style={{ borderRadius: 99, padding: 6 }}><Icon name="logout" size={16} /></button></form>

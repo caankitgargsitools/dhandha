@@ -195,7 +195,10 @@ async function upload(job, files) {
 
 // One browser session per portal, kept between jobs: after a person has typed a captcha, the portal often lets the
 // same session download the next tenders without asking again. Where it does ask, the person is asked as usual.
-const SESSION_IDLE_MS = 20 * 60000;
+// Idle sessions are kept alive (the portal's home page every few minutes, like an open browser tab) for 45 minutes,
+// and the twice-daily pre-check batch runs portal by portal, so one typed captcha serves a run of tenders.
+const SESSION_IDLE_MS = 45 * 60000;
+const KEEPALIVE_MS = 4 * 60000;
 const sessions = new Map(); // portal -> { ctx, page, last }
 async function sessionFor(browser, portal) {
   for (const [p, s] of sessions) if (Date.now() - s.last > SESSION_IDLE_MS) { await s.ctx.close().catch(() => {}); sessions.delete(p); }
@@ -207,6 +210,14 @@ async function sessionFor(browser, portal) {
   }
   s.last = Date.now();
   return s;
+}
+async function keepAlive() {
+  for (const [portal, s] of sessions) {
+    if (Date.now() - (s.touched || s.last) < KEEPALIVE_MS || s.page.isClosed()) continue;
+    s.touched = Date.now();
+    const site = GEPNIC.find((x) => x.portal === portal);
+    if (site) await s.page.goto(site.base, { timeout: 30000, waitUntil: "domcontentloaded" }).catch(() => {});
+  }
 }
 async function dropSession(portal) { const s = sessions.get(portal); if (s) { sessions.delete(portal); await s.ctx.close().catch(() => {}); } }
 
@@ -251,7 +262,7 @@ try {
     const job = await rpc("doc_job_claim", { p_runner: RUNNER, p_portal: lastPortal });
     if (job) { await runJob(browser, job); did++; lastPortal = job.portal; continue; }
     if (!did && Date.now() - start < waitFirst * 1000) { await sleep(5000); continue; }
-    if (args.includes("--forever") && Date.now() < stopAt) { await sleep(3000); continue; }
+    if (args.includes("--forever") && Date.now() < stopAt) { await keepAlive(); await sleep(3000); continue; }
     break;
   }
   log(`done: ${did} job(s)`);

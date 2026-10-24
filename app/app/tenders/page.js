@@ -6,6 +6,7 @@ import { setTenderStatus } from "./actions";
 import { rescore, muteTenderWord, aiCheckNow, setAiFit } from "./bidActions";
 import QuestionCards from "./QuestionCards";
 import { openQuestions, mandatoryUnmet } from "@/lib/conditions";
+import { prerequisiteList } from "@/lib/prereq";
 import { parseFilters, applyFilters, activeCount, facets, STAGES, LEFT, WORK, SORTS, ELIG } from "@/lib/tenderFilters";
 
 const TABS = [["open", "Worth bidding"], ["shortlisted", "Shortlisted"], ["all", "All matches"], ["done", "Results"]];
@@ -45,7 +46,14 @@ export default async function Tenders({ searchParams }) {
   }));
   const won = rows.filter((m) => m.status === "won").length, lost = rows.filter((m) => m.status === "lost").length;
   const canWrite = role !== "viewer";
-  const { data: facts } = await supabase.from("company_facts").select("key, value").eq("company_id", company.id).eq("period", "");
+  // pre-check state of the open tenders shown: fetching / waiting for a captcha / done
+  const openIds = list.filter((m) => live(m) && !m.tenders.prechecked_at).map((m) => m.tenders.id).slice(0, 150);
+  const [{ data: facts }, { data: jobs }] = await Promise.all([
+    supabase.from("company_facts").select("key, value").eq("company_id", company.id).eq("period", ""),
+    openIds.length ? supabase.from("tender_doc_jobs").select("tender_id, status").in("tender_id", openIds).order("created_at", { ascending: false }) : { data: [] },
+  ]);
+  const jobOf = {};
+  for (const j of jobs || []) jobOf[j.tender_id] ||= j.status;
   const answers = Object.fromEntries((facts || []).map((f) => [f.key, f.value]));
   const questions = openQuestions(rows.filter((m) => live(m) && !["skipped", "lost"].includes(m.status)), answers);
 
@@ -128,10 +136,19 @@ export default async function Tenders({ searchParams }) {
                   {m.ai_fit === "no" && canWrite && <form action={setAiFit} style={{ display: "inline" }}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="fit" value="yes" /><button className="sm ghost" style={{ padding: "2px 8px" }}>Bring back</button></form>}
                   {m.ai_fit !== "no" && m.ai_fit && canWrite && m.status === "new" && <form action={setAiFit} style={{ display: "inline" }}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="fit" value="no" /><button className="sm ghost" style={{ padding: "2px 8px" }} title="Hide it and tell the AI check it was wrong">Not my work</button></form>}
                   {mandatoryUnmet(m.reasons).length ? <span className="chip warn" title={mandatoryUnmet(m.reasons).join("; ")}>{m.forced_at ? "Filing despite a warning" : "⚠ Mandatory condition not met"}</span> : !m.eligible ? <span className="chip mute">Outside your preferences</span> : m.pending ? <Link href={`/app/tenders/${m.id}/assistant`} className="chip warn">Qualifies if you answer {m.pending}</Link> : <span className="chip ok">Qualified</span>}
+                  {t.prechecked_at ? <span className="chip ok plain" title="Documents fetched and checked in advance">✓ Pre-checked</span>
+                    : ["queued", "running"].includes(jobOf[t.id]) ? <span className="chip info plain">Pre-check: fetching documents…</span>
+                    : jobOf[t.id] === "captcha" ? <span className="chip warn plain">Pre-check: waiting for the portal's captcha</span> : null}
                   <span className="tiny faint">{t.portal} · {t.tender_ref}</span>
                 </div>
                 <h4><Link href={`/app/tenders/${m.id}`} style={{ color: "inherit" }}>{t.title}</Link></h4>
                 <div className="small muted">{t.authority}{t.district ? `, ${t.district}` : ""} · value {t.value_inr ? lakh(t.value_inr) : "not stated"} · EMD {t.emd_inr ? lakh(t.emd_inr) : "nil"}</div>
+                {(() => {
+                  const ready = t.prereq ? prerequisiteList({ found: t.prereq, tender: t, unmet: mandatoryUnmet(m.reasons) }).filter((x) => x.key !== "dsc") : [];
+                  return ready.length > 0 && (
+                    <div className="tiny" style={{ marginTop: 4 }}><span className="faint">Get ready: </span>{ready.slice(0, 4).map((x) => x.label.split(" — ")[0]).join(" · ")}{ready.length > 4 ? ` · +${ready.length - 4} more` : ""}</div>
+                  );
+                })()}
                 {m.matched_on?.length > 0 && (
                   <div className="row tiny" style={{ gap: 6, marginTop: 6 }}>
                     <span className="faint">Matched on:</span>

@@ -2,7 +2,7 @@
 
 Checked and sent to the owner every morning (09:23 IST) by the Dhandha development session. Items move to
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
-Last checked: 24 Oct 2026.
+Last checked: 25 Oct 2026.
 
 ## The queue — one by one, in this order
 
@@ -21,6 +21,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 8 | **This month's MCA file** — Admin → New companies (#11) | You | New rows (last upload 17 Oct) | Open |
 | 9 | **Turn off Google Route Optimization API** in Google Cloud — it refuses API keys, so it only adds cost (#24) | You | Optional, no check needed | Open |
 | 10 | **Supabase leaked-password protection** — Authentication → Policies (#12) | You | Supabase security check clears | Open |
+| 10a | **Captcha desk at 10:07 and 15:07 IST** — the automatic pre-check fetches every fitting tender in two daily batches; type the portal captchas when the phone alert comes (usually one per portal per batch) | You | Tenders show "✓ Pre-checked" and a "Get ready" line before anyone opens them | From 25 Oct |
 | 11 | **Tender winners after the captcha** — results pages return nothing; find the new layout and fix (A) | Claude | Real award results arrive in Tender winners | Next for Claude |
 | 12 | **More tender detail per crawl** (value, EMD) and a Haryana portal re-test (D) | Claude | Values / EMD filled on new tenders; Haryana tenders arrive | Planned |
 | 13 | **BOQ Excel (.xls) into the cost planner** (B) | Claude | Upload the portal's BOQ and its items fill the planner | Planned |
