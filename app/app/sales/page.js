@@ -21,7 +21,7 @@ export default async function TeamCalendar({ searchParams }) {
       .gte("starts_at", new Date().toISOString()).lte("starts_at", new Date(Date.now() + 14 * 86400000).toISOString()).order("starts_at").limit(50),
   ]);
   const canWrite = role !== "viewer";
-  const label = new Date(`${day}T00:00:00+05:30`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
+  const label = new Date(`${day}T12:00:00+05:30`).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long" });
   return (
     <>
       <div className="page-head">

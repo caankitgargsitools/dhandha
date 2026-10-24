@@ -3,7 +3,7 @@ import { useState } from "react";
 import { bookByToken } from "./actions";
 import { groupSlots } from "@/lib/scheduling";
 
-const dayLabel = (d) => new Date(`${d}T00:00:00+05:30`).toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "short" });
+const dayLabel = (d) => new Date(`${d}T12:00:00+05:30`).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "short" });
 
 // The client picks a date (only dates with a free time are listed), then a free time. Times are the whole
 // company's; who takes the meeting is decided when they book.

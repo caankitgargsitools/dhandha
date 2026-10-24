@@ -5,7 +5,7 @@ import { groupSlots } from "@/lib/scheduling";
 import { waLink } from "@/lib/leads";
 import { Spinner } from "./Progress";
 
-const dayLabel = (d) => new Date(`${d}T00:00:00+05:30`).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+const dayLabel = (d) => new Date(`${d}T12:00:00+05:30`).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short" });
 
 // On a lead: book a meeting now (free times from the team's calendars, travel included for field visits), or send
 // the client a link to pick their own time.
