@@ -18,7 +18,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 5 | **Phone app** — open Settings → Phone app once as platform admin, install, turn on notifications (#2) | You | Notification keys exist; a test alert reaches your phone | Done 24 Oct — Android phone registered; test alerts arrived |
 | 6 | **Email sending (Resend)** — account, verify your domain, `RESEND_API_KEY` + `OUTREACH_FROM_EMAIL` in Vercel (#8) | You | The daily self-check shows email ready; review requests and sequences start emailing | Open |
 | 7 | **Google Ads lead forms** — create the webhook key, paste URL + key into your lead form, "Send test data" (#22) | You | The test lead appears in Leads | Open |
-| 8 | **This month's MCA file** — Admin → New companies (#11) | You | New rows (last upload 17 Oct) | Open |
+| 8 | **This month's MCA file** — Admin → New companies (#11) | You | New rows (last upload 17 Oct) | Automatic fetch built 24 Oct (daily 10:55 IST); upload by hand only if MCA shows a bot check — you get an alert |
 | 9 | **Turn off Google Route Optimization API** in Google Cloud — it refuses API keys, so it only adds cost (#24) | You | Optional, no check needed | Open |
 | 10 | **Supabase leaked-password protection** — Authentication → Policies (#12) | You | Supabase security check clears | Open |
 | 10a | **Daily captcha session** — Admin → Captcha session → "Start today's session" each morning (reminder 09:31 IST), type each portal's captcha; re-verify a portal when its alert comes. Needs the phone app (step 5) for alerts | You | Portals show Live; tenders show "✓ Pre-checked" before anyone opens them; the page learns each portal's session length | From 25 Oct |
