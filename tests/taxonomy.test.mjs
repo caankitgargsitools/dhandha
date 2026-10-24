@@ -45,3 +45,34 @@ test("capital-letter short forms must appear in capitals; context rules need the
   assert.ok(fits("Filing of TDS returns for the Board").length);
   assert.deepEqual(fits("TDS meter supply"), []);
 });
+
+test("strict: PMU counts only for finance work; management consulting not for technology", () => {
+  for (const t of [
+    "Request for Proposal (RFP) for Setting up a Project Management Unit (PMU) for planning and implementation of State Data Integration Platform",
+    "Request For Proposal RFP For selection of a Consultancy Firm for establishing of Project Management Unit PMU for Commissionerate Police Bhubaneswar",
+    "PMU/935/2026-27 (Ref PMU/935/2026-27)",
+    "Selection of a Government Organisation for Establishment and Operation of the Information Technology Project Management Unit (IT-PMU)",
+    "Senior Technology Management Consultant (Ref 11-RFP-Senior Consultant-2025-26)",
+  ]) assert.deepEqual(fits(t), [], t);
+  assert.ok(fits("Engagement of PMU for financial management of the Jal Jeevan Mission").length);
+  assert.ok(fits("Hiring of PMU for PFMS and DBT implementation, Finance Department").length);
+  assert.ok(fits("Empanelment of management consultants for the Corporation").length);
+});
+
+test("strict but complete: unmistakable CA phrases survive works words; non-financial audits never match", () => {
+  for (const t of [
+    "REQUEST FOR PROPOSAL for Appointment of Nodal Consultant cum Financial Consultant or Transaction Adviser For Construction of High Capacity Metro",
+    "THIRD PARTY TECHNO FINANCIAL AUDIT FOR THE WORK OF CONSTRUCTION OF 80 FEET WIDE ROAD BY PROVIDING AND LAYING UNREINFORCED PLAIN CEMENT CONCRETE",
+    "Techno financial Audit of the work of Special Repair of existing roads of Phase -1 at Urban Estate Gurdaspur",
+    "Appointment of Project Implementing Agency for Integrated Financial Advisory and Alternate Finance Mobilisation Services",
+    "Limited Tender for engaging Audit and Consulting firm for conducting Annual Revenue Assurance Audit of Internet Data Centers of BSNL",
+    "Selection of Audit Agency for CBS Data Migration and Post-Implementation Audit",
+    "Work of Sales accounting through accounts personnel at RSMMLs SBU and PC Limestone Jodhpur Office",
+  ]) assert.ok(fits(t).length, t);
+  for (const t of [
+    "Construction of office building for Chartered Accountants Institute, repair of roof",
+    "Energy audit of internal audit office building",
+    "Request for Proposal for SAP - Financial Accounting and Controlling (FICO) Module in OSRTC",
+    "Conduction of Air Audit Test at substations",
+  ]) assert.deepEqual(fits(t).filter((k) => k !== "chartered accountant"), [], t);
+});
