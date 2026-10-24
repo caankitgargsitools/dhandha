@@ -2,7 +2,6 @@ import Link from "next/link";
 import { getContext, daysLeft, lakh, fmtDate } from "@/lib/session";
 import { ScoreRing, Donut } from "@/components/Charts";
 import Icon from "@/components/Icon";
-import PreviewNote from "@/components/PreviewNote";
 import { setTenderStatus } from "./actions";
 import { rescore, muteTenderWord, aiCheckNow, setAiFit } from "./bidActions";
 import QuestionCards from "./QuestionCards";
@@ -65,7 +64,6 @@ export default async function Tenders({ searchParams }) {
       </div>
       {noPrefs && <div className="notice bad"><Icon name="briefcase" /><span><strong>Tell Dhandha what you do</strong> — pick your industry, sub-industry and services so only relevant tenders reach you. <Link href="/app/tenders/preferences">Choose services</Link></span></div>}
       {questions.length > 0 && <QuestionCards questions={questions} canAnswer={canWrite} />}
-      <PreviewNote>Tenders shown are samples until the crawler server is switched on. Scoring, shortlisting and bid packs are live.</PreviewNote>
 
       <div className="grid-3">
         <div className="panel ledger"><div className="kpi-label">Worth bidding now</div><div className="kpi">{rows.filter((m) => live(m) && m.eligible && !["skipped"].includes(m.status)).length}</div><div className="faint small">eligible and still open{rows.some((m) => live(m) && m.eligible && m.pending) ? ` · ${rows.filter((m) => live(m) && m.eligible && m.pending).length} need your answers` : ""}</div></div>
