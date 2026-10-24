@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { onlineSlots, fieldSlots, dayPlan, at, local, hhmm, pairKey, travelPairs, leadAddress, groupSlots } from "../lib/scheduling.js";
+import { onlineSlots, fieldSlots, dayPlan, planVisits, at, local, hhmm, pairKey, travelPairs, leadAddress, groupSlots } from "../lib/scheduling.js";
 
 const DAY = "2026-10-26"; // a Monday
 const BEFORE = new Date("2026-10-25T10:00:00+05:30");
@@ -46,7 +46,7 @@ test("field visits fit between meetings with travel both ways", () => {
   assert.equal(hhmm(t(slots.at(-1))), "18:00");
   // a 2-hour visit cannot fit before Client A
   assert.equal(fieldSlots({ day: DAY, rep, meetings, address: "New", duration: 120, travel, now: BEFORE }).map((s) => hhmm(t(s)))[0], "13:00");
-  assert.equal(travelPairs(rep, meetings, "New").length, 4);
+  assert.equal(travelPairs(rep, meetings, "New").length, 5); // to and from each place + office → Client A
 });
 
 test("day plan shows when to leave and the drive for each visit", () => {
@@ -87,4 +87,35 @@ test("an empty field day offers a choice of visit times, not just the first", ()
   const out = fieldSlots({ day: DAY, rep, address: "Client, Noida", duration: 30, buffer: 10, travel: {}, fallback: 15, now: BEFORE });
   assert.deepEqual(out.map((s) => hhmm(t(s))), ["10:15", "10:45"]); // 11:15 would end after 11:30
   assert.ok(out.every((s) => s.travel_in === 15));
+});
+
+test("route-aware: the rep already visiting the area adds the least driving and gets the visit", () => {
+  const ra = { id: "ra", day_start: "09:30", day_end: "18:30", modes: ["field"], work_days: [1], start_address: "Office Delhi" };
+  const rb = { id: "rb", day_start: "09:30", day_end: "18:30", modes: ["field"], work_days: [1], start_address: "Office Delhi" };
+  const meetings = [{ rep_id: "ra", mode: "field", address: "Sector 3 Noida", starts_at: at(DAY, 660), ends_at: at(DAY, 705), status: "booked" }]; // ra in Sector 3, 11:00-11:45
+  const travel = { [pairKey("Office Delhi", "Sector 4 Noida")]: 50, [pairKey("Sector 4 Noida", "Office Delhi")]: 50, [pairKey("Sector 3 Noida", "Sector 4 Noida")]: 10, [pairKey("Sector 4 Noida", "Sector 3 Noida")]: 10, [pairKey("Office Delhi", "Sector 3 Noida")]: 50 };
+  const after = (rep) => fieldSlots({ day: DAY, rep, meetings, address: "Sector 4 Noida", duration: 30, buffer: 10, travel, now: BEFORE }).find((s) => hhmm(t(s)) >= "12:00");
+  assert.equal(after(ra).travel_in, 10); // straight from Sector 3
+  assert.equal(after(ra).detour, 10);
+  assert.equal(after(rb).detour, 50); // from the office
+  assert.ok(after(ra).detour < after(rb).detour);
+  // the drive between consecutive stops is priced too
+  assert.ok(travelPairs(ra, meetings, "Sector 4 Noida").some(([a, b]) => a === "Office Delhi" && b === "Sector 3 Noida"));
+});
+
+test("plan visits: nearby clients go to the same rep in a sensible order; what cannot fit is reported", () => {
+  const rA = { id: "A", day_start: "09:30", day_end: "13:00", modes: ["field"], work_days: [1], start_address: "Noida" };
+  const rB = { id: "B", day_start: "09:30", day_end: "13:00", modes: ["field"], work_days: [1], start_address: "Gurugram" };
+  const places = ["Noida", "Gurugram", "N1", "N2", "G1"];
+  const near = (a, b) => (a[0] === b[0] ? 10 : 60); // same first letter = same side of town
+  const travel = {};
+  for (const a of places) for (const b of places) if (a !== b) travel[pairKey(a, b)] = near(a, b);
+  const { plan, unplaced } = planVisits({ day: DAY, reps: [rA, rB], visits: [{ id: "n1", address: "N1" }, { id: "g1", address: "G1" }, { id: "n2", address: "N2" }], duration: 45, buffer: 10, travel, now: BEFORE });
+  assert.deepEqual(unplaced, []);
+  assert.deepEqual(plan.filter((p) => p.rep_id === "A").map((p) => p.id).sort(), ["n1", "n2"]);
+  assert.deepEqual(plan.filter((p) => p.rep_id === "B").map((p) => p.id), ["g1"]);
+  const a = plan.filter((p) => p.rep_id === "A");
+  assert.ok(a[1].start >= new Date(a[0].end.getTime() + 10 * 60000 + 10 * 60000)); // break + drive between them
+  // a 3-hour visit fits nobody's morning
+  assert.deepEqual(planVisits({ day: DAY, reps: [rA], visits: [{ id: "x", address: "N1" }], duration: 240, travel, now: BEFORE }).unplaced, ["x"]);
 });

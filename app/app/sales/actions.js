@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { getContext } from "@/lib/session";
-import { onlineSlots, fieldSlots, travelPairs, addDays, local, leadAddress } from "@/lib/scheduling";
+import { onlineSlots, fieldSlots, travelPairs, planVisits, addDays, local, leadAddress } from "@/lib/scheduling";
 import { travelMinutes } from "@/lib/routes";
 
 // Sales team: salespeople, meeting types, booking (by staff or by the client through a link) and the day plan.
@@ -68,10 +68,11 @@ async function slotsFor(supabase, tenant, company, type, address, { days = 7, fr
       out.push(...fieldSlots({ day, rep, meetings: meetings || [], address, duration: type.duration_min, buffer: type.buffer_min, travel: t.travel }));
     }
   }
-  if (all) return { slots: out.sort((a, b) => a.start - b.start || (a.travel_in ?? 0) - (b.travel_in ?? 0)), estimated, travelError };
-  // field: one rep per time — the shortest drive in
+  // field: the rep whose day already passes nearby (least extra driving) comes first for each time
+  const extra = (x) => x.detour ?? x.travel_in ?? 0;
+  if (all) return { slots: out.sort((a, b) => a.start - b.start || extra(a) - extra(b)), estimated, travelError };
   const best = new Map();
-  for (const x of out) { const k = x.start.toISOString(); if (!best.has(k) || (x.travel_in ?? 0) < (best.get(k).travel_in ?? 0)) best.set(k, x); }
+  for (const x of out) { const k = x.start.toISOString(); if (!best.has(k) || extra(x) < extra(best.get(k))) best.set(k, x); }
   return { slots: [...best.values()].sort((a, b) => a.start - b.start), estimated, travelError };
 }
 
@@ -134,4 +135,58 @@ export async function setMeetingStatus(formData) {
   if (!["done", "cancelled", "no_show", "booked"].includes(status)) return;
   await supabase.from("meetings").update({ status }).eq("id", String(formData.get("id"))).eq("company_id", company.id);
   done();
+}
+
+// Plan several field visits on one day: every place of the day is priced once with Google (cache first), then the
+// free planner shares the visits out so each salesperson drives as little as possible. Nothing is booked yet.
+async function planFor(ctx, { day, typeId, leadIds }) {
+  const { supabase, tenant, company } = ctx;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day || "")) return { error: "Pick a day." };
+  const ids = [...new Set((leadIds || []).map(String))].slice(0, 12);
+  if (!ids.length) return { error: "Tick the clients to visit (up to 12)." };
+  const [{ data: type }, { data: reps }, { data: meetings }, { data: leads }] = await Promise.all([
+    supabase.from("meeting_types").select("*").eq("id", typeId).eq("company_id", company.id).maybeSingle(),
+    supabase.from("sales_reps").select("*").eq("company_id", company.id).eq("active", true),
+    supabase.from("meetings").select("id, rep_id, mode, address, starts_at, ends_at, buffer_min, status").eq("company_id", company.id).in("status", ["booked", "done"])
+      .gte("starts_at", new Date(Date.parse(`${day}T00:00:00+05:30`)).toISOString()).lt("starts_at", new Date(Date.parse(`${day}T00:00:00+05:30`) + 86400000).toISOString()),
+    supabase.from("leads").select("id, name, address, notes, city, state").in("id", ids).eq("company_id", company.id),
+  ]);
+  if (!type || type.mode !== "field") return { error: "Choose a field-visit meeting type." };
+  const field = (reps || []).filter((r) => r.modes.includes("field")).map((r) => ({ ...r, day_start: String(r.day_start).slice(0, 5), day_end: String(r.day_end).slice(0, 5) }));
+  if (!field.length) return { error: "No salesperson takes field visits yet. Add one under Salespeople." };
+  const visits = (leads || []).map((l) => ({ id: l.id, name: l.name, address: leadAddress(l) })).filter((v) => v.address);
+  const places = [...new Set([...field.map((r) => r.start_address), ...(meetings || []).map((m) => m.address), ...visits.map((v) => v.address)].filter(Boolean))].slice(0, 25);
+  const pairs = places.flatMap((a) => places.filter((b) => b !== a).map((b) => [a, b]));
+  const t = await travelMinutes(supabase, tenant.id, pairs);
+  const r = planVisits({ day, reps: field, meetings: meetings || [], visits, duration: type.duration_min, buffer: type.buffer_min, travel: t.travel });
+  const name = Object.fromEntries(field.map((x) => [x.id, x.name]));
+  const lead = Object.fromEntries(visits.map((v) => [v.id, v]));
+  return {
+    type, estimated: t.estimated, travelError: t.error || null,
+    plan: r.plan.map((p) => ({ lead_id: p.id, lead: lead[p.id].name, address: lead[p.id].address, rep_id: p.rep_id, rep: name[p.rep_id], start: p.start.toISOString(), end: p.end.toISOString(), leave_at: p.leave_at.toISOString(), travel_in: p.travel_in, detour: p.detour })),
+    unplaced: [...r.unplaced.map((id) => lead[id].name), ...(leads || []).filter((l) => !leadAddress(l)).map((l) => `${l.name} (no address)`)],
+  };
+}
+
+export async function planDay({ day, typeId, leadIds }) {
+  const ctx = await getContext();
+  if (ctx.role === "viewer") return { error: "Viewers cannot plan visits." };
+  return planFor(ctx, { day, typeId, leadIds });
+}
+
+// Book the plan: worked out again on the latest calendar (so nothing double-books), then every visit is saved; the
+// CRM entries follow by trigger.
+export async function bookPlan({ day, typeId, leadIds }) {
+  const ctx = await getContext();
+  if (ctx.role === "viewer") return { error: "Viewers cannot book meetings." };
+  const r = await planFor(ctx, { day, typeId, leadIds });
+  if (r.error) return r;
+  if (!r.plan.length) return { error: "None of these visits fits that day any more." };
+  const { error } = await ctx.supabase.from("meetings").insert(r.plan.map((p) => ({
+    tenant_id: ctx.tenant.id, company_id: ctx.company.id, rep_id: p.rep_id, lead_id: p.lead_id, type_id: r.type.id, mode: "field", title: r.type.name,
+    starts_at: p.start, ends_at: p.end, buffer_min: r.type.buffer_min, address: p.address, travel_min: p.travel_in, leave_at: p.leave_at,
+  })));
+  if (error) return { error: error.message };
+  done(); revalidatePath("/app/crm");
+  return { ok: true, booked: r.plan.length, unplaced: r.unplaced };
 }
