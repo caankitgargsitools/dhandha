@@ -2,10 +2,11 @@
 import { useActionState } from "react";
 import { signIn, signUp } from "./actions";
 
-export default function AuthForm({ mode, email, name }) {
+export default function AuthForm({ mode, email, name, invite }) {
   const [state, action, pending] = useActionState(mode === "signup" ? signUp : signIn, {});
   return (
     <form action={action} className="stack">
+      {invite && <input type="hidden" name="invite" value={invite} />}
       {mode === "signup" && (
         <>
           <div><label htmlFor="full_name">Your name</label><input id="full_name" name="full_name" required defaultValue={name || ""} /></div>

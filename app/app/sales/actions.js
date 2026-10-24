@@ -190,3 +190,31 @@ export async function bookPlan({ day, typeId, leadIds }) {
   done(); revalidatePath("/app/crm");
   return { ok: true, booked: r.plan.length, unplaced: r.unplaced };
 }
+
+// Invite a salesperson to Dhandha in one step: they get a login with the Field role (or Telecaller for online-only
+// people); their sales profile links itself when they join (trigger t_link_rep_on_join), or at once if they already
+// have a login.
+export async function inviteRep({ repId, email }) {
+  const { supabase, tenant, company, isAdmin } = await getContext();
+  if (!isAdmin) return { error: "Only the workspace admin can invite people." };
+  const mail = String(email || "").trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(mail)) return { error: "Enter their email." };
+  const { data: rep } = await supabase.from("sales_reps").select("id, name, modes, user_id").eq("id", repId).eq("company_id", company.id).maybeSingle();
+  if (!rep) return { error: "Salesperson not found." };
+  if (rep.user_id) return { error: `${rep.name} is already linked to a login.` };
+  await supabase.from("sales_reps").update({ email: mail }).eq("id", rep.id);
+  const role = rep.modes.includes("field") ? "field" : "telecaller";
+  const { data, error } = await supabase.rpc("add_team_member", { p_tenant: tenant.id, p_email: mail, p_role: role, p_name: rep.name });
+  if (error) return { error: error.message };
+  if (data.status === "added") {
+    // already had a login: link now
+    const { data: m } = await supabase.from("tenant_members").select("user_id, profiles!inner(email)").eq("tenant_id", tenant.id).eq("profiles.email", mail).maybeSingle();
+    if (m?.user_id) await supabase.from("sales_reps").update({ user_id: m.user_id }).eq("id", rep.id);
+    done();
+    return { ok: true, linked: true, message: `${rep.name} already had a Dhandha login — added to your workspace and linked.` };
+  }
+  const { headers } = await import("next/headers");
+  const h = await headers();
+  done();
+  return { ok: true, link: `${h.get("x-forwarded-proto") || "https"}://${h.get("x-forwarded-host") || h.get("host")}/login?invite=${data.token}`, name: rep.name };
+}
