@@ -11,10 +11,10 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 
 | Step | Item | Who | What "done" looks like | Status |
 |------|------|-----|------------------------|--------|
-| 1 | **AI tender check** — AI reads each candidate tender's scope and keeps only work you can do (cheapest AI first, about ₹0.10 a tender) (#18 / K) | Both | You said Yes (24 Oct); built and on for GSC | Done — checking the first run |
+| 1 | **AI tender check** — AI reads each candidate tender's scope and keeps only work you can do (cheapest AI first, about ₹0.10 a tender) (#18 / K) | Both | You said Yes (24 Oct); built and on for GSC | Done — runs hourly; the daily self-check shows it working |
 | 2 | **Link Saurabh to his Dhandha login** — Sales team → Salespeople → Saurabh → pick his login → Save (#20) | You | Phone alerts and "My day" work for him | Done 24 Oct — Saurabh signed in (Manager) and his sales profile is linked |
 | 3 | **Link your Google Business Profile** — Generate leads → Google Business Profile → search → "This is us" (#23) | You | I see the listing, score and checklist | Skipped for now (24 Oct) — ask again later |
-| 4 | **Switch on the Lead autopilot** — daily budget, sources, Google Maps searches (#21) | You | I see it on and the first morning run | Switched on 24 Oct (GSC: ₹100/day; Google Maps, tender winners, MCA; Delhi NCR) — checking the first run on 25 Oct 08:47 |
+| 4 | **Switch on the Lead autopilot** — daily budget, sources, Google Maps searches (#21) | You | I see it on and the first morning run | Done — first run 25 Oct 08:47: 18 leads (17 Google Maps, 1 tender winner) for ₹36; fixed so unused budget now goes to Google Maps (about 50 leads a day from 26 Oct) |
 | 5 | **Phone app** — open Settings → Phone app once as platform admin, install, turn on notifications (#2) | You | Notification keys exist; a test alert reaches your phone | Done 24 Oct — Android phone registered; test alerts arrived |
 | 6 | **Email sending (Resend)** — account, verify your domain, `RESEND_API_KEY` + `OUTREACH_FROM_EMAIL` in Vercel (#8) | You | The daily self-check shows email ready; review requests and sequences start emailing | Open |
 | 7 | **Google Ads lead forms** — create the webhook key, paste URL + key into your lead form, "Send test data" (#22) | You | The test lead appears in Leads | Open |
@@ -22,7 +22,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 9 | **Turn off Google Route Optimization API** in Google Cloud — it refuses API keys, so it only adds cost (#24) | You | Optional, no check needed | Open |
 | 10 | **Supabase leaked-password protection** — Authentication → Policies (#12) | You | Supabase security check clears | Open |
 | 10a | **Daily captcha session** — Admin → Captcha session → "Start today's session" each morning (reminder 09:31 IST), type each portal's captcha; re-verify a portal when its alert comes. Needs the phone app (step 5) for alerts | You | Portals show Live; tenders show "✓ Pre-checked" before anyone opens them; the page learns each portal's session length | From 25 Oct |
-| 10b | **Big document hand-over time-outs** — 2 fetches on 24 Oct failed at `doc_job_put_chunk` (database statement time-out); make the chunk writes smaller/faster and retry (G) | Claude | No fetch fails at "Handing over" | First thing 25 Oct |
+| 10b | **Big document hand-over time-outs** — 2 fetches on 24 Oct failed at `doc_job_put_chunk` (database statement time-out); make the chunk writes smaller/faster and retry (G) | Claude | No fetch fails at "Handing over" | Done 25 Oct — 512 KB pieces, no compression attempt, five retries |
 | 11 | **Tender winners after the captcha** — results pages return nothing; find the new layout and fix (A) | Claude | Real award results arrive in Tender winners | Next for Claude |
 | 12 | **More tender detail per crawl** (value, EMD) and a Haryana portal re-test (D) | Claude | Values / EMD filled on new tenders; Haryana tenders arrive | Planned |
 | 13 | **BOQ Excel (.xls) into the cost planner** (B) | Claude | Upload the portal's BOQ and its items fill the planner | Planned |
@@ -42,6 +42,10 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 27 | **Before launch** — remove demo data (`demo_seed`), move pg_net out of the public schema (J) | Claude | No demo rows; Supabase lint clean | At launch |
 
 ## Done (recent)
+
+- 25 Oct: Lead autopilot first run (18 leads in the CRM at New); unused budget now goes to Google Maps. Document hand-over time-outs fixed. 22 tenders pre-checked with "Get ready" lists; 6 portal sessions live (CPPP, Delhi, Maharashtra, MP, Odisha, Punjab).
+
+- 24 Oct: assistant tabs (Tender summary, Documents) and saved chat; portal dates win over document dates; get-ready list; automatic pre-check; daily captcha session with per-portal learning; credit balance pill; phone notifications on; MCA monthly fetcher (MCA refuses GitHub's US machines — needs the Indian server or upload by hand).
 
 - 24 Oct: strict tender matching — GSC 58 → 50 open matches, all with a CA word; 21 irrelevant ones hidden (IT/police PMUs, tech consultant, engineering DPRs, closed and demo leftovers) and 14 missed CA tenders added (techno-financial audits, financial consultant / transaction adviser on works projects, revenue-assurance and CBS audits, accounting outsourcing). Spend outside Dhandha in Results by source.
 

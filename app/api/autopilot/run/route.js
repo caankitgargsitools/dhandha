@@ -16,26 +16,32 @@ export async function POST(request) {
   if (error) return new Response(/bad worker key/.test(error.message) ? "forbidden" : "error", { status: /bad worker key/.test(error.message) ? 403 : 500 });
   const done = [];
   for (const c of due || []) {
-    const put = (source, rows, note) => supabase.rpc("autopilot_import", { p_key: key, p_company: c.company_id, p_source: source, p_rows: rows, p_note: note || null });
+    let added = 0;
+    const put = async (source, rows, note) => {
+      const { data } = await supabase.rpc("autopilot_import", { p_key: key, p_company: c.company_id, p_source: source, p_rows: rows, p_note: note || null });
+      added += Number(data?.added || 0);
+    };
     const opts = { n: c.each, minScore: c.min_score, ideal: c.ideal };
     if (c.sources.includes("tender_winner")) await put("tender_winner", pickBest((c.winners || []).map(winnerRow), { ...opts, source: "tender_winner" }));
     if (c.sources.includes("mca")) await put("mca", pickBest((c.mca || []).map(mcaRow), { ...opts, source: "mca" }));
     if (c.sources.includes("google_maps")) {
+      // Google Maps takes whatever the other sources could not use, so the whole day's budget goes to leads
+      const want = Math.max(c.each, Number(c.total || 0) - added);
       const searches = mapsQueries(c.queries);
       if (!searches.length) { await put("google_maps", [], "No Google Maps searches set"); continue; }
       const found = new Map();
       // a few pages per search, until there are three candidates for every lead the budget buys
       for (const q of searches) {
         let page;
-        for (let i = 0; i < 3 && found.size < c.each * 3; i++) {
+        for (let i = 0; i < 3 && found.size < want * 3; i++) {
           const r = await placesSearch({ query: q, pageToken: page });
           if (r.error) { console.error("autopilot maps", r.error); break; }
           for (const p of r.places) if (!found.has(p.id)) found.set(p.id, { ...mapPlace(p, { industry: q.split(" in ")[0] }), address: p.formattedAddress || null });
           if (!(page = r.next)) break;
         }
-        if (found.size >= c.each * 3) break;
+        if (found.size >= want * 3) break;
       }
-      const rows = pickBest([...found.values()].filter((r) => r.phone), { ...opts, source: "google_maps" }).map(({ _id, _address, _rating, _reviews, ...r }) => r);
+      const rows = pickBest([...found.values()].filter((r) => r.phone), { ...opts, n: want, source: "google_maps" }).map(({ _id, _address, _rating, _reviews, ...r }) => r);
       await put("google_maps", rows, `${searches.length} search${searches.length > 1 ? "es" : ""}`);
     }
     done.push(c.company_id);
