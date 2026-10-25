@@ -15,7 +15,7 @@ for (const k of ["SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "INGEST_KEY"]) if (
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const RUNNER = env.RUNNER_NAME || "docs";
-const MAX_FILES = 15, MAX_BYTES = 25 * 1024 * 1024, CHUNK = 1024 * 1024; // 1 MB pieces keep each database write short
+const MAX_FILES = 15, MAX_BYTES = 25 * 1024 * 1024, CHUNK = 512 * 1024; // 512 KB pieces keep each database write well inside its time limit
 const CAPTCHA_IMG = "img#captchaImage, img[id*=aptcha i], img[src*=aptcha i]";
 const CAPTCHA_INPUT = "input#captchaText, input[name*=aptcha i]:not([type=hidden])";
 const DOC_RX = /\.(pdf|xls|xlsx|doc|docx|zip|rar|dwg|jpg|jpeg)\b/i;
@@ -195,9 +195,9 @@ async function upload(job, files) {
     const chunks = Math.ceil(f.data.length / CHUNK) || 1;
     for (let s = 0; s < chunks; s++) {
       const body = { p_job: job.id, p_file_no: no, p_seq: s, p_b64: f.data.subarray(s * CHUNK, (s + 1) * CHUNK).toString("base64") };
-      // a busy database can time out one write: try each piece up to three times
+      // a busy database can time out one write: try each piece up to five times, waiting longer each time
       for (let tryNo = 1; ; tryNo++) {
-        try { await rpc("doc_job_put_chunk", body); break; } catch (e) { if (tryNo >= 3) throw e; await sleep(2000 * tryNo); }
+        try { await rpc("doc_job_put_chunk", body); break; } catch (e) { if (tryNo >= 5) throw e; await sleep(3000 * tryNo); }
       }
     }
     list.push({ no, name: String(f.name).replace(/[^\w.\- ()]/g, "_").slice(0, 150), size: f.data.length, chunks });
