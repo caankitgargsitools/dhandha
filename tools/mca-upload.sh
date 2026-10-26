@@ -13,7 +13,7 @@ mkdir -p "$DIR/crawler/src" "$DIR/lib"
 cd "$DIR"
 echo "Getting the latest Dhandha MCA files…"
 for f in crawler/src/mca.js crawler/src/mcaPick.js crawler/src/unzip.js lib/xlsx.js lib/mca.js; do
-  curl -fsSL "$REPO/$f" -o "$f"
+  curl -fsSL -H "Cache-Control: no-cache" "$REPO/$f?v=$(date +%s)" -o "$f"   # always the newest version
 done
 echo '{"type":"module"}' > lib/package.json
 cat > crawler/package.json <<'PKG'
