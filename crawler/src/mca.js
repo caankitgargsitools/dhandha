@@ -70,6 +70,9 @@ try {
   // what the page loads in the background (the monthly list may come from a data address, not plain links)
   const loaded = [];
   page.on("response", (r) => { const t = r.headers()["content-type"] || ""; if (loaded.length < 150 && !/image|font|css|javascript/i.test(t)) loaded.push({ url: r.url().slice(0, 300), status: r.status(), type: t.slice(0, 60) }); });
+  // MCA fills its document lists from /bin/dms/searchDocList (JSON); keep those answers to read the files from them
+  const docLists = [];
+  page.on("response", async (r) => { if (/searchDocList/i.test(r.url()) && docLists.length < 30) { const body = await r.text().catch(() => ""); docLists.push({ url: r.url(), body }); } });
   let files = [], seenPage = null;
   for (const url of PAGES) {
     log("open", url);
@@ -78,11 +81,39 @@ try {
     // MCA's page redirects and rebuilds itself after loading: wait until it settles before reading it
     await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {});
     await page.waitForTimeout(3000);
+    // MCA sent us to its home page: go there through its own menu, as a visitor would; on a laptop, ask the person
+    const target = new URL(url).pathname;
+    if (!page.url().includes(target)) {
+      await page.evaluate((t) => { const a = [...document.querySelectorAll("a[href]")].find((x) => x.getAttribute("href").includes(t)); if (a) a.click(); }, target).catch(() => {});
+      await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {});
+      await page.waitForTimeout(4000);
+    }
+    if (!page.url().includes(target) && VISIBLE) {
+      console.log(`\n>>> MCA opened its home page instead. In the Chrome window, please open Data & Reports → "${url.includes("statistics") ? "Company Statistics" : "Incorporated Or Closed During The Month"}" (log in to MCA if it asks). Waiting up to 5 minutes…\n`);
+      const until = Date.now() + 5 * 60000;
+      while (Date.now() < until && !page.url().includes(target)) await page.waitForTimeout(3000);
+      await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {});
+      await page.waitForTimeout(4000);
+    }
     let html = "";
     for (let i = 0; i < 5 && !html; i++) html = await page.content().catch(async () => { await page.waitForTimeout(2000); return ""; });
     if (looksBlocked(res.status(), html) && !(VISIBLE && await waitForPerson(page))) { await report({ status: "blocked", url, detail: `MCA answered ${res.status()} with a bot check` }); process.exit(0); }
     seenPage = url;
     const links = await page.$$eval("a[href]", (as) => as.map((a) => ({ href: a.href, text: a.innerText.trim().slice(0, 200) }))).catch(() => []);
+    // documents listed by searchDocList: a title naming a month, and a path to the file in the same entry
+    for (const d of docLists) {
+      let json; try { json = JSON.parse(d.body); } catch { continue; }
+      const walk = (o) => {
+        if (!o || typeof o !== "object") return;
+        if (Array.isArray(o)) return o.forEach(walk);
+        const vals = Object.values(o).filter((v) => typeof v === "string");
+        const title = vals.find((v) => /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[\s,_-]*20\d\d/i.test(v) && v.length < 200);
+        const path = vals.find((v) => /\/content\/dam|getdocument|\.(xlsx|xls|csv|zip)\b|mds=/i.test(v));
+        if (title && path) links.push({ href: new URL(path, "https://www.mca.gov.in").href, text: title });
+        Object.values(o).forEach(walk);
+      };
+      walk(json);
+    }
     files = pickRecent(links, MONTHS);
     log(`  ${links.length} links; monthly files: ${files.map((f) => f.month).join(", ") || "none"}`);
     // nothing recognised: show the links that look like data, so the developer can see the page's layout
@@ -100,10 +131,10 @@ try {
         return { hits, text: (main?.innerText || "").slice(0, 20000) };
       }).catch(() => ({ hits: [], text: "" }));
       await rpc("probe_upload", { p_url: url, p_note: "MCA page snapshot (no monthly file found)", p_runner: RUNNER,
-        p_result: { status: 200, final_url: page.url(), title: await page.title().catch(() => ""), text: snap.text, links: { month_elements: snap.hits, background: loaded }, forms: [] } }).catch((e) => log("snapshot", e.message));
+        p_result: { status: 200, final_url: page.url(), title: await page.title().catch(() => ""), text: snap.text, links: { month_elements: snap.hits, background: loaded, doc_lists: docLists.map((d) => ({ url: d.url, body: d.body.slice(0, 15000) })) }, forms: [] } }).catch((e) => log("snapshot", e.message));
       log("  sent a page snapshot to Dhandha");
     }
-    if (!files.length) for (const l of links.filter((l) => /xls|csv|zip|dms|document|download|incorporat|month|20\d\d/i.test(`${l.href} ${l.text}`)).slice(0, 40)) log(`    link: ${l.text.slice(0, 80)} → ${l.href.slice(0, 160)}`);
+    if (!files.length && process.env.MCA_DEBUG) for (const l of links.filter((l) => /xls|csv|zip|dms|document|download|incorporat|month|20\d\d/i.test(`${l.href} ${l.text}`)).slice(0, 40)) log(`    link: ${l.text.slice(0, 80)} → ${l.href.slice(0, 160)}`);
     if (files.length) break;
   }
   if (!files.length) {
