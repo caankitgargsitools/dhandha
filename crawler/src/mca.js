@@ -11,7 +11,7 @@ const { chromium } = await import("playwright").catch(() => import("playwright-c
 import { readXlsx } from "../../lib/xlsx.js";
 import { mcaFromRows } from "../../lib/mca.js";
 import { unzip } from "./unzip.js";
-import { pickRecent, looksBlocked } from "./mcaPick.js";
+import { pickRecent, looksBlocked, mcaDocLinks } from "./mcaPick.js";
 
 const env = process.env;
 for (const k of ["SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "INGEST_KEY"]) if (!env[k]) { console.error(`Missing ${k}`); process.exit(1); }
@@ -100,7 +100,12 @@ try {
     if (looksBlocked(res.status(), html) && !(VISIBLE && await waitForPerson(page))) { await report({ status: "blocked", url, detail: `MCA answered ${res.status()} with a bot check` }); process.exit(0); }
     seenPage = url;
     const links = await page.$$eval("a[href]", (as) => as.map((a) => ({ href: a.href, text: a.innerText.trim().slice(0, 200) }))).catch(() => []);
-    // documents listed by searchDocList: a title naming a month, and a path to the file in the same entry
+    // MCA's own document list for "Companies and LLPs registered in <month>" (folder 403), asked as the page asks it
+    const listUrl = `https://www.mca.gov.in/bin/dms/searchDocList?page=1&perPage=${MONTHS + 2}&sortField=Date&sortOrder=D&searchField=Title&searchKeyword=&startDate=&endDate=&filter=&dialog=${encodeURIComponent(JSON.stringify({ folder: "403", language: "English", totalColumns: 2, columns: ["Title", "Date"] }))}`;
+    const listBody = await page.evaluate(async (u) => { try { const r = await fetch(u, { credentials: "include" }); return r.ok ? r.text() : ""; } catch { return ""; } }, listUrl).catch(() => "");
+    if (listBody) docLists.push({ url: listUrl, body: listBody });
+    for (const d of docLists) links.push(...mcaDocLinks(d.body));
+    // other document lists: a title naming a month, and a path to the file in the same entry
     for (const d of docLists) {
       let json; try { json = JSON.parse(d.body); } catch { continue; }
       const walk = (o) => {
