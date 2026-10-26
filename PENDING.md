@@ -2,7 +2,7 @@
 
 Checked and sent to the owner every morning (09:23 IST) by the Dhandha development session. Items move to
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
-Last checked: 25 Oct 2026.
+Last checked: 26 Oct 2026.
 
 ## The queue — one by one, in this order
 
@@ -24,7 +24,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 10a | **Daily captcha session** — Admin → Captcha session → "Start today's session" each morning (reminder 09:31 IST), type each portal's captcha; re-verify a portal when its alert comes. Needs the phone app (step 5) for alerts | You | Portals show Live; tenders show "✓ Pre-checked" before anyone opens them; the page learns each portal's session length | From 25 Oct |
 | 10b | **Big document hand-over time-outs** — 2 fetches on 24 Oct failed at `doc_job_put_chunk` (database statement time-out); make the chunk writes smaller/faster and retry (G) | Claude | No fetch fails at "Handing over" | Done 25 Oct — 512 KB pieces, no compression attempt, five retries |
 | 11 | **Tender winners after the captcha** — results pages return nothing; find the new layout and fix (A) | Claude | Real award results arrive in Tender winners | Next for Claude |
-| 12 | **More tender detail per crawl** (value, EMD) and a Haryana portal re-test (D) | Claude | Values / EMD filled on new tenders; Haryana tenders arrive | Planned |
+| 12 | **More tender detail per crawl** (value, EMD) and a Haryana portal re-test (D) | Claude | Values / EMD filled on new tenders; Haryana tenders arrive | Haryana tenders arrive again (26 Oct crawl); value / EMD per crawl still planned |
 | 13 | **BOQ Excel (.xls) into the cost planner** (B) | Claude | Upload the portal's BOQ and its items fill the planner | Planned |
 | 14 | **Razorpay switch-on** — keys in Vercel, webhook in Razorpay, secret in Supabase Vault, seller GSTIN in Admin → Billing (#7) | You | Webhook secret + GSTIN present; a test top-up adds credits | Open |
 | 15 | **Facebook / Instagram (Meta app)** — Business app, keys in Vercel, app secret in Vault, App Review (#9) | You | A test lead-ad lead arrives | Open |
@@ -42,6 +42,8 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 27 | **Before launch** — remove demo data (`demo_seed`), move pg_net out of the public schema (J) | Claude | No demo rows; Supabase lint clean | At launch |
 
 ## Done (recent)
+
+- 26 Oct: Lead autopilot 2nd run — 35 new leads for ₹70 (15 already in your leads skipped); 72 GSC leads in all. Crawl runs no longer cut off at 25 minutes (the old document step removed — the always-on worker does it). Haryana and Delhi tenders arriving.
 
 - 25 Oct: Lead autopilot first run (18 leads in the CRM at New); unused budget now goes to Google Maps. Document hand-over time-outs fixed. 22 tenders pre-checked with "Get ready" lists; 6 portal sessions live (CPPP, Delhi, Maharashtra, MP, Odisha, Punjab).
 
