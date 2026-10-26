@@ -71,11 +71,14 @@ try {
     log("open", url);
     const res = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 }).catch((e) => ({ error: e }));
     if (res?.error) { log("  ", res.error.message.split("\n")[0]); continue; }
+    // MCA's page redirects and rebuilds itself after loading: wait until it settles before reading it
+    await page.waitForLoadState("networkidle", { timeout: 30000 }).catch(() => {});
     await page.waitForTimeout(3000);
-    const html = await page.content();
+    let html = "";
+    for (let i = 0; i < 5 && !html; i++) html = await page.content().catch(async () => { await page.waitForTimeout(2000); return ""; });
     if (looksBlocked(res.status(), html) && !(VISIBLE && await waitForPerson(page))) { await report({ status: "blocked", url, detail: `MCA answered ${res.status()} with a bot check` }); process.exit(0); }
     seenPage = url;
-    const links = await page.$$eval("a[href]", (as) => as.map((a) => ({ href: a.href, text: a.innerText.trim().slice(0, 200) })));
+    const links = await page.$$eval("a[href]", (as) => as.map((a) => ({ href: a.href, text: a.innerText.trim().slice(0, 200) }))).catch(() => []);
     files = pickRecent(links, MONTHS);
     log(`  ${links.length} links; monthly files: ${files.map((f) => f.month).join(", ") || "none"}`);
     if (files.length) break;
