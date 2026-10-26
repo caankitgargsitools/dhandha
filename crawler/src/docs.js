@@ -290,6 +290,33 @@ async function keepAlive() {
 }
 async function dropSession(portal) { const s = sessions.get(portal); if (s) { sessions.delete(portal); await s.ctx.close().catch(() => {}); } }
 
+// Probe: open one public page (asked for by Dhandha's developer to see a portal from India) and report what is there —
+// status, text, links, form fields and a small screenshot. Nothing is submitted; a captcha is only noted, never touched.
+async function runProbe(browser, pr) {
+  const ctx = await browser.newContext({ locale: "en-IN", viewport: { width: 1280, height: 1600 } });
+  const page = await ctx.newPage();
+  const out = {};
+  try {
+    const res = await page.goto(pr.url, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await page.waitForTimeout(4000);
+    out.status = res?.status() ?? null;
+    out.final_url = page.url();
+    out.title = await page.title().catch(() => "");
+    out.text = (await page.evaluate(() => document.body?.innerText || "").catch(() => "")).slice(0, 30000);
+    out.links = await page.$$eval("a[href]", (as) => as.slice(0, 400).map((a) => ({ href: a.href, text: a.innerText.trim().slice(0, 120) }))).catch(() => []);
+    out.forms = await page.$$eval("form", (fs) => fs.slice(0, 10).map((f) => ({ action: f.action, method: f.method,
+      fields: [...f.querySelectorAll("input,select,textarea,button")].slice(0, 40).map((e) => ({ tag: e.tagName.toLowerCase(), type: e.type || "", name: e.name || e.id || "", value: e.tagName === "SELECT" ? [...e.options].slice(0, 15).map((o) => o.text).join(" | ") : (e.type === "hidden" ? "" : String(e.value || "").slice(0, 60)) })) }))).catch(() => []);
+    out.captcha = await hasCaptcha(page).catch(() => false);
+    out.screenshot = `data:image/jpeg;base64,${(await page.screenshot({ type: "jpeg", quality: 35 })).toString("base64")}`;
+  } catch (e) {
+    out.error = e.message.split("\n")[0];
+  } finally {
+    await ctx.close().catch(() => {});
+  }
+  await rpc("probe_report", { p_id: pr.id, p_result: out }).catch((e) => log("probe_report", e.message));
+  log(`probe ${pr.id} ${pr.url}: ${out.error || out.status}`);
+}
+
 async function runJob(browser, job) {
   const site = GEPNIC.find((s) => s.portal === job.portal);
   if (!site || site.skip) { await update(job, { status: "failed", error: `Fetching documents from ${job.portal} is not supported yet. Download them from the portal and upload here.` }); return; }
@@ -336,6 +363,8 @@ try {
       lastSessionCheck = Date.now();
       const req = await rpc("session_claim", { p_runner: RUNNER }).catch((e) => { log("session_claim", e.message); return null; });
       if (req) { await openSession(browser, req); lastSessionCheck = 0; continue; }
+      const pr = await rpc("probe_claim", { p_runner: RUNNER }).catch(() => null);
+      if (pr) { await runProbe(browser, pr); lastSessionCheck = 0; continue; }
     }
     // jobs people wait for come first; otherwise stay on the portal whose session is already open
     const job = await rpc("doc_job_claim", { p_runner: RUNNER, p_portal: lastPortal });
