@@ -6,7 +6,7 @@ name: crawler image
 on:
   push:
     branches: [main]
-    paths: ["crawler/**", ".github/workflows/crawler-image.yml"]
+    paths: ["crawler/**", "lib/xlsx.js", "lib/mca.js", ".github/workflows/crawler-image.yml"]
   workflow_dispatch:
 
 permissions:
@@ -30,7 +30,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
-          context: crawler
+          context: .
+          file: crawler/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
