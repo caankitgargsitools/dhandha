@@ -12,6 +12,9 @@ command -v node >/dev/null || { echo "Please install Node.js first: https://node
 mkdir -p "$DIR/crawler/src" "$DIR/lib"
 cd "$DIR"
 echo "Getting the latest Dhandha MCA files…"
+# pin the newest commit, so a cached older copy is never used
+SHA="$(curl -fsSL -H 'Accept: application/vnd.github.sha' https://api.github.com/repos/caankitgargsitools/dhandha/commits/main 2>/dev/null || true)"
+if printf '%s' "$SHA" | grep -Eq '^[0-9a-f]{40}$'; then REPO="https://raw.githubusercontent.com/caankitgargsitools/dhandha/$SHA"; echo "Version ${SHA:0:7}"; fi
 for f in crawler/src/mca.js crawler/src/mcaPick.js crawler/src/unzip.js lib/xlsx.js lib/mca.js; do
   curl -fsSL -H "Cache-Control: no-cache" "$REPO/$f?v=$(date +%s)" -o "$f"   # always the newest version
 done
