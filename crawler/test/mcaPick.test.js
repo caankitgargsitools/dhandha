@@ -34,3 +34,12 @@ test("last six months, one file each, oldest first", () => {
   assert.deepEqual(r.map((x) => x.month), [202604, 202605, 202606, 202607, 202608, 202609]);
   assert.equal(r.at(-1).href, "/dam/Sep_2026.xlsx");
 });
+
+test("MCA document links without an extension count, by the month in their text", () => {
+  const r = pickRecent([
+    { href: "https://www.mca.gov.in/bin/dms/getdocument?mds=abc&type=open", text: "Companies registered during September 2026" },
+    { href: "https://www.mca.gov.in/bin/dms/getdocument?mds=def&type=open", text: "Companies registered during August 2026" },
+    { href: "https://www.mca.gov.in/content/mca/global/en/home.html", text: "Home 2026" },
+  ], 6);
+  assert.deepEqual(r.map((x) => x.month), [202608, 202609]);
+});
