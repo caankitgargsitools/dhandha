@@ -37,3 +37,15 @@ export function pickRecent(links, months = 6) {
 
 // MCA's site answers a bot check instead of the page
 export const looksBlocked = (status, text) => status === 403 || status === 429 || /access denied|request unsuccessful|verify you are (a )?human|are you a robot|captcha|incapsula|akamai/i.test(String(text || "").slice(0, 5000));
+
+// MCA's document list (/bin/dms/searchDocList, folder 403 = "Companies and LLPs registered in <Month>' <Year>"):
+// documentDetails is JSON inside a JSON string. → [{ href, text }] download links for the registration files.
+export function mcaDocLinks(body, base = "https://www.mca.gov.in") {
+  let outer; try { outer = typeof body === "string" ? JSON.parse(body) : body; } catch { return []; }
+  let items = outer?.documentDetails;
+  if (typeof items === "string") { try { items = JSON.parse(items); } catch { return []; } }
+  if (!Array.isArray(items)) return [];
+  return items
+    .filter((d) => d && d.docID && /registered/i.test(d.column1 || "") && !/struck|closed/i.test(d.column1 || ""))
+    .map((d) => ({ href: `${base}/bin/dms/getdocument?mds=${d.docID}&type=open`, text: `${String(d.column1).replace(/\\u0027/g, "'")}.${(d.docType || "xlsx").toLowerCase()}` }));
+}
