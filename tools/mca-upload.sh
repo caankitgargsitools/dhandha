@@ -21,12 +21,21 @@ cat > crawler/package.json <<'PKG'
 PKG
 ( cd crawler && npm install --silent --no-audit --no-fund )
 KEYFILE="$DIR/.key"
+# a key looks like dhk_ followed by letters and digits; an old or wrong saved value is asked for again
+valid() { printf '%s' "$1" | grep -Eq '^dhk_[A-Za-z0-9]{16,}$'; }
+if [ -s "$KEYFILE" ] && ! valid "$(cat "$KEYFILE")"; then rm -f "$KEYFILE"; fi
 if [ ! -s "$KEYFILE" ]; then
   echo
   echo "Paste the Dhandha upload key (Admin → Crawler → Create key, name it 'MCA laptop'), then press Enter."
+  echo "Only the key: the line after INGEST_KEY= (it starts with dhk_). Nothing shows while you paste."
   echo "It is saved only on this computer, in $KEYFILE."
-  read -r -s KEY; echo
-  [ -n "$KEY" ] || { echo "No key given."; exit 1; }
+  IFS= read -r -s KEY
+  # a pasted block of several lines is read to the end here, so none of it reaches the shell afterwards
+  while IFS= read -r -s -t 1 MORE; do KEY="$KEY $MORE"; done
+  echo
+  # if the whole setup script was pasted, keep only the key
+  KEY="$(printf '%s' "$KEY" | grep -Eo 'dhk_[A-Za-z0-9]{16,}' | head -n1)"
+  valid "$KEY" || { echo "That did not look like a key (it starts with dhk_). Run this again and paste only the key."; exit 1; }
   umask 077; printf '%s' "$KEY" > "$KEYFILE"
 fi
 export SUPABASE_URL="https://umyesrpibsdgzsrqfvqf.supabase.co"
