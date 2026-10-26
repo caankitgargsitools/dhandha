@@ -67,6 +67,9 @@ async function waitForPerson(page) {
 try {
   const ctx = await browser.newContext({ locale: "en-IN", acceptDownloads: true });
   const page = await ctx.newPage();
+  // what the page loads in the background (the monthly list may come from a data address, not plain links)
+  const loaded = [];
+  page.on("response", (r) => { const t = r.headers()["content-type"] || ""; if (loaded.length < 150 && !/image|font|css|javascript/i.test(t)) loaded.push({ url: r.url().slice(0, 300), status: r.status(), type: t.slice(0, 60) }); });
   let files = [], seenPage = null;
   for (const url of PAGES) {
     log("open", url);
@@ -83,6 +86,23 @@ try {
     files = pickRecent(links, MONTHS);
     log(`  ${links.length} links; monthly files: ${files.map((f) => f.month).join(", ") || "none"}`);
     // nothing recognised: show the links that look like data, so the developer can see the page's layout
+    if (!files.length) {
+      // send Dhandha a snapshot of the page (public page only): elements naming a month, and the background data addresses
+      const snap = await page.evaluate(() => {
+        const rx = /(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*[\s,_-]*20\d\d/i;
+        const hits = [];
+        for (const el of document.querySelectorAll("a,button,li,td,option,span,div")) {
+          const t = (el.innerText || "").trim();
+          if (t && t.length < 160 && rx.test(t) && el.children.length < 4) hits.push({ tag: el.tagName.toLowerCase(), text: t.slice(0, 120), html: el.outerHTML.slice(0, 500) });
+          if (hits.length >= 60) break;
+        }
+        const main = document.querySelector("main, #main, .main, .container, body");
+        return { hits, text: (main?.innerText || "").slice(0, 20000) };
+      }).catch(() => ({ hits: [], text: "" }));
+      await rpc("probe_upload", { p_url: url, p_note: "MCA page snapshot (no monthly file found)", p_runner: RUNNER,
+        p_result: { status: 200, final_url: page.url(), title: await page.title().catch(() => ""), text: snap.text, links: { month_elements: snap.hits, background: loaded }, forms: [] } }).catch((e) => log("snapshot", e.message));
+      log("  sent a page snapshot to Dhandha");
+    }
     if (!files.length) for (const l of links.filter((l) => /xls|csv|zip|dms|document|download|incorporat|month|20\d\d/i.test(`${l.href} ${l.text}`)).slice(0, 40)) log(`    link: ${l.text.slice(0, 80)} → ${l.href.slice(0, 160)}`);
     if (files.length) break;
   }
