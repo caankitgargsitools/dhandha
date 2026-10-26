@@ -3,7 +3,11 @@
 // admin used to upload by hand. A file already loaded is skipped. Where MCA's site answers with a bot check or a
 // captcha, nothing is attempted: the run reports it and the admin gets a phone alert to upload by hand.
 //   node src/mca.js            check once (GitHub Actions runs it daily: .github/workflows/mca-monthly.yml)
-import { chromium } from "playwright";
+//   MCA_VISIBLE=1 node src/mca.js   on a laptop (tools/mca-upload.sh): a visible Chrome window on the person's own
+//                              connection; if MCA shows a check, the person completes it in that window and the run waits
+const VISIBLE = process.env.MCA_VISIBLE === "1";
+// "playwright" on the servers; "playwright-core" with the person's own Chrome on a laptop (tools/mca-upload.sh)
+const { chromium } = await import("playwright").catch(() => import("playwright-core"));
 import { readXlsx } from "../../lib/xlsx.js";
 import { mcaFromRows } from "../../lib/mca.js";
 import { unzip } from "./unzip.js";
@@ -47,7 +51,18 @@ function rowsOf(name, data) {
   throw new Error("old .xls format — open it in Excel, save as .xlsx and upload at Admin → New companies");
 }
 
-const browser = await chromium.launch();
+const browser = VISIBLE ? await chromium.launch({ headless: false, channel: "chrome" }) : await chromium.launch();
+// in the visible window a person may clear MCA's check; wait for them (up to 10 minutes) instead of giving up
+async function waitForPerson(page) {
+  console.log("\n>>> MCA is showing a check in the Chrome window. Please complete it there; this script will carry on by itself.\n");
+  const until = Date.now() + 10 * 60000;
+  while (Date.now() < until) {
+    await page.waitForTimeout(3000);
+    const html = await page.content().catch(() => "");
+    if (!looksBlocked(200, html) && /\.(xlsx|xls|csv|zip)/i.test(html)) return true;
+  }
+  return false;
+}
 try {
   const ctx = await browser.newContext({ locale: "en-IN", acceptDownloads: true });
   const page = await ctx.newPage();
@@ -58,7 +73,7 @@ try {
     if (res?.error) { log("  ", res.error.message.split("\n")[0]); continue; }
     await page.waitForTimeout(3000);
     const html = await page.content();
-    if (looksBlocked(res.status(), html)) { await report({ status: "blocked", url, detail: `MCA answered ${res.status()} with a bot check` }); process.exit(0); }
+    if (looksBlocked(res.status(), html) && !(VISIBLE && await waitForPerson(page))) { await report({ status: "blocked", url, detail: `MCA answered ${res.status()} with a bot check` }); process.exit(0); }
     seenPage = url;
     const links = await page.$$eval("a[href]", (as) => as.map((a) => ({ href: a.href, text: a.innerText.trim().slice(0, 200) })));
     files = pickRecent(links, MONTHS);
@@ -72,9 +87,17 @@ try {
   for (const found of files) {
     const name = decodeURIComponent(found.href.split("/").pop().split("?")[0]).slice(0, 200);
     if (await rpc("mca_fetch_seen", { p_name: name })) { log("already loaded:", name); continue; }
-    const resp = await ctx.request.get(found.href, { timeout: 120000 });
-    const body = Buffer.from(await resp.body());
-    const type = resp.headers()["content-type"] || "";
+    let resp = await ctx.request.get(found.href, { timeout: 120000 });
+    let body = Buffer.from(await resp.body());
+    let type = resp.headers()["content-type"] || "";
+    if (VISIBLE && (!resp.ok() || /text\/html/i.test(type))) {
+      // as a person would: click the link in the page and keep the downloaded file
+      const dl = page.waitForEvent("download", { timeout: 120000 }).catch(() => null);
+      await page.evaluate((h) => { const a = [...document.querySelectorAll("a")].find((x) => x.href === h); if (a) a.click(); else location.href = h; }, found.href);
+      const d = await dl;
+      const path = d && await d.path();
+      if (path) { const { readFile } = await import("node:fs/promises"); body = await readFile(path); resp = { ok: () => true, status: () => 200 }; type = "application/octet-stream"; }
+    }
     if (!resp.ok() || /text\/html/i.test(type)) {
       const blocked = looksBlocked(resp.status(), body.toString("utf8", 0, 5000));
       await report({ status: blocked ? "blocked" : "failed", name, url: found.href, detail: `download answered ${resp.status()} ${type}` });
