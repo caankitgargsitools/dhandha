@@ -43,7 +43,8 @@ function rowsOf(name, data) {
     return rowsOf(inner.name, inner.data);
   }
   if (/\.xlsx$/i.test(name) || data.subarray(0, 2).toString() === "PK") return readXlsx(data, { maxRows: 100000 });
-  if (/\.csv$/i.test(name)) {
+  // a file with no extension: plain text with commas is a CSV
+  if (/\.csv$/i.test(name) || (!/\.xls$/i.test(name) && /^[\x09\x0a\x0d\x20-\x7e]{20}/.test(data.subarray(0, 20).toString("latin1")) && data.subarray(0, 2000).toString("latin1").includes(","))) {
     const lines = data.toString("utf8").split(/\r?\n/).filter(Boolean);
     const split = (l) => l.match(/("([^"]|"")*"|[^,]*)(,|$)/g).map((c) => c.replace(/,$/, "").replace(/^"|"$/g, "").replace(/""/g, '"'));
     return lines.map(split);
@@ -81,6 +82,8 @@ try {
     const links = await page.$$eval("a[href]", (as) => as.map((a) => ({ href: a.href, text: a.innerText.trim().slice(0, 200) }))).catch(() => []);
     files = pickRecent(links, MONTHS);
     log(`  ${links.length} links; monthly files: ${files.map((f) => f.month).join(", ") || "none"}`);
+    // nothing recognised: show the links that look like data, so the developer can see the page's layout
+    if (!files.length) for (const l of links.filter((l) => /xls|csv|zip|dms|document|download|incorporat|month|20\d\d/i.test(`${l.href} ${l.text}`)).slice(0, 40)) log(`    link: ${l.text.slice(0, 80)} → ${l.href.slice(0, 160)}`);
     if (files.length) break;
   }
   if (!files.length) {
@@ -88,7 +91,8 @@ try {
     process.exit(0);
   }
   for (const found of files) {
-    const name = decodeURIComponent(found.href.split("/").pop().split("?")[0]).slice(0, 200);
+    const tail = decodeURIComponent(found.href.split("/").pop().split("?")[0]);
+    const name = (/\.(xlsx|xls|csv|zip)$/i.test(tail) ? tail : `${found.text || "MCA"} (${found.month})`).replace(/[^\w .()-]/g, "_").slice(0, 200);
     if (await rpc("mca_fetch_seen", { p_name: name })) { log("already loaded:", name); continue; }
     let resp = await ctx.request.get(found.href, { timeout: 120000 });
     let body = Buffer.from(await resp.body());

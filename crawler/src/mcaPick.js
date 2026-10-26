@@ -14,7 +14,8 @@ export function monthOf(text) {
 // links: [{ href, text }] → the newest spreadsheet (or zip) by the month in its text or file name
 export function pickLatest(links) {
   const files = links
-    .filter((l) => /\.(xlsx|xls|csv|zip)(\?|$)/i.test(l.href || ""))
+    // a spreadsheet link, or MCA's document links (…/bin/dms/getdocument?…) that carry no file extension
+    .filter((l) => /\.(xlsx|xls|csv|zip)(\?|$)/i.test(l.href || "") || /getdocument|\/dms\/|download/i.test(l.href || ""))
     .map((l) => ({ ...l, month: monthOf(`${l.text} ${decodeURIComponent(String(l.href).split("/").pop())}`) }))
     .filter((l) => l.month);
   files.sort((a, b) => b.month - a.month || (/\.xlsx/i.test(b.href) ? 1 : 0) - (/\.xlsx/i.test(a.href) ? 1 : 0));
