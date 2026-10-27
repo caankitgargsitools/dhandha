@@ -2,17 +2,22 @@
 import { stateFrom, industryPack } from "../classify.js";
 
 export function mapGemDoc(doc, base) {
-  const num = Array.isArray(doc.b_bid_number) ? doc.b_bid_number[0] : doc.b_bid_number;
-  const cat = Array.isArray(doc.b_category_name) ? doc.b_category_name[0] : doc.b_category_name;
+  const one = (v) => (Array.isArray(v) ? v[0] : v);
+  const num = one(doc.b_bid_number);
+  const cat = one(doc.b_category_name);
   const ministry = [doc.ba_official_details_minName, doc.ba_official_details_deptName].flat().filter(Boolean).join(" / ");
-  const end = Array.isArray(doc.final_end_date_sort) ? doc.final_end_date_sort[0] : doc.final_end_date_sort;
-  const start = Array.isArray(doc.final_start_date_sort) ? doc.final_start_date_sort[0] : doc.final_start_date_sort;
+  // GeM's "...Z" times are India time (13:02Z is shown on the page as 1:02 PM)
+  const ist = (v) => (v ? String(one(v)).replace(/Z$/, "+05:30") : null);
+  const end = ist(doc.final_end_date_sort), start = ist(doc.final_start_date_sort);
   if (!num || !cat) return null;
+  const id = one(doc.b_id) || doc.id;
+  const qty = one(doc.b_total_quantity);
   return {
-    portal: "GeM", tender_ref: num, title: cat, authority: ministry || "GeM buyer",
+    portal: "GeM", tender_ref: num, title: qty ? `${cat} (qty ${qty})` : cat, authority: ministry || "GeM buyer",
     category: cat, industry_pack: industryPack(cat) || "goods_supply",
-    published_on: start ? String(start).slice(0, 10) : null, due_at: end || null,
-    state: stateFrom(ministry), url: `${base}/all-bids`,
+    published_on: start ? start.slice(0, 10) : null, due_at: end,
+    state: stateFrom(ministry),
+    url: id ? `${base}/${/\/R\//.test(num) ? "showradocumentPdf" : "showbidDocument"}/${id}` : `${base}/all-bids`,
   };
 }
 
@@ -82,30 +87,44 @@ async function crawlGemPage(page, { base, maxPages, words, log, progress }) {
 export async function crawlGem(browser, { maxPages = 20, log = console.log, base = "https://bidplus.gem.gov.in", progress = () => {}, words = (process.env.GEM_SEARCH || "audit,chartered accountant,accounting,accounts,internal audit,GST,taxation,valuation,financial consultant").split(",").map((x) => x.trim()).filter(Boolean) } = {}) {
   const ctx = await browser.newContext({ locale: "en-IN" });
   const page = await ctx.newPage();
-  const out = [];
+  const out = new Map();
   try {
+    // the page asks for its first list itself: take its security token and filter from that request
+    const first = page.waitForRequest((r) => r.url().includes("all-bids-data"), { timeout: 60000 }).catch(() => null);
     await page.goto(`${base}/all-bids`, { waitUntil: "domcontentloaded", timeout: 60000 });
-    for (let p = 1; p <= maxPages; p++) {
-      progress({ phase: "listing", page: p, of: maxPages });
-      const res = await page.evaluate(async ({ p, base }) => {
-        const csrf = document.querySelector("input[name=csrf_bd_gem_nk]")?.value
-          || document.cookie.split("; ").find((c) => c.startsWith("csrf_gem_cookie="))?.split("=")[1] || "";
-        const payload = { page: p, param: { searchBid: "", searchType: "fullText" },
-          filter: { bidStatusType: "ongoing_bids", byType: "all", highBidValue: "", byEndDate: { from: "", to: "" }, sort: "Bid-Start-Date-Latest" } };
-        const body = new URLSearchParams({ payload: JSON.stringify(payload), csrf_bd_gem_nk: csrf });
-        const r = await fetch(`${base}/all-bids-data`, { method: "POST", body, headers: { "x-requested-with": "XMLHttpRequest" } });
-        return r.ok ? r.json() : { error: r.status };
-      }, { p, base });
-      const docs = res?.response?.response?.docs || res?.response?.docs || [];
-      if (res?.error) { log(`  GeM page ${p}: HTTP ${res.error}`); break; }
-      for (const d of docs) { const m = mapGemDoc(d, base); if (m) out.push(m); }
-      if (docs.length === 0) break;
-      await new Promise((r) => setTimeout(r, 1200));
+    const req = await first;
+    const form = new URLSearchParams(req?.postData() || "");
+    const csrf = form.get("csrf_bd_gem_nk") || "";
+    let filter = { bidStatusType: "ongoing_bids", byType: "all", highBidValue: "", byEndDate: { from: "", to: "" }, sort: "Bid-End-Date-Oldest" };
+    try { filter = JSON.parse(form.get("payload") || "{}").filter || filter; } catch {}
+    if (!csrf) log("  GeM: no security token seen on the page");
+    await page.waitForTimeout(1500);
+    // every search word (CA work) in full, plus the first pages of all bids
+    for (const w of [...words, ""]) {
+      const limit = w ? maxPages * 3 : maxPages;
+      let found = null;
+      for (let p = 1; p <= limit; p++) {
+        progress({ phase: w ? `search “${w}”` : "latest", page: p, of: found ? Math.min(limit, Math.ceil(found / 10)) : limit });
+        const res = await page.evaluate(async ({ p, base, csrf, filter, w }) => {
+          const payload = { page: p, param: { searchBid: w, searchType: "fullText" }, filter };
+          const body = new URLSearchParams({ payload: JSON.stringify(payload), csrf_bd_gem_nk: csrf });
+          const r = await fetch(`${base}/all-bids-data`, { method: "POST", body, headers: { "x-requested-with": "XMLHttpRequest" } });
+          return r.ok ? r.json() : { error: r.status };
+        }, { p, base, csrf, filter, w });
+        if (res?.error) { log(`  GeM ${w || "all"} page ${p}: HTTP ${res.error}`); break; }
+        const r = res?.response?.response || res?.response || {};
+        const docs = r.docs || [];
+        found = r.numFound ?? found;
+        for (const d of docs) { const m = mapGemDoc(d, base); if (m) out.set(m.tender_ref, m); }
+        if (!docs.length || (found !== null && p * 10 >= found)) break;
+        await new Promise((x) => setTimeout(x, 800)); // polite pace
+      }
+      log(`  GeM ${w ? `“${w}”` : "all bids"}: ${found ?? "?"} found · ${out.size} so far`);
     }
     // the data address answered nothing (it changes): read the page itself instead
-    if (!out.length) out.push(...await crawlGemPage(page, { base, maxPages, words, log, progress }));
+    if (!out.size) for (const m of await crawlGemPage(page, { base, maxPages, words, log, progress })) out.set(m.tender_ref, m);
   } finally {
     await ctx.close();
   }
-  return out;
+  return [...out.values()];
 }
