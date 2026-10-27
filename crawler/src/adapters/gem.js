@@ -16,7 +16,68 @@ export function mapGemDoc(doc, base) {
   };
 }
 
-export async function crawlGem(browser, { maxPages = 20, log = console.log, base = "https://bidplus.gem.gov.in", progress = () => {} } = {}) {
+// "26-10-2026 3:28 PM" (India time) → ISO with +05:30
+export function gemDate(s) {
+  const m = String(s || "").match(/(\d{1,2})-(\d{1,2})-(\d{4})\s+(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+  if (!m) return null;
+  let h = Number(m[4]) % 12; if ((m[6] || "").toUpperCase() === "PM") h += 12; if (!m[6]) h = Number(m[4]);
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${m[3]}-${pad(m[2])}-${pad(m[1])}T${pad(h)}:${m[5]}:00+05:30`;
+}
+
+// The bid list as GeM shows it on the page (text of "All Bids"): Bid No., Items, Quantity, Department, Start/End Date.
+export function parseGemText(text, base = "https://bidplus.gem.gov.in") {
+  const out = [];
+  const blocks = String(text || "").split(/\n\s*Bid No\.:\s*/).slice(1);
+  for (const b of blocks) {
+    const num = (b.match(/^(GEM\/\d{4}\/[A-Z]\/\d+)/) || [])[1];
+    const items = (b.match(/Items:\s*([^\n]+)/) || [])[1];
+    if (!num || !items) continue;
+    const dept = ((b.match(/Department Name And Address:\s*\n([\s\S]*?)\n\s*Start Date:/) || [])[1] || "").split("\n").map((x) => x.trim()).filter(Boolean);
+    const start = gemDate((b.match(/Start Date:\s*([^\n]+)/) || [])[1]);
+    const end = gemDate((b.match(/End Date:\s*([^\n]+)/) || [])[1]);
+    const qty = (b.match(/Quantity:\s*([^\n]+)/) || [])[1];
+    const title = items.replace(/\.\.\.$/, "").trim();
+    const authority = dept.join(" / ") || "GeM buyer";
+    out.push({ portal: "GeM", tender_ref: num, title: qty ? `${title} (qty ${qty.trim()})` : title, authority, department: dept[1] || null,
+      category: title, industry_pack: industryPack(title) || "goods_supply", published_on: start ? start.slice(0, 10) : null, due_at: end,
+      state: stateFrom(authority), url: `${base}/all-bids` });
+  }
+  return out;
+}
+
+// Reads the list straight from the page, a page at a time (GeM's "Next" works by script, not links), for the latest
+// bids and for each search word (GEM_SEARCH, e.g. audit, accountant): what a person sees on "All Bids".
+async function crawlGemPage(page, { base, maxPages, words, log, progress }) {
+  const out = new Map();
+  for (const w of ["", ...words]) {
+    await page.goto(`${base}/all-bids`, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await page.waitForTimeout(3000);
+    if (w) {
+      const box = await page.$("input[name=search]");
+      if (!box) break;
+      await box.fill(w); await box.press("Enter");
+      await page.waitForTimeout(4000);
+    }
+    let last = "";
+    for (let p = 1; p <= maxPages; p++) {
+      progress({ phase: w ? `search “${w}”` : "latest", page: p, of: maxPages });
+      const text = await page.evaluate(() => document.body.innerText).catch(() => "");
+      const rows = parseGemText(text, base);
+      if (!rows.length || rows[0].tender_ref === last) break;
+      last = rows[0].tender_ref;
+      for (const r of rows) out.set(r.tender_ref, r);
+      const next = await page.$("a:has-text('Next'), li.next a, a.page-link:has-text('Next')");
+      if (!next) break;
+      await next.click().catch(() => {});
+      await page.waitForTimeout(2500);
+    }
+    log(`  GeM ${w ? `“${w}”` : "latest"}: ${out.size} bids so far`);
+  }
+  return [...out.values()];
+}
+
+export async function crawlGem(browser, { maxPages = 20, log = console.log, base = "https://bidplus.gem.gov.in", progress = () => {}, words = (process.env.GEM_SEARCH || "audit,chartered accountant,accounting,accounts,internal audit,GST,taxation,valuation,financial consultant").split(",").map((x) => x.trim()).filter(Boolean) } = {}) {
   const ctx = await browser.newContext({ locale: "en-IN" });
   const page = await ctx.newPage();
   const out = [];
@@ -39,6 +100,8 @@ export async function crawlGem(browser, { maxPages = 20, log = console.log, base
       if (docs.length === 0) break;
       await new Promise((r) => setTimeout(r, 1200));
     }
+    // the data address answered nothing (it changes): read the page itself instead
+    if (!out.length) out.push(...await crawlGemPage(page, { base, maxPages, words, log, progress }));
   } finally {
     await ctx.close();
   }

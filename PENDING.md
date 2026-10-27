@@ -2,7 +2,7 @@
 
 Checked and sent to the owner every morning (09:23 IST) by the Dhandha development session. Items move to
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
-Last checked: 26 Oct 2026.
+Last checked: 27 Oct 2026.
 
 ## The queue — one by one, in this order
 
@@ -42,6 +42,8 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 27 | **Before launch** — remove demo data (`demo_seed`), move pg_net out of the public schema (J) | Claude | No demo rows; Supabase lint clean | At launch |
 
 ## Done (recent)
+
+- 27 Oct: the Mumbai server crawled all 19 GePNIC portals overnight in 40 minutes (≈56,400 open tenders); 38 tenders pre-checked; 19 portal sessions live. GeM adapter now reads the bid list from the page (latest + service searches: audit, accountant, GST…). Lead autopilot found 0 new leads today — the same Google Maps results repeat; fix in progress (look past businesses already in your leads).
 
 - 26 Oct: Lead autopilot 2nd run — 35 new leads for ₹70 (15 already in your leads skipped); 72 GSC leads in all. Crawl runs no longer cut off at 25 minutes (the old document step removed — the always-on worker does it). Haryana and Delhi tenders arriving.
 
