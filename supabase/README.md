@@ -70,3 +70,4 @@ Social lead sources:
 47. `mca_fetches` (execute_sql) — table (status loaded/blocked/no_file/failed), `mca_fetch_seen`, `mca_fetch_report` (push on load; on block/failure at most weekly)
 48. `queue_prefetch` (execute_sql, 26 Oct) — a failed fetch may be queued again after an hour (was a day); tenders with a reading count as pre-checked (`prechecked_at` back-filled)
 49. `crawler_probes` (execute_sql) — table (no policies), `probe_claim` (runner must match `runner_like`, default india%), `probe_report`; the docs worker opens the page and reports status, text, links, forms, captcha seen, screenshot
+50. `autopilot_seen` (execute_sql, 27 Oct) — phones (last 10 digits) and normalised names already in a company's leads, so the autopilot's Google Maps searches look past them; `probe_upload` (26 Oct) — a worker stores a page snapshot as a probe row

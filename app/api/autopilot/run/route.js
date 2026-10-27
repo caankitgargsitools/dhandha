@@ -27,7 +27,13 @@ export async function POST(request) {
     if (c.sources.includes("google_maps")) {
       // Google Maps takes whatever the other sources could not use, so the whole day's budget goes to leads
       const want = Math.max(c.each, Number(c.total || 0) - added);
-      const searches = mapsQueries(c.queries);
+      // rotate which search goes first each day, and look past businesses already in this company's leads
+      const all = mapsQueries(c.queries);
+      const day = Math.floor(Date.now() / 864e5);
+      const searches = all.map((_, i) => all[(i + day) % all.length]);
+      const { data: seen } = await supabase.rpc("autopilot_seen", { p_key: key, p_company: c.company_id });
+      const phones = new Set(seen?.phones || []), names = new Set(seen?.names || []);
+      const known = (r) => phones.has(String(r.phone || "").replace(/\D/g, "").slice(-10)) || names.has(String(r.name || "").toLowerCase().replace(/[^a-z0-9]/g, ""));
       if (!searches.length) { await put("google_maps", [], "No Google Maps searches set"); continue; }
       const found = new Map();
       // a few pages per search, until there are three candidates for every lead the budget buys
@@ -36,7 +42,11 @@ export async function POST(request) {
         for (let i = 0; i < 3 && found.size < want * 3; i++) {
           const r = await placesSearch({ query: q, pageToken: page });
           if (r.error) { console.error("autopilot maps", r.error); break; }
-          for (const p of r.places) if (!found.has(p.id)) found.set(p.id, { ...mapPlace(p, { industry: q.split(" in ")[0] }), address: p.formattedAddress || null });
+          for (const p of r.places) {
+            if (found.has(p.id)) continue;
+            const row = { ...mapPlace(p, { industry: q.split(" in ")[0] }), address: p.formattedAddress || null };
+            if (!known(row)) found.set(p.id, row);
+          }
           if (!(page = r.next)) break;
         }
         if (found.size >= want * 3) break;
