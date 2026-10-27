@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { parseIstDate, rupees, industryPack, stateFrom } from "../src/classify.js";
 import { parseTitleCell, parseDetail } from "../src/adapters/gepnic.js";
-import { mapGemDoc } from "../src/adapters/gem.js";
+import { mapGemDoc, parseGemText, gemDate } from "../src/adapters/gem.js";
 
 test("IST dates", () => {
   assert.equal(parseIstDate("07-Oct-2026 05:00 PM"), "2026-10-07T11:30:00.000Z");
@@ -33,4 +33,39 @@ test("classify", () => {
 test("GeM doc", () => {
   const t = mapGemDoc({ b_bid_number: ["GEM/2026/B/5823417"], b_category_name: ["Road Maintenance Service"], ba_official_details_minName: ["Ministry of Road Transport"], final_end_date_sort: ["2026-10-18T15:00:00Z"] }, "https://bidplus.gem.gov.in");
   assert.equal(t.tender_ref, "GEM/2026/B/5823417"); assert.equal(t.industry_pack, "construction"); assert.equal(t.due_at, "2026-10-18T15:00:00Z");
+});
+
+test("GeM bid list read from the page text", () => {
+  const text = `Showing 1 - 10 records of 42206 records
+Sort by: Bid End Date: Oldest First
+
+Bid No.:  GEM/2026/B/7670847
+
+RA NO: GEM/2026/R/757471
+
+Items: CTG Machine (V2)
+Quantity: 10
+Department Name And Address: 
+Ministry of Labour and Employment
+Employees State Insuarnce Corporation
+Start Date: 24-10-2026 1:00 PM
+End Date:   26-10-2026 3:28 PM
+
+Bid No.:  GEM/2026/B/8122503
+
+Items: Annual audit of accounts...
+Quantity: 1
+Department Name And Address: 
+Higher Education Department Haryana
+Start Date: 25-10-2026 2:00 PM
+End Date:   06-11-2026 11:00 AM
+Prev`;
+  const rows = parseGemText(text);
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].tender_ref, "GEM/2026/B/7670847");
+  assert.equal(rows[0].due_at, "2026-10-26T15:28:00+05:30");
+  assert.equal(rows[0].authority, "Ministry of Labour and Employment / Employees State Insuarnce Corporation");
+  assert.equal(rows[1].title, "Annual audit of accounts (qty 1)");
+  assert.equal(rows[1].state, "Haryana");
+  assert.equal(gemDate("06-11-2026 12:05 AM"), "2026-11-06T00:05:00+05:30");
 });
