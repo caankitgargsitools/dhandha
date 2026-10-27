@@ -43,7 +43,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 
 ## Done (recent)
 
-- 27 Oct (later): Lead autopilot fixed — rerun found 50 new leads for ₹100 (skips businesses already in your leads, rotates searches). Tender winners now asked in the morning captcha session. State portals (Gujarat, Karnataka, AP, Telangana, Bihar) open from India with no captcha; their tender lists load in the background, so probes now record those calls.
+- 27 Oct (later): Lead autopilot fixed — rerun found 50 new leads for ₹100 (skips businesses already in your leads, rotates searches). Tender winners now asked in the morning captcha session. Server updater (Watchtower) was broken since setup — replaced by the owner; the server now has all fixes and updates hourly. GeM reader verified on the live page (41,984 bids). Gujarat nProcure adapter built (≈3,400 tenders); Karnataka's search needs a captcha (will join the morning session); AP, Telangana, Bihar being probed. State portals (Gujarat, Karnataka, AP, Telangana, Bihar) open from India with no captcha; their tender lists load in the background, so probes now record those calls.
 
 - 27 Oct: the Mumbai server crawled all 19 GePNIC portals overnight in 40 minutes (≈56,400 open tenders); 38 tenders pre-checked; 19 portal sessions live. GeM adapter now reads the bid list from the page (latest + service searches: audit, accountant, GST…). Lead autopilot found 0 new leads today — the same Google Maps results repeat; fix in progress (look past businesses already in your leads).
 

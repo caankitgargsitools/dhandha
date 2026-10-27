@@ -4,6 +4,7 @@ import { chromium } from "playwright";
 import { GEPNIC, GEM } from "./sources.js";
 import { crawlGepnic } from "./adapters/gepnic.js";
 import { crawlGem } from "./adapters/gem.js";
+import { crawlNprocure, NPROCURE } from "./adapters/nprocure.js";
 import { crawlGepnicResults } from "./adapters/gepnicResults.js";
 import { crawlGemResults } from "./adapters/gemResults.js";
 import { sendTenders, sendAwards } from "./ingest.js";
@@ -37,6 +38,8 @@ function plan() {
     steps.push({ name: `${site.portal} · tenders`, run: (p) => crawlGepnic(p.browser, site, { maxDetails, log, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders(site.portal, rows, env)) : "no tenders found — check the site or adapter" })) });
     if (results) winners.push({ name: `${site.portal} · winners`, run: (p) => crawlGepnicResults(p.browser, site, { maxPages: Math.min(maxPages, 10), maxAwards, log, progress: p.update, captcha }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendAwards(`Results: ${site.portal}`, rows, env)) : "no results found — check the site or adapter" })) });
   }
+  // state portals with their own systems (not GePNIC)
+  if (pick(NPROCURE.portal)) steps.push({ name: `${NPROCURE.portal} · tenders`, run: (p) => crawlNprocure(p.browser, { maxPages: Number(env.NPROCURE_PAGES || 400), log, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders(NPROCURE.portal, rows, env)) : "no tenders found — check the site or adapter" })) });
   // tenders everywhere first; winners pages wait for a person to type a captcha, so they go last
   if (!pick("GeM")) return [...steps, ...winners];
   steps.push({ name: "GeM · tenders", run: (p) => crawlGem(p.browser, { maxPages, log, base: GEM.base, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders("GeM", rows, env)) : "no bids found — check the adapter" })) });
