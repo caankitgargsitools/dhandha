@@ -32,7 +32,15 @@ test("classify", () => {
 });
 test("GeM doc", () => {
   const t = mapGemDoc({ b_bid_number: ["GEM/2026/B/5823417"], b_category_name: ["Road Maintenance Service"], ba_official_details_minName: ["Ministry of Road Transport"], final_end_date_sort: ["2026-10-18T15:00:00Z"] }, "https://bidplus.gem.gov.in");
-  assert.equal(t.tender_ref, "GEM/2026/B/5823417"); assert.equal(t.industry_pack, "construction"); assert.equal(t.due_at, "2026-10-18T15:00:00Z");
+  assert.equal(t.tender_ref, "GEM/2026/B/5823417"); assert.equal(t.industry_pack, "construction"); assert.equal(t.due_at, "2026-10-18T15:00:00+05:30");
+  // real answer of all-bids-data (27 Oct 2026): India time marked Z, RA link, quantity
+  const ra = mapGemDoc({ id: "10074964", b_id: [10074964], b_bid_number: ["GEM/2026/R/757884"], b_category_name: ["Frame,Brushless Motors"], b_total_quantity: [47], final_start_date_sort: ["2026-10-24T19:00:00Z"], final_end_date_sort: ["2026-10-27T13:09:39Z"], ba_official_details_minName: ["Ministry of Defence"], ba_official_details_deptName: ["Department of Military Affairs"] }, "https://bidplus.gem.gov.in");
+  assert.equal(ra.url, "https://bidplus.gem.gov.in/showradocumentPdf/10074964");
+  assert.equal(ra.title, "Frame,Brushless Motors (qty 47)");
+  assert.equal(ra.authority, "Ministry of Defence / Department of Military Affairs");
+  assert.equal(ra.published_on, "2026-10-24");
+  const bid = mapGemDoc({ b_id: [9455923], b_bid_number: ["GEM/2026/B/7653450"], b_category_name: ["Saree"] }, "https://bidplus.gem.gov.in");
+  assert.equal(bid.url, "https://bidplus.gem.gov.in/showbidDocument/9455923");
 });
 
 test("GeM bid list read from the page text", () => {
