@@ -87,8 +87,6 @@ export function cityFrom(address) {
 export async function crawlGepnicResults(browser, site, { maxPages = 10, maxAwards = 300, log = console.log, progress = () => {}, captcha = null } = {}) {
   const ctx = await browser.newContext({ locale: "en-IN", userAgent: "Mozilla/5.0 (DhandhaBot; tender alerts for registered businesses)" });
   const page = await ctx.newPage();
-  const list = [];
-  const out = [];
   try {
     await page.goto(site.base + LIST, { waitUntil: "domcontentloaded", timeout: 60000 });
     // The results list sits behind a captcha: a person types it in Dhandha (see captcha.js), or the step is skipped.
@@ -96,39 +94,49 @@ export async function crawlGepnicResults(browser, site, { maxPages = 10, maxAwar
       const ok = captcha && await captcha(page, { portal: site.portal, purpose: "Results of tenders (winners)", onWait: () => progress({ phase: "captcha" }) });
       if (!ok) { log(`  ${site.portal} results page asks for a captcha — nobody typed it, skipped`); return []; }
     }
-    for (let p = 0; p < maxPages && list.length < maxAwards; p++) {
-      progress({ phase: "listing", page: p + 1, of: maxPages });
-      const { header, rows } = await page.$$eval("table.list_table tr, table#table tr", (trs) => {
-        const all = trs.map((tr) => ({ cells: [...tr.querySelectorAll("td, th")].map((td) => td.innerText.trim()), href: tr.querySelector("td a")?.getAttribute("href") || null }));
-        const hi = all.findIndex((r) => r.cells.some((c) => /tender id|title/i.test(c)) && r.cells.length >= 4);
-        return { header: hi >= 0 ? all[hi].cells : [], rows: all.filter((r, i) => i > hi && r.cells.length >= 4 && /^\d+\.?$/.test(r.cells[0])) };
-      });
-      list.push(...parseResultsList(header, rows, site));
-      const next = await page.$("a#linkFwd, a:has-text('Next >')");
-      if (!next || rows.length === 0) break;
-      await Promise.all([page.waitForLoadState("domcontentloaded"), next.click()]);
-    }
-    const todo = list.slice(0, maxAwards);
-    for (const [i, a] of todo.entries()) {
-      progress({ phase: "details", done: i, total: todo.length });
-      if (!a._detail) continue;
-      try {
-        const href = a._detail.startsWith("http") ? a._detail : new URL(a._detail, site.base + "/").toString();
-        const d = await ctx.newPage();
-        await d.goto(href, { waitUntil: "domcontentloaded", timeout: 45000 });
-        const tables = await d.$$eval("table", (ts) => ts.map((t) => [...t.querySelectorAll(":scope > tbody > tr, :scope > tr")].map((tr) => [...tr.querySelectorAll(":scope > td, :scope > th")].map((td) => td.innerText))));
-        await d.close();
-        for (const b of parseAoc(tables)) {
-          const { _detail, listed_on, ...award } = a;
-          out.push({ ...award, ...b, contract_date: b.contract_date || listed_on, bidder_city: cityFrom(b.bidder_address), url: site.base + LIST }); // detail links are session-bound
-        }
-        await new Promise((r) => setTimeout(r, 1500)); // polite pace
-      } catch (e) {
-        log(`  result failed ${site.portal} ${a.tender_ref}: ${e.message}`);
-      }
-    }
+    return await readResults(page, site, { maxPages, maxAwards, log, progress });
   } finally {
     await ctx.close();
+  }
+}
+
+export const RESULTS_LIST = LIST;
+
+// Reads the "Results of Tenders" list the page is showing (after its captcha was typed and Search pressed), page by
+// page, then opens each award (AOC) in a new tab of the same session. Returns award rows for ingest_awards.
+export async function readResults(page, site, { maxPages = 10, maxAwards = 300, log = console.log, progress = () => {} } = {}) {
+  const list = [];
+  const out = [];
+  for (let p = 0; p < maxPages && list.length < maxAwards; p++) {
+    progress({ phase: "listing", page: p + 1, of: maxPages });
+    const { header, rows } = await page.$$eval("table.list_table tr, table#table tr", (trs) => {
+      const all = trs.map((tr) => ({ cells: [...tr.querySelectorAll("td, th")].map((td) => td.innerText.trim()), href: tr.querySelector("td a")?.getAttribute("href") || null }));
+      const hi = all.findIndex((r) => r.cells.some((c) => /tender id|title/i.test(c)) && r.cells.length >= 4);
+      return { header: hi >= 0 ? all[hi].cells : [], rows: all.filter((r, i) => i > hi && r.cells.length >= 4 && /^\d+\.?$/.test(r.cells[0])) };
+    });
+    list.push(...parseResultsList(header, rows, site));
+    const next = await page.$("a#linkFwd, a:has-text('Next >')");
+    if (!next || rows.length === 0) break;
+    await Promise.all([page.waitForLoadState("domcontentloaded"), next.click()]);
+  }
+  const todo = list.slice(0, maxAwards);
+  for (const [i, a] of todo.entries()) {
+    progress({ phase: "details", done: i, total: todo.length });
+    if (!a._detail) continue;
+    try {
+      const href = a._detail.startsWith("http") ? a._detail : new URL(a._detail, site.base + "/").toString();
+      const d = await page.context().newPage();
+      await d.goto(href, { waitUntil: "domcontentloaded", timeout: 45000 });
+      const tables = await d.$$eval("table", (ts) => ts.map((t) => [...t.querySelectorAll(":scope > tbody > tr, :scope > tr")].map((tr) => [...tr.querySelectorAll(":scope > td, :scope > th")].map((td) => td.innerText))));
+      await d.close();
+      for (const b of parseAoc(tables)) {
+        const { _detail, listed_on, ...award } = a;
+        out.push({ ...award, ...b, contract_date: b.contract_date || listed_on, bidder_city: cityFrom(b.bidder_address), url: site.base + LIST }); // detail links are session-bound
+      }
+      await new Promise((r) => setTimeout(r, 1500)); // polite pace
+    } catch (e) {
+      log(`  result failed ${site.portal} ${a.tender_ref}: ${e.message}`);
+    }
   }
   return out;
 }

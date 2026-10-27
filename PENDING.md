@@ -23,7 +23,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 10 | **Supabase leaked-password protection** — Authentication → Policies (#12) | You | Supabase security check clears | Open |
 | 10a | **Daily captcha session** — Admin → Captcha session → "Start today's session" each morning (reminder 09:31 IST), type each portal's captcha; re-verify a portal when its alert comes. Needs the phone app (step 5) for alerts | You | Portals show Live; tenders show "✓ Pre-checked" before anyone opens them; the page learns each portal's session length | From 25 Oct |
 | 10b | **Big document hand-over time-outs** — 2 fetches on 24 Oct failed at `doc_job_put_chunk` (database statement time-out); make the chunk writes smaller/faster and retry (G) | Claude | No fetch fails at "Handing over" | Done 25 Oct — 512 KB pieces, no compression attempt, five retries |
-| 11 | **Tender winners after the captcha** — results pages return nothing; find the new layout and fix (A) | Claude | Real award results arrive in Tender winners | Next for Claude |
+| 11 | **Tender winners after the captcha** — results pages show nothing until their captcha is typed, and the crawler asked at times nobody was watching (all expired). 27 Oct: moved into the morning captcha session — after each portal goes live you get one more captcha "Tender winners: …" (A) | Both | Real award results arrive in Tender winners | Built 27 Oct — first results at your next captcha session |
 | 12 | **More tender detail per crawl** (value, EMD) and a Haryana portal re-test (D) | Claude | Values / EMD filled on new tenders; Haryana tenders arrive | Haryana tenders arrive again (26 Oct crawl); value / EMD per crawl still planned |
 | 13 | **BOQ Excel (.xls) into the cost planner** (B) | Claude | Upload the portal's BOQ and its items fill the planner | Planned |
 | 14 | **Razorpay switch-on** — keys in Vercel, webhook in Razorpay, secret in Supabase Vault, seller GSTIN in Admin → Billing (#7) | You | Webhook secret + GSTIN present; a test top-up adds credits | Open |
@@ -42,6 +42,8 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 27 | **Before launch** — remove demo data (`demo_seed`), move pg_net out of the public schema (J) | Claude | No demo rows; Supabase lint clean | At launch |
 
 ## Done (recent)
+
+- 27 Oct (later): Lead autopilot fixed — rerun found 50 new leads for ₹100 (skips businesses already in your leads, rotates searches). Tender winners now asked in the morning captcha session. State portals (Gujarat, Karnataka, AP, Telangana, Bihar) open from India with no captcha; their tender lists load in the background, so probes now record those calls.
 
 - 27 Oct: the Mumbai server crawled all 19 GePNIC portals overnight in 40 minutes (≈56,400 open tenders); 38 tenders pre-checked; 19 portal sessions live. GeM adapter now reads the bid list from the page (latest + service searches: audit, accountant, GST…). Lead autopilot found 0 new leads today — the same Google Maps results repeat; fix in progress (look past businesses already in your leads).
 
