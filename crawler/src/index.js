@@ -17,7 +17,9 @@ const maxAwards = Number(env.MAX_AWARDS || 300);
 const maxDetails = Number(env.MAX_DETAILS || 40); // tender detail pages opened per portal per run
 const concurrency = Number(env.CONCURRENCY || 2);
 const budgetMs = Number(env.CRAWL_BUDGET_MIN || 0) * 60000; // 0 = no limit
-const results = env.CRAWL_RESULTS !== "0";
+// GePNIC results pages need a captcha; they are read in the admin's morning captcha session (docs.js winnersInSession),
+// not in crawl runs where nobody is watching. CRAWL_RESULTS=1 brings the old crawl-time step back.
+const results = env.CRAWL_RESULTS === "1";
 const log = (...a) => console.log(new Date().toISOString(), ...a);
 // captcha pages wait for a person to type the answer in Admin → Crawler (CAPTCHA_WAIT_MIN, 0 = skip them)
 // once a captcha goes unanswered nobody is watching, so the rest of this run skips captcha pages instead of waiting
@@ -38,7 +40,7 @@ function plan() {
   // tenders everywhere first; winners pages wait for a person to type a captcha, so they go last
   if (!pick("GeM")) return [...steps, ...winners];
   steps.push({ name: "GeM · tenders", run: (p) => crawlGem(p.browser, { maxPages, log, base: GEM.base, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders("GeM", rows, env)) : "no bids found — check the adapter" })) });
-  if (results) winners.push({ name: "GeM · winners", run: (p) => crawlGemResults(p.browser, { maxPages: Math.min(maxPages, 5), maxBids: maxAwards, log, base: GEM.base, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendAwards("Results: GeM", rows, env)) : "no results found — check GEM_RESULT_STATUS or the adapter" })) });
+  if (env.CRAWL_RESULTS !== "0") winners.push({ name: "GeM · winners", run: (p) => crawlGemResults(p.browser, { maxPages: Math.min(maxPages, 5), maxBids: maxAwards, log, base: GEM.base, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendAwards("Results: GeM", rows, env)) : "no results found — check GEM_RESULT_STATUS or the adapter" })) });
   return [...steps, ...winners];
 }
 
