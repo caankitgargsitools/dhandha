@@ -68,4 +68,7 @@ Prev`;
   assert.equal(rows[1].title, "Annual audit of accounts (qty 1)");
   assert.equal(rows[1].state, "Haryana");
   assert.equal(gemDate("06-11-2026 12:05 AM"), "2026-11-06T00:05:00+05:30");
+  assert.equal(rows[0].url, "https://bidplus.gem.gov.in/all-bids");
+  const linked = parseGemText(text, undefined, { "GEM/2026/B/7670847": "https://bidplus.gem.gov.in/showbidDocument/9455923" });
+  assert.equal(linked[0].url, "https://bidplus.gem.gov.in/showbidDocument/9455923");
 });

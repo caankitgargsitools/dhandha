@@ -26,7 +26,8 @@ export function gemDate(s) {
 }
 
 // The bid list as GeM shows it on the page (text of "All Bids"): Bid No., Items, Quantity, Department, Start/End Date.
-export function parseGemText(text, base = "https://bidplus.gem.gov.in") {
+// `links` maps a bid number to its bid document link (showbidDocument/<id>) where the page has one.
+export function parseGemText(text, base = "https://bidplus.gem.gov.in", links = {}) {
   const out = [];
   const blocks = String(text || "").split(/\n\s*Bid No\.:\s*/).slice(1);
   for (const b of blocks) {
@@ -41,7 +42,7 @@ export function parseGemText(text, base = "https://bidplus.gem.gov.in") {
     const authority = dept.join(" / ") || "GeM buyer";
     out.push({ portal: "GeM", tender_ref: num, title: qty ? `${title} (qty ${qty.trim()})` : title, authority, department: dept[1] || null,
       category: title, industry_pack: industryPack(title) || "goods_supply", published_on: start ? start.slice(0, 10) : null, due_at: end,
-      state: stateFrom(authority), url: `${base}/all-bids` });
+      state: stateFrom(authority), url: links[num] || `${base}/all-bids` });
   }
   return out;
 }
@@ -63,7 +64,8 @@ async function crawlGemPage(page, { base, maxPages, words, log, progress }) {
     for (let p = 1; p <= maxPages; p++) {
       progress({ phase: w ? `search “${w}”` : "latest", page: p, of: maxPages });
       const text = await page.evaluate(() => document.body.innerText).catch(() => "");
-      const rows = parseGemText(text, base);
+      const links = await page.$$eval("a[href*='showbidDocument']", (as) => Object.fromEntries(as.map((a) => [a.innerText.trim(), a.href]))).catch(() => ({}));
+      const rows = parseGemText(text, base, links);
       if (!rows.length || rows[0].tender_ref === last) break;
       last = rows[0].tender_ref;
       for (const r of rows) out.set(r.tender_ref, r);
