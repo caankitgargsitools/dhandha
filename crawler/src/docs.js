@@ -350,7 +350,7 @@ async function runProbe(browser, pr) {
     out.final_url = page.url();
     out.title = await page.title().catch(() => "");
     out.text = (await page.evaluate(() => document.body?.innerText || "").catch(() => "")).slice(0, 30000);
-    out.links = await page.$$eval("a[href]", (as) => as.slice(0, 400).map((a) => ({ href: a.href, text: a.innerText.trim().slice(0, 120) }))).catch(() => []);
+    out.links = await page.$$eval("a[href], a[onclick]", (as) => as.slice(0, 400).map((a) => ({ href: a.href, text: a.innerText.trim().slice(0, 120), ...(a.getAttribute("onclick") ? { onclick: a.getAttribute("onclick").slice(0, 300) } : {}), ...(a.id ? { id: a.id } : {}) }))).catch(() => []);
     out.forms = await page.$$eval("form", (fs) => fs.slice(0, 10).map((f) => ({ action: f.action, method: f.method,
       fields: [...f.querySelectorAll("input,select,textarea,button")].slice(0, 40).map((e) => ({ tag: e.tagName.toLowerCase(), type: e.type || "", name: e.name || e.id || "", value: e.tagName === "SELECT" ? [...e.options].slice(0, 15).map((o) => o.text).join(" | ") : (e.type === "hidden" ? "" : String(e.value || "").slice(0, 60)) })) }))).catch(() => []);
     out.captcha = await hasCaptcha(page).catch(() => false);
