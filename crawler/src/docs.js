@@ -296,9 +296,28 @@ async function runProbe(browser, pr) {
   const ctx = await browser.newContext({ locale: "en-IN", viewport: { width: 1280, height: 1600 } });
   const page = await ctx.newPage();
   const out = {};
+  // background data calls (XHR / fetch) the page makes — single-page portals load their tender lists this way
+  const network = [];
+  page.on("response", async (r) => {
+    const q = r.request();
+    if (!["xhr", "fetch"].includes(q.resourceType()) || network.length >= 60) return;
+    const entry = { url: r.url().slice(0, 500), method: q.method(), post: (q.postData() || "").slice(0, 800), status: r.status(), type: r.headers()["content-type"] || "" };
+    network.push(entry);
+    if (/json|text|html|xml/.test(entry.type)) entry.body = (await r.text().catch(() => "")).slice(0, 5000);
+  });
   try {
     const res = await page.goto(pr.url, { waitUntil: "domcontentloaded", timeout: 60000 });
     await page.waitForTimeout(4000);
+    // optional steps: [{click:"Visible text"}, {css:"selector"}, {fill:{css, value}}, {wait:ms}] — read-only browsing, nothing submitted
+    for (const a of pr.actions || []) {
+      try {
+        if (a.click) await page.getByText(a.click, { exact: false }).first().click({ timeout: 10000 });
+        else if (a.css) await page.locator(a.css).first().click({ timeout: 10000 });
+        else if (a.fill) await page.locator(a.fill.css).first().fill(String(a.fill.value), { timeout: 10000 });
+        await page.waitForTimeout(a.wait || 3000);
+      } catch (e) { network.push({ step: a, error: e.message.split("\n")[0] }); }
+    }
+    out.network = network;
     out.status = res?.status() ?? null;
     out.final_url = page.url();
     out.title = await page.title().catch(() => "");
