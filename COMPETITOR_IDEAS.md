@@ -24,7 +24,7 @@ Priority: H = high, M = medium, L = low · Effort: S = small, M = medium, L = la
 | C11 | **Cold-email deliverability**: inbox warm-up, several sending inboxes, rotation, bounces | Instantly, lemlist | One domain gets flagged at scale | M | M | Waiting for approval |
 | C12 | **Find missing emails / phones** across several providers (waterfall enrichment) | Clay, Apollo, Lusha | Makes MCA, winner and Maps leads reachable | M | H | = PENDING 43 |
 | C13 | **AI call → hand over to a person** live, with the context | Retell, Vapi, Bland | Hot leads need a human at once | M | H | Waiting for approval (needs the telecom number) |
-| C14 | **After-call analytics**: summary, sentiment, objections, dispositions | Retell, Bolna, Vapi | Shows the AI caller works | S | H | Partly built (call learning); sentiment/objections waiting for approval |
+| C14 | **After-call analytics**: summary, sentiment, objections, dispositions | Retell, Bolna, Vapi | Shows the AI caller works | S | H | Approved and built 28 Oct (Call learning: mood, objections, next step — free, `lib/callInsights.js`) |
 | C15 | **Batch AI-call campaigns**: many calls at once, retries, voicemail detection, branded caller ID | Retell, Bland, Bolna | Scale | M | M | Waiting for approval (needs GPU + telecom) |
 | C16 | **AI receptionist for incoming calls**: answers your number, qualifies, books a meeting | Bolna, Retell, Exotel, Ozonetel | Missed calls are lost leads | M | M | Waiting for approval (needs telecom) |
 | C17 | **Regional languages** for calls (Tamil, Telugu, Marathi, Bengali, Gujarati) | Bolna (Sarvam) | Tier-2/3 buyers | M | M | Waiting for approval |
