@@ -24,7 +24,10 @@ export default async function Outreach() {
     <div className="stack">
       <div className="page-head">
         <div><h1>Outreach</h1><p>Email and WhatsApp sequences that follow up for you, step by step, and stop by themselves when a call or meeting is logged.</p></div>
-        <Link href="/app/outreach/settings" className="btn ghost">Sender settings</Link>
+        <div className="row" style={{ gap: 8 }}>
+          <Link href="/app/outreach/broadcasts" className="btn ghost">WhatsApp broadcasts</Link>
+          <Link href="/app/outreach/settings" className="btn ghost">Sender settings</Link>
+        </div>
       </div>
       <div className="grid-3">
         <div className="panel ledger"><div className="kpi-label">Sent in 30 days</div><div className="kpi">{sent.length}</div><div className="faint small">{sent.filter((m) => m.channel === "email").length} email · {sent.filter((m) => m.channel === "whatsapp").length} WhatsApp</div></div>
