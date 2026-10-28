@@ -35,6 +35,7 @@ export default async function AppLayout({ children }) {
       { href: "/app/settings/app", label: "Phone app", icon: "phone" },
       ...(isAdmin ? [{ href: "/app/settings/drive", label: "Google Drive", icon: "doc" }] : []),
       ...(["admin", "manager"].includes(role) ? [{ href: "/app/settings/sheets", label: "Google Sheets & Excel", icon: "doc" }] : []),
+      ...(["admin", "manager"].includes(role) ? [{ href: "/app/settings/assistants", label: "AI assistants (ChatGPT, Claude)", icon: "sparkle" }] : []),
       ...(tenant.kind === "firm" || companies.length > 1 ? [{ href: "/app/settings/companies", label: "Companies", icon: "building" }] : []),
       ...(isAdmin ? [{ href: "/app/settings/audit", label: "Audit log", icon: "log" }] : []),
       ...(isPlatformAdmin ? [{ href: "/admin", label: "Admin panel", icon: "admin" }] : []),
