@@ -61,3 +61,13 @@ export async function startForLeads(id, leadIds) {
   revalidatePath(`/app/leads/playbook/${id}`);
   return { ok: true, count: data };
 }
+
+// A test call with Dhandha AI from the browser, using the saved AI-call step (script, language, voice) of this
+// playbook. Gives the voice server's address and a one-call token.
+export async function startVoiceTest(sequenceId, step) {
+  const { supabase, role } = await getContext();
+  if (role === "viewer") return { error: "Viewers cannot start test calls." };
+  const { data, error } = await supabase.rpc("voice_session_start", { p_sequence: sequenceId, p_step: step || null });
+  if (error) return { error: msg(error) };
+  return { token: data.token, url: data.url };
+}

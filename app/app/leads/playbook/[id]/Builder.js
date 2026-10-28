@@ -2,21 +2,24 @@
 import { useState, useTransition } from "react";
 import { STEP_TYPES, LANGUAGES, VOICES, DAYS, UNITS, PLACEHOLDERS, delayMinutes, delayText } from "@/lib/playbook";
 import { savePlaybook } from "../actions";
+import VoiceTest from "@/components/VoiceTest";
 
 const blank = (type) => ({ type, amount: 1, unit: type === "ai_call" ? "minutes" : "days", script: "", goal: "", language: "en", voice: "female", match_language: true,
   wa_template: "", wa_lang: "en", subject: "", body: "", send_via: "whatsapp", type_id: "", title: "", details: "" });
 
-export default function Builder({ id, initial, canEdit, sources, meetingTypes, channels }) {
+export default function Builder({ id, initial, unsaved, canEdit, sources, meetingTypes, channels }) {
   const [pb, setPb] = useState(initial);
   const [note, setNote] = useState(null);
   const [pending, start] = useTransition();
-  const set = (k, v) => setPb((p) => ({ ...p, [k]: v }));
-  const setStep = (i, k, v) => setPb((p) => ({ ...p, steps: p.steps.map((s, j) => (j === i ? { ...s, [k]: v } : s)) }));
-  const move = (i, d) => setPb((p) => { const s = [...p.steps]; const j = i + d; if (j < 0 || j >= s.length) return p; [s[i], s[j]] = [s[j], s[i]]; return { ...p, steps: s }; });
-  const remove = (i) => setPb((p) => ({ ...p, steps: p.steps.filter((_, j) => j !== i) }));
-  const add = (type) => setPb((p) => ({ ...p, steps: [...p.steps, blank(type)] }));
-  const toggle = (k, v) => setPb((p) => ({ ...p, [k]: p[k].includes(v) ? p[k].filter((x) => x !== v) : [...p[k], v] }));
-  const save = () => start(async () => { setNote(null); const r = await savePlaybook(id, pb); setNote(r.error ? { bad: r.error } : { ok: "Saved." }); });
+  const [testing, setTesting] = useState(null); // step number of the AI call being tested
+  const [dirty, setDirty] = useState(!!unsaved);
+  const set = (k, v) => { setDirty(true); setPb((p) => ({ ...p, [k]: v })); };
+  const setStep = (i, k, v) => setDirty(true) || setPb((p) => ({ ...p, steps: p.steps.map((s, j) => (j === i ? { ...s, [k]: v } : s)) }));
+  const move = (i, d) => setDirty(true) || setPb((p) => { const s = [...p.steps]; const j = i + d; if (j < 0 || j >= s.length) return p; [s[i], s[j]] = [s[j], s[i]]; return { ...p, steps: s }; });
+  const remove = (i) => setDirty(true) || setPb((p) => ({ ...p, steps: p.steps.filter((_, j) => j !== i) }));
+  const add = (type) => setDirty(true) || setPb((p) => ({ ...p, steps: [...p.steps, blank(type)] }));
+  const toggle = (k, v) => setDirty(true) || setPb((p) => ({ ...p, [k]: p[k].includes(v) ? p[k].filter((x) => x !== v) : [...p[k], v] }));
+  const save = () => start(async () => { setNote(null); const r = await savePlaybook(id, pb); setNote(r.error ? { bad: r.error } : { ok: "Saved." }); if (!r.error) setDirty(false); });
 
   // when each step happens, counted from the moment the lead arrives (before office hours move it)
   let clock = 0;
@@ -96,6 +99,11 @@ export default function Builder({ id, initial, canEdit, sources, meetingTypes, c
                 </div>
                 <label>Goal of the call<input value={s.goal} onChange={(e) => setStep(i, "goal", e.target.value)} maxLength={300} placeholder="e.g. Find out if they need an audit this year and offer a 15-minute meeting" /></label>
                 <label>Script — how the caller opens and what it must cover<textarea rows={5} value={s.script} onChange={(e) => setStep(i, "script", e.target.value)} maxLength={4000} /></label>
+                <div className="row" style={{ gap: 8 }}>
+                  <button type="button" className="ghost sm" disabled={dirty || testing != null} onClick={() => setTesting(i + 1)}>▶ Test this call</button>
+                  <span className="tiny faint">{dirty ? "Save the playbook first, then test the saved script." : "Talk to Dhandha AI from this browser (microphone needed). It opens with \"Namaste, I am Dhandha AI…\"."}</span>
+                </div>
+                {testing === i + 1 && <VoiceTest sequenceId={id} step={i + 1} onClose={() => setTesting(null)} />}
               </div>
             )}
 

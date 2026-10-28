@@ -39,7 +39,7 @@ export default async function Playbook({ params, searchParams }) {
       <div className="page-head">
         <div><Link href="/app/leads/playbook" className="small">← All playbooks</Link><h1>{book.name}</h1></div>
       </div>
-      <Builder id={id} initial={initial} canEdit={canEdit} sources={SOURCES} meetingTypes={types || []}
+      <Builder id={id} initial={initial} unsaved={!(steps || []).length} canEdit={canEdit} sources={SOURCES} meetingTypes={types || []}
         channels={{ email: emailReady(), whatsapp: !!settings?.wa_connected_at, ai: false }} />
 
       <div className="grid-2" style={{ alignItems: "start" }}>
