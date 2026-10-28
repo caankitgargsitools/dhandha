@@ -21,6 +21,20 @@ export const GEPNIC = [
   { portal: "Jharkhand e-Tender", state: "Jharkhand", base: "https://jharkhandtenders.gov.in/nicgep/app" },
   { portal: "Goa e-Procurement", state: "Goa", base: "https://eprocure.goa.gov.in/nicgep/app" },
   { portal: "Assam e-Procurement", state: "Assam", base: "https://assamtenders.gov.in/nicgep/app" },
+  // added 28 Oct after checks from the Mumbai server (Manipur refuses visitors; Chhattisgarh runs its own system)
+  { portal: "Meghalaya e-Tender", state: "Meghalaya", base: "https://meghalayatenders.gov.in/nicgep/app" },
+  { portal: "Mizoram e-Tender", state: "Mizoram", base: "https://mizoramtenders.gov.in/nicgep/app" },
+  { portal: "Nagaland e-Tender", state: "Nagaland", base: "https://nagalandtenders.gov.in/nicgep/app" },
+  { portal: "Sikkim e-Tender", state: "Sikkim", base: "https://sikkimtender.gov.in/nicgep/app" },
+  { portal: "Tripura e-Tender", state: "Tripura", base: "https://tripuratenders.gov.in/nicgep/app" },
+  { portal: "Arunachal e-Tender", state: "Arunachal Pradesh", base: "https://arunachaltenders.gov.in/nicgep/app" },
+  { portal: "Chandigarh e-Tender", state: "Chandigarh", base: "https://etenders.chd.nic.in/nicgep/app" },
+  { portal: "Puducherry e-Tender", state: "Puducherry", base: "https://pudutenders.gov.in/nicgep/app" },
+  { portal: "Ladakh e-Tender", state: "Ladakh", base: "https://tenders.ladakh.gov.in/nicgep/app" },
+  // public-sector companies on GePNIC (all-India; the state comes from each tender's organisation)
+  { portal: "Indian Oil (IOCL)", state: null, base: "https://iocletenders.nic.in/nicgep/app" },
+  { portal: "Coal India", state: null, base: "https://coalindiatenders.nic.in/nicgep/app" },
+  { portal: "BHEL", state: null, base: "https://eprocurebhel.co.in/nicgep/app" },
 ];
 
 export const GEM = { portal: "GeM", base: "https://bidplus.gem.gov.in" };
