@@ -4,6 +4,8 @@ import { local, addDays, at, dayPlan, directionsUrl } from "@/lib/scheduling";
 import { setMeetingStatus } from "../actions";
 import { telLink } from "@/lib/leads";
 import SubmitButton from "@/components/SubmitButton";
+import CheckIn from "@/components/CheckIn";
+import { mapLink, ROUGH_M } from "@/lib/visits";
 
 // A salesperson's day as a route: when to leave, the drive, the meeting, directions — in order.
 export default async function MyDay({ searchParams }) {
@@ -18,6 +20,10 @@ export default async function MyDay({ searchParams }) {
   if (!rep) return <div className="panel small muted">You are not on the sales team yet. An admin can add you under <Link href="/app/sales/team">Salespeople</Link>.</div>;
   const { data: meetings } = await supabase.from("meetings").select("*, leads(id, name, contact_person, phone)").eq("rep_id", rep.id).neq("status", "cancelled")
     .gte("starts_at", at(day, 0).toISOString()).lt("starts_at", at(day, 1440).toISOString()).order("starts_at");
+  const ids = (meetings || []).map((m) => m.id);
+  const { data: checks } = ids.length ? await supabase.from("visit_checkins").select("meeting_id, kind, at, lat, lng, accuracy_m").in("meeting_id", ids).order("at") : { data: [] };
+  const checksOf = (id) => (checks || []).filter((c) => c.meeting_id === id);
+  const hhmm = (t) => new Date(t).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false });
   const plan = dayPlan({ day, rep: { ...rep, day_start: String(rep.day_start).slice(0, 5) }, meetings: meetings || [] });
   const label = new Date(`${day}T12:00:00+05:30`).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", weekday: "long", day: "numeric", month: "long" });
   const q = (o) => new URLSearchParams({ rep: rep.id, date: day, ...o }).toString();
@@ -51,6 +57,14 @@ export default async function MyDay({ searchParams }) {
                 <span className={`chip ${p.status === "done" ? "ok" : p.status === "no_show" ? "bad" : "info"}`}>{p.status === "booked" ? (p.mode === "field" ? "Visit" : "Online") : p.status === "done" ? "Done" : "No-show"}</span>
               </div>
               <div className="tiny faint" style={{ marginTop: 4 }}>{[p.leads?.contact_person, p.leads?.phone, p.mode === "field" ? p.address : null, p.notes].filter(Boolean).join(" · ")}</div>
+              {p.mode === "field" && checksOf(p.id).length > 0 && (
+                <div className="tiny" style={{ marginTop: 6 }}>
+                  {checksOf(p.id).map((c, k) => <span key={k} style={{ marginRight: 10 }}>📍 {c.kind === "in" ? "In" : "Out"} {hhmm(c.at)} · <a href={mapLink(c)} target="_blank" rel="noreferrer">map</a>{c.accuracy_m > ROUGH_M ? <span className="faint"> (rough ±{c.accuracy_m} m)</span> : null}</span>)}
+                </div>
+              )}
+              {p.mode === "field" && rep.user_id === user.id && p.status !== "no_show" && day === today && (
+                <div style={{ marginTop: 8 }}><CheckIn meetingId={p.id} state={checksOf(p.id).at(-1)?.kind || null} /></div>
+              )}
               {p.status === "booked" && role !== "viewer" && (
                 <div className="row" style={{ gap: 6, marginTop: 8 }}>
                   {telLink(p.leads?.phone) && <a className="btn sm ghost" href={telLink(p.leads.phone)}>Call</a>}

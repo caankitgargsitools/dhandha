@@ -218,3 +218,14 @@ export async function inviteRep({ repId, email }) {
   done();
   return { ok: true, link: `${h.get("x-forwarded-proto") || "https"}://${h.get("x-forwarded-host") || h.get("host")}/login?invite=${data.token}`, name: rep.name };
 }
+
+// GPS proof of a field visit (components/CheckIn.js)
+export async function visitCheck(meetingId, kind, lat, lng, accuracy, note) {
+  const { supabase } = await getContext();
+  if (!["in", "out"].includes(kind) || !Number.isFinite(lat) || !Number.isFinite(lng)) return { error: "Bad location." };
+  const { error } = await supabase.rpc("visit_check", { p_meeting: String(meetingId), p_kind: kind, p_lat: lat, p_lng: lng, p_acc: Math.max(0, Math.round(accuracy || 0)), p_note: String(note || "").slice(0, 500) || null });
+  if (error) return { error: error.message };
+  revalidatePath("/app/sales/day");
+  revalidatePath("/app/sales/visits");
+  return { ok: true };
+}
