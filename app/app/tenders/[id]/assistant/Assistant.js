@@ -24,6 +24,8 @@ const form = (o) => { const f = new FormData(); for (const [k, v] of Object.entr
 // page itself never jumps while answering.
 export default function Assistant({ matchId, tenderId, portal, files = [], history = [], balance = Infinity, done, steps, brief, formats, redo, canAnswer, canPrepare }) {
   const router = useRouter();
+  // the portal's BOQ spreadsheet among the fetched documents, for "Use the BOQ from the tender documents"
+  const boqDocs = files.filter((x) => x.url && /boq/i.test(x.file_name) && /\.xlsx?$/i.test(x.file_name));
   const [log, setLog] = useState(history);
   const [tab, setTab] = useState("chat");
   const [skipped, setSkipped] = useState(() => new Set());
@@ -132,7 +134,7 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
         )}
         {redo?.price && repricing && (
           <div style={{ alignSelf: "stretch" }}>
-            <CostPlanner matchId={matchId} initial={redo.price.sheet} estimate={redo.price.estimate} saved={{ price: redo.price.price }}
+            <CostPlanner matchId={matchId} boqDocs={boqDocs} initial={redo.price.sheet} estimate={redo.price.estimate} saved={{ price: redo.price.price }}
               onDone={(label) => { setRepricing(false); say("me", label); say("bot", "Price updated for this tender. It goes on the preparation sheet; you enter it in the portal's price bid."); router.refresh(); }} />
             <button className="ghost sm" style={{ marginTop: 8 }} onClick={() => setRepricing(false)}>Close</button>
           </div>
@@ -248,7 +250,7 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
             </div>
           )}
           {current.kind === "price" && current.ev && <EvalPanel ev={current.ev} estimate={current.estimate} cost={current.cost} quote={current.quote} />}
-          {current.kind === "price" && <CostPlanner matchId={matchId} initial={current.sheet} estimate={current.estimate} fresh={current.fresh} saved={current.quote ? { price: current.quote } : null} onDone={(label) => { askedNow(); say("me", label); say("bot", "Price saved for this tender. It goes on the preparation sheet; you enter it in the portal's price bid."); router.refresh(); }} />}
+          {current.kind === "price" && <CostPlanner matchId={matchId} boqDocs={boqDocs} initial={current.sheet} estimate={current.estimate} fresh={current.fresh} saved={current.quote ? { price: current.quote } : null} onDone={(label) => { askedNow(); say("me", label); say("bot", "Price saved for this tender. It goes on the preparation sheet; you enter it in the portal's price bid."); router.refresh(); }} />}
           {current.kind === "draft" && (
             <div className="row" style={{ gap: 8 }}>
               <button disabled={busy} onClick={() => run("Make the draft", () => generateBidPack({}, form({ match_id: matchId, kind: "draft" })), (r) => r.message || "Draft ready.", { label: "Putting the bid file together…", seconds: 20 })}>{busy ? "Preparing…" : "Make draft bid pack"}</button>

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { computeSheet, manpowerCost, travelCost } from "@/lib/costing";
+import { computeSheet, manpowerCost, travelCost, BOQ_MAX } from "@/lib/costing";
+import { Spinner } from "@/components/Progress";
 import { savePrice, saveSheet } from "../../masterActions";
 
 const inr = (n) => (n === null || n === undefined || Number.isNaN(n) ? "—" : `₹${Math.round(n).toLocaleString("en-IN")}`);
@@ -8,7 +9,7 @@ const lakh = (n) => (n >= 1e7 ? `₹${(n / 1e7).toFixed(2)} Cr` : n >= 1e5 ? `�
 
 // The price step: type the quote directly, or work it out — BOQ, manpower with statutory costs, travel and stay,
 // other costs, overheads, contingency, margin and GST — and use the suggested quote.
-export default function CostPlanner({ matchId, initial, estimate, saved, fresh, onDone }) {
+export default function CostPlanner({ matchId, initial, estimate, saved, fresh, onDone, boqDocs = [] }) {
   const [mode, setMode] = useState(saved?.price ? "done" : fresh ? "choose" : "plan");
   const [s, setS] = useState(initial);
   const [direct, setDirect] = useState("");
@@ -30,6 +31,7 @@ export default function CostPlanner({ matchId, initial, estimate, saved, fresh, 
   const setRow = (sec, i, k, v) => setS((x) => ({ ...x, [sec]: x[sec].map((r, j) => (j === i ? { ...r, [k]: v } : r)) }));
   const addRow = (sec, row) => setS((x) => ({ ...x, [sec]: [...x[sec], row] }));
   const delRow = (sec, i) => setS((x) => ({ ...x, [sec]: x[sec].filter((_, j) => j !== i) }));
+  const importBoq = (items, replace) => setS((x) => ({ ...x, boq: (replace ? items : [...x.boq, ...items]).slice(0, BOQ_MAX) }));
 
   async function finish(args, label) {
     setBusy(true); setErr("");
@@ -69,6 +71,7 @@ export default function CostPlanner({ matchId, initial, estimate, saved, fresh, 
       <div className="grid-main">
         <div className="stack-sm">
           <Section title="Items / BOQ" total={c.boq} onAdd={() => addRow("boq", { item: "", unit: "job", qty: "", rate: "" })}>
+            <BoqImport docs={boqDocs} lines={s.boq.filter((r) => String(r.item || "").trim() || r.qty || r.rate).length} onItems={importBoq} />
             <table className="small" style={{ width: "100%" }}><thead><tr><th>Item</th><th>Unit</th><th>Qty</th><th>Rate ₹</th><th className="right">Amount</th><th /></tr></thead><tbody>
               {s.boq.map((r, i) => <tr key={i}><td><input value={r.item} onChange={(e) => setRow("boq", i, "item", e.target.value)} style={cell} /></td><td><input value={r.unit} onChange={(e) => setRow("boq", i, "unit", e.target.value)} style={{ ...cell, maxWidth: 60 }} /></td><td><Num v={r.qty} on={(v) => setRow("boq", i, "qty", v)} w={60} /></td><td><Num v={r.rate} on={(v) => setRow("boq", i, "rate", v)} /></td><td className="right num">{inr(Number(r.qty) * Number(r.rate))}</td><td><X on={() => delRow("boq", i)} /></td></tr>)}
             </tbody></table>
@@ -119,6 +122,81 @@ export default function CostPlanner({ matchId, initial, estimate, saved, fresh, 
           <button className="ghost sm" onClick={() => setMode("direct")}>Type a different price</button>
         </aside>
       </div>
+    </div>
+  );
+}
+
+// BOQ import: the portal's BOQ Excel (old .xls or .xlsx) is read here in the browser — files can be up to 10 MB,
+// more than a server action takes — and its items (description, unit, quantity, estimated rate if any) are added
+// to the planner. Free: no AI, no upload.
+const MAX_BYTES = 10 * 1024 * 1024;
+function BoqImport({ docs, lines, onItems }) {
+  const [busy, setBusy] = useState("");
+  const [msg, setMsg] = useState("");
+  const [err, setErr] = useState("");
+  const [pending, setPending] = useState(null); // { items, label } waiting for "add below" / "replace"
+  const input = useRef(null);
+
+  function apply(items, label, replace) {
+    onItems(items, replace);
+    setPending(null);
+    const cut = items.length > BOQ_MAX ? ` (the planner keeps the first ${BOQ_MAX} lines)` : "";
+    setMsg(`${items.length} item${items.length === 1 ? "" : "s"} imported from ${label}${cut}. Fill in your rates.`);
+  }
+
+  async function read(getBytes, name) {
+    setErr(""); setMsg(""); setPending(null); setBusy(`Reading ${name}…`);
+    try {
+      const bytes = await getBytes();
+      if (bytes.byteLength > MAX_BYTES) throw new Error(`${name} is larger than 10 MB.`);
+      const [{ readWorkbook }, { boqFromSheets, toPlannerItems }] = await Promise.all([import("@/lib/sheets"), import("@/lib/boq")]);
+      const { sheet, items } = boqFromSheets(await readWorkbook(bytes));
+      if (!items.length) throw new Error(`no BOQ items found in ${name}. I look for a header row with "Item Description" and "Quantity", and lines with a quantity under it.`);
+      const label = `${name}${sheet ? ` (sheet ${sheet})` : ""}`;
+      const rows = toPlannerItems(items);
+      if (lines) setPending({ items: rows, label });
+      else apply(rows, label, false);
+    } catch (e) {
+      setErr(`Could not import the BOQ: ${e?.message || e}`);
+    } finally {
+      setBusy("");
+    }
+  }
+
+  function onFile(e) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    if (f.size > MAX_BYTES) return setErr(`${f.name} is larger than 10 MB. Please use the BOQ file from the portal as it is.`);
+    read(async () => new Uint8Array(await f.arrayBuffer()), f.name);
+  }
+
+  function fromDoc(d) {
+    read(async () => {
+      const r = await fetch(d.url);
+      if (!r.ok) throw new Error(`could not download ${d.file_name}; reload the page and try again.`);
+      return new Uint8Array(await r.arrayBuffer());
+    }, d.file_name);
+  }
+
+  return (
+    <div className="stack-sm" style={{ marginBottom: 8 }}>
+      <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
+        <input ref={input} type="file" accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" onChange={onFile} style={{ display: "none" }} aria-label="BOQ Excel file" />
+        <button type="button" className="ghost sm" disabled={!!busy} aria-busy={!!busy} onClick={() => input.current?.click()}>Import BOQ from Excel (.xls / .xlsx)</button>
+        {docs.map((d) => <button key={d.id} type="button" className="ghost sm" disabled={!!busy} onClick={() => fromDoc(d)} title={d.file_name}>Use the BOQ from the tender documents{docs.length > 1 ? `: ${d.file_name}` : ""}</button>)}
+        {busy && <Spinner label={busy} />}
+      </div>
+      {pending && (
+        <div className="row small" style={{ gap: 8, flexWrap: "wrap" }}>
+          <span>{pending.items.length} items found in {pending.label}. You already have {lines} line{lines === 1 ? "" : "s"} here.</span>
+          <button type="button" className="sm" onClick={() => apply(pending.items, pending.label, false)}>Add below them</button>
+          <button type="button" className="ghost sm" onClick={() => apply(pending.items, pending.label, true)}>Replace them</button>
+          <button type="button" className="ghost sm" onClick={() => setPending(null)}>Cancel</button>
+        </div>
+      )}
+      {msg && <div className="small" role="status" style={{ color: "var(--leaf)" }}>{msg}</div>}
+      {err && <div className="small" role="alert" style={{ color: "var(--blood)" }}>{err}</div>}
     </div>
   );
 }
