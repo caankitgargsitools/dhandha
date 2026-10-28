@@ -5,13 +5,16 @@ import { ScoreRing } from "@/components/Charts";
 import Icon from "@/components/Icon";
 import FormState from "../../FormState";
 import ProfileTools from "./ProfileTools";
+import { ReviewReplies, PostWriter } from "./ReviewReplies";
+import { reviewList } from "@/lib/reviewReply";
 import { saveReviewSettings } from "../googleActions";
 
 const STATUS = { waiting: ["mute", "Waiting"], emailed: ["info", "Emailed"], task: ["warn", "Task for WhatsApp"], skipped: ["mute", "Skipped"], clicked: ["ok", "Opened the review page"] };
 
 // Google Business Profile: how strong the listing is, what to fix, and automatic review requests to won customers.
 export default async function GoogleProfile() {
-  const { supabase, company, isAdmin } = await getContext();
+  const { supabase, company, isAdmin, role } = await getContext();
+  const canWrite = ["admin", "manager"].includes(role);
   const [{ data: s }, { data: snaps }, { data: reqs }] = await Promise.all([
     supabase.from("review_settings").select("*").eq("company_id", company.id).maybeSingle(),
     supabase.from("gbp_snapshots").select("taken_on, rating, reviews").eq("company_id", company.id).order("taken_on", { ascending: false }).limit(60),
@@ -75,6 +78,20 @@ export default async function GoogleProfile() {
             </div>); })}
         </div>
       </div>
+
+      {s?.place_id && (
+        <div className="grid-2" style={{ alignItems: "start" }}>
+          <div className="panel stack-sm">
+            <h3 style={{ margin: 0 }}>Reply to reviews</h3>
+            <ReviewReplies reviews={reviewList(s.details)} business={s.place_name || company.legal_name} canWrite={canWrite} />
+          </div>
+          <div className="panel stack-sm">
+            <h3 style={{ margin: 0 }}>This week&apos;s Google post</h3>
+            <p className="small muted" style={{ margin: 0 }}>A post a week keeps your listing fresh. Say what it is about; Dhandha writes it (free AI first; 1 credit only if a paid AI is needed).</p>
+            {canWrite ? <PostWriter /> : <p className="small muted">Admins and managers write posts.</p>}
+          </div>
+        </div>
+      )}
 
       <div className="panel stack-sm">
         <h3 style={{ margin: 0 }}>More ways to rank higher nearby</h3>
