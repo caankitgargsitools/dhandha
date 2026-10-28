@@ -72,7 +72,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 47 | **Referral programme, renewal reminders, win-back / upsell campaigns** | Claude | Built and working | Done 28 Oct — renewal reminders; referral links (/ref, task to ask 14 days after a win, referred leads with thank-you task); win-back (CRM → Win-back & referrals: lost deals after N days, quiet customers after M days) |
 | 48 | **Festival greetings & social posts with logo**, auto-posted to Google Profile / social (part of Phase 4, step 22) | Both | Built and working | To do — one by one, in the order you choose |
 | 49 | **EMD / bank guarantee and working-capital finance** via bank / NBFC tie-ups (referral fee) | Both | Built and working | To do — one by one, in the order you choose |
-| 50 | **Government schemes & subsidies finder** | Claude | Built and working | To do — one by one, in the order you choose |
+| 50 | **Government schemes & subsidies finder** | Claude | Built and working | Done 28 Oct — menu "Government schemes": 11 central schemes matched to your Vault, yes/no questions, official links; state schemes later |
 | 51 | **Morning brief on WhatsApp** — today's tenders, follow-ups, hot leads, money due | Claude | Built and working | Done 28 Oct as a phone alert at 09:05 (new tenders, bids closing, follow-ups, tasks, meetings, new leads); on WhatsApp once Dhandha's WhatsApp is set up (step 29) |
 | 52 | **Pricing of Dhandha** — set plans and credits against competitors (notes in CLAUDE.md "Competitors"); suggestion: free tier + ~₹999/mo or ₹9,999/yr all-in + credits | Both | Built and working | To do — one by one, in the order you choose |
 

@@ -26,7 +26,7 @@ export default async function AppLayout({ children }) {
       { href: "/app/outreach", label: "Outreach", icon: "mail" },
       { href: "/app/sales", label: "Sales team", icon: "calendar" },
     ] },
-    { items: [{ href: "/app/vault", label: "Business Vault", icon: "vault", match: ["/app/vault", "/app/brand", "/app/tenders/preferences"] }] },
+    { items: [{ href: "/app/vault", label: "Business Vault", icon: "vault", match: ["/app/vault", "/app/brand", "/app/tenders/preferences"] }, { href: "/app/schemes", label: "Government schemes", icon: "rupee" }] },
     { title: "Account", items: [
       { href: "/app/wallet", label: "Credits & plan", icon: "wallet" },
       { href: "/app/support", label: "Help & tickets", icon: "ticket" },
