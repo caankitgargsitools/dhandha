@@ -5,6 +5,7 @@ import { GEPNIC, GEM } from "./sources.js";
 import { crawlGepnic } from "./adapters/gepnic.js";
 import { crawlGem } from "./adapters/gem.js";
 import { crawlNprocure, NPROCURE } from "./adapters/nprocure.js";
+import { crawlBihar, BIHAR } from "./adapters/biharEproc.js";
 import { crawlGepnicResults } from "./adapters/gepnicResults.js";
 import { crawlGemResults } from "./adapters/gemResults.js";
 import { sendTenders, sendAwards } from "./ingest.js";
@@ -37,16 +38,25 @@ function plan() {
   const sites = rotate(GEPNIC.filter((s) => !s.skip && pick(s.portal)), Math.floor(Date.now() / (8 * 3600000)));
   const steps = [], winners = [];
   for (const site of sites) {
-    steps.push({ name: `${site.portal} · tenders`, run: (p) => crawlGepnic(p.browser, site, { maxDetails, log, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders(site.portal, rows, env)) : "no tenders found — check the site or adapter" })) });
+    steps.push({ name: `${site.portal} · tenders`, run: async (p) => crawlGepnic(p.browser, site, { maxDetails, log, progress: p.update, wanted: await detailWanted(site.portal) }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders(site.portal, rows, env)) : "no tenders found — check the site or adapter" })) });
     if (results) winners.push({ name: `${site.portal} · winners`, run: (p) => crawlGepnicResults(p.browser, site, { maxPages: Math.min(maxPages, 10), maxAwards, log, progress: p.update, captcha }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendAwards(`Results: ${site.portal}`, rows, env)) : "no results found — check the site or adapter" })) });
   }
   // state portals with their own systems (not GePNIC)
   if (pick(NPROCURE.portal)) steps.push({ name: `${NPROCURE.portal} · tenders`, run: (p) => crawlNprocure(p.browser, { maxPages: Number(env.NPROCURE_PAGES || 400), log, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders(NPROCURE.portal, rows, env)) : "no tenders found — check the site or adapter" })) });
+  if (pick(BIHAR.portal)) steps.push({ name: `${BIHAR.portal} · tenders`, run: (p) => crawlBihar(p.browser, { log, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders(BIHAR.portal, rows, env)) : "no tenders — the site may have refused the connection" })) });
   // tenders everywhere first; winners pages wait for a person to type a captcha, so they go last
   if (!pick("GeM")) return [...steps, ...winners];
   steps.push({ name: "GeM · tenders", run: (p) => crawlGem(p.browser, { maxPages, log, base: GEM.base, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders("GeM", rows, env)) : "no bids found — check the adapter" })) });
   if (env.CRAWL_RESULTS !== "0") winners.push({ name: "GeM · winners", run: (p) => crawlGemResults(p.browser, { maxPages: Math.min(maxPages, 5), maxBids: maxAwards, log, base: GEM.base, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendAwards("Results: GeM", rows, env)) : "no results found — check GEM_RESULT_STATUS or the adapter" })) });
   return [...steps, ...winners];
+}
+
+// Matched tenders still missing value / EMD on this portal (their detail pages are opened first).
+async function detailWanted(portal) {
+  try {
+    const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/detail_wanted`, { method: "POST", headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, "content-type": "application/json" }, body: JSON.stringify({ p_key: env.INGEST_KEY, p_portal: portal }) });
+    return new Set(r.ok ? await r.json() : []);
+  } catch { return new Set(); }
 }
 
 const summary = (r) => r ? Object.entries(r).map(([k, v]) => `${v} ${k}`).join(", ") : "";

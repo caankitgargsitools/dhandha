@@ -32,7 +32,7 @@ export function parseDetail(rows) {
   };
 }
 
-export async function crawlGepnic(browser, site, { maxOrgs = 400, maxDetails = 40, log = console.log, progress = () => {} } = {}) {
+export async function crawlGepnic(browser, site, { maxOrgs = 400, maxDetails = 40, log = console.log, progress = () => {}, wanted = new Set() } = {}) {
   const ctx = await browser.newContext({ locale: "en-IN", userAgent: "Mozilla/5.0 (DhandhaBot; tender alerts for registered businesses)" });
   const page = await ctx.newPage();
   const out = [];
@@ -78,9 +78,12 @@ export async function crawlGepnic(browser, site, { maxOrgs = 400, maxDetails = 4
     }
     // Detail pages (value, EMD, pre-bid) cost a page load each, so only the newest few per run; the rest get
     // theirs on later runs or when a company opens the tender.
+    // Tenders a company is already interested in but without value / EMD go first (`wanted`, from detail_wanted).
     const cutoff = Date.now() + 2 * 864e5;
-    const detailed = new Set(out.filter((t) => t._detail && Date.parse(t.due_at) > cutoff)
-      .sort((a, b) => String(b.published_on).localeCompare(String(a.published_on))).slice(0, maxDetails));
+    const first = out.filter((t) => t._detail && wanted.has(t.tender_ref)).slice(0, 120);
+    const newest = out.filter((t) => t._detail && Date.parse(t.due_at) > cutoff && !wanted.has(t.tender_ref))
+      .sort((a, b) => String(b.published_on).localeCompare(String(a.published_on))).slice(0, maxDetails);
+    const detailed = new Set([...first, ...newest]);
     // detail pages (value, EMD, pre-bid) — links are session-bound, so open them in the same context
     for (const [i, t] of [...detailed].entries()) {
       progress({ phase: "details", done: i, total: detailed.size });
