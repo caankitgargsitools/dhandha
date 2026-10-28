@@ -83,3 +83,4 @@ Social lead sources:
 60. PSU portals (execute_sql, 28 Oct) — `private.session_portals` and `private.queue_prefetch` also leave out NTPC Tenders and SAIL Tenders
 61. Quotations (execute_sql, 28 Oct) — `quotes` (members read); `private.next_quote_number`; `quote_save`, `quote_send` (authenticated); `quote_view`, `quote_respond` (anon, by token)
 62. Referrals & win-back (execute_sql, 28 Oct) — `leads.referred_by`; `referral_links`; `private.ensure_referral_link`, `referral_link`, `referral_view` / `referral_submit` (anon); `private.won_to_referral` + trigger `t_won_referral`; `winback_settings`, `winback_log`, `winback_save`, `private.winback_run` + cron `winback_daily` (03:51 UTC)
+63. Lead routing (execute_sql, 28 Oct) — `lead_routing`; `private.route_lead` + trigger `b_lead_route` (before insert); `private.routed_lead_push` + trigger `t_routed_lead_push`; `lead_routing_save`

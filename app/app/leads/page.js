@@ -69,6 +69,7 @@ export default async function Leads({ searchParams }) {
       <div className="page-head">
         <div><h1>Leads</h1><p>Prospects for {company.legal_name}, scored on how well they fit your ideal client. {["telecaller", "field"].includes(role) ? "You see the leads given to you." : ""}</p></div>
         <div className="row">
+          <Link href="/app/leads/routing" className="btn ghost">Lead routing</Link>
           <Link href="/app/leads/new-companies" className="btn ghost"><Icon name="building" size={16} /> New companies</Link>
           <Link href="/app/leads/winners" className="btn gold"><Icon name="tender" size={16} /> Tender winners</Link>
         </div>
