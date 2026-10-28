@@ -33,6 +33,7 @@ It covers:
 5. **Prefer non-destructive database changes.** Disable roles, revoke flags or ban users instead of deleting rows.
 6. **Dummy data must be removable.** Every demo row is registered in `public.demo_seed(table_name,row_id)` so it can be removed before go-live.
 8. **Pending list, every day.** `PENDING.md` lists what waits on the owner and what Claude is doing. Do everything possible yourself; list only what truly needs the owner. A scheduled task checks it every morning (09:23 IST): verify what is done (database, GitHub, live checks), finish what you can, update the file, and send the list to the owner in chat, asking them to say what they have done. Follow this in all development.
+9. **Keep working; don't wait (28 Oct).** Keep developing all the time. Keep studying competitors (CRM, lead finders, tenders, AI calling) and put every feature they have that we don't in `COMPETITOR_IDEAS.md` (pending the owner's approval; ask about them one at a time). The owner has given standing approval for normal work (access, tools, database changes). If a design/feature decision is needed and no answer comes within about a minute, move on to the next item and ask again when the owner is back. When input is needed, send a phone push (PushNotification) starting "Papa, I am waiting for your input: …".
 7. **Answer in chat.** The owner wants answers inline in chat rather than as separate documents. Ask questions one at a time, with Yes/No/Skip or multiple-choice options.
 
 ## Map of the code
