@@ -2,7 +2,7 @@
 
 Checked and sent to the owner every morning (09:23 IST) by the Dhandha development session. Items move to
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
-Last checked: 27 Oct 2026.
+Last checked: 28 Oct 2026.
 
 ## The queue — one by one, in this order
 
@@ -23,7 +23,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 10 | **Supabase leaked-password protection** — Authentication → Policies (#12) | You | Supabase security check clears | Open |
 | 10a | **Daily captcha session** — Admin → Captcha session → "Start today's session" each morning (reminder 09:31 IST), type each portal's captcha; re-verify a portal when its alert comes. Needs the phone app (step 5) for alerts | You | Portals show Live; tenders show "✓ Pre-checked" before anyone opens them; the page learns each portal's session length | From 25 Oct |
 | 10b | **Big document hand-over time-outs** — 2 fetches on 24 Oct failed at `doc_job_put_chunk` (database statement time-out); make the chunk writes smaller/faster and retry (G) | Claude | No fetch fails at "Handing over" | Done 25 Oct — 512 KB pieces, no compression attempt, five retries |
-| 11 | **Tender winners after the captcha** — results pages show nothing until their captcha is typed, and the crawler asked at times nobody was watching (all expired). 27 Oct: moved into the morning captcha session — after each portal goes live you get one more captcha "Tender winners: …" (A) | Both | Real award results arrive in Tender winners | Built 27 Oct — first results at your next captcha session |
+| 11 | **Tender winners after the captcha** — results pages show nothing until their captcha is typed, and the crawler asked at times nobody was watching (all expired). 27 Oct: moved into the morning captcha session — after each portal goes live you get one more captcha "Tender winners: …" (A) | Both | Real award results arrive in Tender winners | Built 27 Oct; reached the server 27 Oct afternoon — first results at today's captcha session (28 Oct) |
 | 12 | **More tender detail per crawl** (value, EMD) and a Haryana portal re-test (D) | Claude | Values / EMD filled on new tenders; Haryana tenders arrive | Haryana tenders arrive again (26 Oct crawl); value / EMD per crawl still planned |
 | 13 | **BOQ Excel (.xls) into the cost planner** (B) | Claude | Upload the portal's BOQ and its items fill the planner | Planned |
 | 14 | **Razorpay switch-on** — keys in Vercel, webhook in Razorpay, secret in Supabase Vault, seller GSTIN in Admin → Billing (#7) | You | Webhook secret + GSTIN present; a test top-up adds credits | Open |
@@ -32,7 +32,10 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 17 | **Apollo API key** — Generate leads → Apollo (#6) | You | Apollo connected | Open |
 | 18 | **First database for the data marketplace** — upload, declare source and lawful basis, set a price, Go live (#17) | You | A live database | Open |
 | 19 | **Indian server (Oracle Mumbai VM)** + make the crawler image public on GitHub (#1, #13) | You | The server reports in | Done 26 Oct — AWS Mumbai server (t4g.small) running the crawler, document fetcher and probes; GeM opens from India (42,206 ongoing bids) |
-| 20 | **GeM tenders and winners** — runs on the Indian server (E) | Claude | GeM tenders and awards arrive | After step 19 |
+| 19a | **AWS budget alert** — Billing → Budgets → Create budget → monthly $20, alert to your email | You | A $20 alert exists (protects against surprise bills) | Open |
+| 20 | **GeM tenders and winners** — runs on the Indian server (E) | Claude | GeM tenders and awards arrive | Tenders done 27 Oct — 1,802 GeM bids, 50 CA matches; GeM winners still 0 (next) |
+| 20a | **State portals (A)** — Gujarat ✅ (3,579 tenders); Karnataka needs its captcha → add to the morning session; AP / Telangana lists sit behind scripts (probing); Bihar resets our server's connection (retry at other hours) | Claude | Tenders from these states arrive | Gujarat done 27 Oct; rest in progress |
+| 20b | **Large PSU portals (B)** then **IREPS (C)** | Claude | NTPC, ONGC, IOCL, BHEL, SAIL, Coal India…, then railway tenders arrive | After A |
 | 21 | **AI calling** — choose the provider: Bolna (recommended), Exotel + Vapi, or Twilio + Retell; a DLT-registered calling number (#19) | Both | You name the provider; I build calls that move deals to "Called" | Parked on your instruction |
 | 22 | **Social posts and AI video (Phase 4)** — choose the style: template videos / talking avatar / both (#15) | Both | You choose; I build | Waiting for your choice |
 | 23 | **IndiaMART / JustDial buyer enquiries** as an automatic lead source (M) | Both | You get a seller account; I connect its lead API | When you have the account |
@@ -42,6 +45,10 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 27 | **Before launch** — remove demo data (`demo_seed`), move pg_net out of the public schema (J) | Claude | No demo rows; Supabase lint clean | At launch |
 
 ## Done (recent)
+
+- 28 Oct: Lead autopilot — 48 new leads for ₹96. 61 new tender matches for GSC in a day (50 from GeM, 8 Uttarakhand, 3 Gujarat). Fixed: the afternoon pre-fetch no longer queues tenders from portals whose documents we can't fetch yet (a Gujarat job failed). 6 pre-fetches failed yesterday afternoon because nobody typed the captcha (the server restart at 12:20 closed the morning sessions).
+
+- 27 Oct (evening): server updater fixed (owner replaced Watchtower); GeM 6 → 1,802 bids (page's own data call with its real security token); Gujarat nProcure 3,394 → 3,579 tenders; Punjab / Rajasthan / West Bengal no longer lost to a database time-out (batch retry). 
 
 - 27 Oct (later): Lead autopilot fixed — rerun found 50 new leads for ₹100 (skips businesses already in your leads, rotates searches). Tender winners now asked in the morning captcha session. Server updater (Watchtower) was broken since setup — replaced by the owner; the server now has all fixes and updates hourly. GeM reader verified on the live page (41,984 bids). Gujarat nProcure adapter built (≈3,400 tenders); Karnataka's search needs a captcha (will join the morning session); AP, Telangana, Bihar being probed. State portals (Gujarat, Karnataka, AP, Telangana, Bihar) open from India with no captcha; their tender lists load in the background, so probes now record those calls.
 
