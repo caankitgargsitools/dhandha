@@ -32,8 +32,8 @@ export default async function Documents() {
       <div>
         <h1>Documents</h1>
         <p className="muted" style={{ margin: 0 }}>
-          Files stay in your Google Drive. Dhandha keeps the link, the key numbers and the expiry date, and alerts you
-          60, 30, 15 and 7 days before anything lapses.
+          Files stay in your Google Drive. Dhandha keeps the link, the key numbers and the expiry date.
+          You&apos;ll get a phone alert 30 and 7 days before a document expires.
         </p>
       </div>
       {driveOn ? (
@@ -82,7 +82,7 @@ export default async function Documents() {
         {!docs?.length ? (
           <p className="muted small">No documents yet. Start with PAN, GST certificate, incorporation certificate and the last 3 years' audited accounts.</p>
         ) : (
-          <table>
+          <div className="table-wrap"><table>
             <thead><tr><th>Document</th><th>No. / period</th><th>Expiry</th><th>File</th><th></th></tr></thead>
             <tbody>
               {docs.map((d) => (
@@ -95,7 +95,7 @@ export default async function Documents() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </div>

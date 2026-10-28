@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { recordBrandAsset } from "../actions";
+import { recordBrandAsset, saveBrandMargins } from "../actions";
 
 // Makes near-white pixels transparent and trims empty borders (for signature / seal photos).
 async function cleanBackground(file) {
@@ -41,7 +41,23 @@ export default function BrandUploader({ tenantId, companyId, kind, accept, clean
   const [error, setError] = useState("");
   const [top, setTop] = useState(current?.margin_top_mm ?? 45);
   const [bottom, setBottom] = useState(current?.margin_bottom_mm ?? 25);
+  const [saved, setSaved] = useState(false);
   const router = useRouter();
+
+  // change the header / footer heights of the letterhead already uploaded, without a new file
+  async function onSaveMargins() {
+    setError(""); setSaved(false); setBusy(true);
+    try {
+      const res = await saveBrandMargins({ kind, meta: { margin_top_mm: Number(top), margin_bottom_mm: Number(bottom) } });
+      if (res?.error) throw new Error(res.error);
+      setSaved(true);
+      router.refresh();
+    } catch (err) {
+      setError(err.message || "Could not save.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function onFile(e) {
     const file = e.target.files?.[0];
@@ -77,6 +93,12 @@ export default function BrandUploader({ tenantId, companyId, kind, accept, clean
         <div className="row">
           <div style={{ flex: 1 }}><label>Header height (mm)</label><input type="number" value={top} min={0} max={120} onChange={(e) => setTop(e.target.value)} /></div>
           <div style={{ flex: 1 }}><label>Footer height (mm)</label><input type="number" value={bottom} min={0} max={80} onChange={(e) => setBottom(e.target.value)} /></div>
+        </div>
+      )}
+      {margins && current !== undefined && (
+        <div className="row" style={{ gap: 8 }}>
+          <button type="button" className="ghost sm" onClick={onSaveMargins} disabled={busy} aria-busy={busy}>Save heights</button>
+          {saved && <span className="small" style={{ color: "var(--ok)" }}>Saved.</span>}
         </div>
       )}
       <label className="btn ghost" style={{ alignSelf: "start", cursor: busy ? "default" : "pointer", color: "var(--ink)", marginBottom: 0 }}>

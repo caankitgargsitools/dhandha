@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { expectedSeconds, remaining, fraction, queueEta, dur } from "@/lib/crawlerEta";
 
-const RUN_NOW = "https://github.com/caankitgargsitools/dhandha/actions/workflows/crawler-run.yml";
 const CHIP = { done: ["ok", "Done"], failed: ["bad", "Failed"], skipped: ["mute", "Next run"], running: ["info", "Running"], queued: ["mute", "Queued"] };
 
 // Live view of the crawler: what is running, how far it got, what is queued and when each should start.
@@ -21,8 +20,8 @@ export default function LiveCrawler({ runners, stats }) {
   if (!r) {
     return (
       <div className="panel">
-        <div className="panel-head"><h3>Live crawler</h3><a className="btn sm" href={RUN_NOW} target="_blank" rel="noreferrer">Run now on GitHub</a></div>
-        <p className="small muted" style={{ margin: 0 }}>No crawl has reported yet. Start one with Run now (GitHub → Run workflow), or wait for the next scheduled run at 06:10, 12:40 or 18:10.</p>
+        <div className="panel-head"><h3>Live crawler</h3></div>
+        <p className="small muted" style={{ margin: 0 }}>No crawl has reported yet. The crawler on the AWS Mumbai server reports here when its next run starts.</p>
       </div>
     );
   }
@@ -51,11 +50,10 @@ export default function LiveCrawler({ runners, stats }) {
         <h3>Live crawler {isLive ? <span className="chip info" style={{ marginLeft: 6 }}>Running</span> : <span className={`chip ${r.status === "failed" ? "bad" : "ok"}`} style={{ marginLeft: 6 }}>{r.status === "failed" ? "Last run failed" : "Last run finished"}</span>}</h3>
         <span className="row" style={{ gap: 8 }}>
           {s.link && <a className="small" href={s.link} target="_blank" rel="noreferrer">Run log</a>}
-          <a className="btn sm" href={RUN_NOW} target="_blank" rel="noreferrer">Run now on GitHub</a>
         </span>
       </div>
       <div className="small faint">
-        {s.where || r.runner} · started {new Date(s.started_at || r.started_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+        {s.where || r.runner} · started {new Date(s.started_at || r.started_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" })}
         {" · "}{doneCount} of {steps.length} steps done{isLive && totalLeft ? ` · about ${dur(totalLeft)} to go` : ""}
         {!isLive && s.finished_at ? ` · took ${dur((Date.parse(s.finished_at) - Date.parse(s.started_at)) / 1000)}` : ""}
       </div>

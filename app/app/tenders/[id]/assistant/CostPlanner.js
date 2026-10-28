@@ -61,7 +61,7 @@ export default function CostPlanner({ matchId, initial, estimate, saved, fresh, 
     );
   }
   if (mode === "done") {
-    return <div className="row" style={{ gap: 8 }}><span className="small">Price saved: <strong>{inr(saved.price)}</strong> + GST</span><button className="ghost sm" onClick={() => setMode("plan")}>Open the cost planner</button></div>;
+    return <div className="row" style={{ gap: 8 }}><span className="small">Price saved: <strong>{inr(saved.price)}</strong> + GST</span><button className="ghost sm" onClick={() => { setDirect(String(saved.price)); setMode("direct"); }}>Change price</button><button className="ghost sm" onClick={() => setMode("plan")}>Open the cost planner</button></div>;
   }
 
   return (
@@ -94,7 +94,7 @@ export default function CostPlanner({ matchId, initial, estimate, saved, fresh, 
           </details>
         </div>
 
-        <aside className="stack-sm" style={{ position: "sticky", top: 12, border: "1px solid var(--line)", borderRadius: 12, padding: 12, background: "var(--paper, #fff)" }}>
+        <aside className="stack-sm" style={{ position: "sticky", top: 12, border: "1px solid var(--line)", borderRadius: 12, padding: 12, background: "var(--panel)" }}>
           <strong>Your cost</strong>
           {[["Items / BOQ", c.boq], ["Manpower", c.manpower], ["Travel and stay", c.travel], ["Other", c.other]].map(([l, v]) => (
             <div key={l}>

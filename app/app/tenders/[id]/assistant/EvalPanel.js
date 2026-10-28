@@ -21,7 +21,7 @@ export default function EvalPanel({ ev, estimate, cost, quote }) {
   const l1 = ev.method !== "QCBS" ? l1Advice({ cost, estimate, minMargin: num(margin) }) : null;
 
   return (
-    <div className="stack-sm" style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 12, padding: 14 }}>
+    <div className="stack-sm" style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 12, padding: 14 }}>
       <div className="row between"><strong>How this tender is evaluated</strong><span className="chip info">{ev.method === "QCBS" ? `QCBS ${tw}:${fw}` : ev.method === "QBS" ? "Quality only (QBS)" : ev.method === "L1" ? "L1 — lowest price wins" : "Other"}</span></div>
       {ev.formula && <div className="tiny faint">Tender says: “{ev.formula}”</div>}
       {ev.criteria.length > 0 && (

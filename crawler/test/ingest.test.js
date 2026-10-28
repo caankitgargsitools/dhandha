@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { sendTenders } from "../src/ingest.js";
+import { sendTenders, sendAwards } from "../src/ingest.js";
 
 test("a timed-out batch is retried in halves; others still go through", async () => {
   const rows = Array.from({ length: 450 }, (_, i) => ({ tender_ref: String(i) }));
@@ -19,4 +19,13 @@ test("a timed-out batch is retried in halves; others still go through", async ()
 test("other errors are not retried; all failing throws", async () => {
   const post = async () => { throw new Error("ingest 401: bad key"); };
   await assert.rejects(sendTenders("x", [{ tender_ref: "1" }], {}, { post, pause: 0 }), /401/);
+});
+
+test("awards use the same retry in halves", async () => {
+  const rows = Array.from({ length: 10 }, (_, i) => ({ tender_ref: String(i) }));
+  let calls = 0;
+  const post = async (src, batch) => { calls++; if (batch.length === 10) throw new Error("ingest awards 504: timeout"); return { received: batch.length, inserted: 1 }; };
+  const t = await sendAwards("x", rows, {}, { post, pause: 0 });
+  assert.deepEqual(t, { received: 10, inserted: 2 });
+  assert.equal(calls, 3);
 });

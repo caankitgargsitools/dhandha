@@ -18,15 +18,22 @@ export default function Uploader() {
     const file = f.get("file");
     if (!file?.size) return setMsg({ error: "Choose a file." });
     if (file.size > 50 * 1024 * 1024) return setMsg({ error: "Keep the file under 50 MB; split bigger databases." });
+    const form = e.currentTarget;
     setBusy(true); setMsg({ note: "Uploading…" }); setEta(Math.round(8 + (file.size / (1024 * 1024)) * 4));
-    const path = `${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-    const { error } = await createClient().storage.from("datasets").upload(path, file, { contentType: file.type || "text/csv" });
-    if (error) { setBusy(false); return setMsg({ error: error.message }); }
-    setMsg({ note: "Reading and loading the records…" });
-    const r = await processDataset({ path, fileName: file.name, name: f.get("name"), source_label: f.get("source_label"), audience: f.get("audience"),
-      lawful_basis: f.get("lawful_basis"), source_note: f.get("source_note"), price: f.get("price"), declared: f.get("declared") === "on" });
-    setBusy(false); setMsg(r);
-    if (!r.error) { e.target.reset(); router.refresh(); }
+    try {
+      const path = `${crypto.randomUUID()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const { error } = await createClient().storage.from("datasets").upload(path, file, { contentType: file.type || "text/csv" });
+      if (error) return setMsg({ error: error.message });
+      setMsg({ note: "Reading and loading the records…" });
+      const r = await processDataset({ path, fileName: file.name, name: f.get("name"), source_label: f.get("source_label"), audience: f.get("audience"),
+        lawful_basis: f.get("lawful_basis"), source_note: f.get("source_note"), price: f.get("price"), declared: f.get("declared") === "on" });
+      setMsg(r || { error: "No answer from the server. Check the list below before trying again." });
+      if (r && !r.error) { form.reset(); router.refresh(); }
+    } catch (err) {
+      setMsg({ error: `The upload stopped: ${err?.message || "network error"}. Check the list below before trying again.` });
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <form onSubmit={submit} className="stack-sm">

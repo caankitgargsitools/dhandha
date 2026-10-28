@@ -12,6 +12,10 @@ export const LEAD_PAGES = [
   ["/app/leads/google-maps", "Google Maps"],
   ["/app/leads/apollo", "Apollo"],
   ["/app/leads/databases", "Buy data"],
+  ["/app/leads/google-ads", "Google Ads"],
+  ["/app/leads/google-profile", "Google Profile"],
+  ["/app/leads/autopilot", "Autopilot"],
+  ["/app/leads/results", "Results"],
 ];
 
 export default function SourceTabs() {

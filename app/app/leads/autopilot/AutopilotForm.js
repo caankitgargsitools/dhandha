@@ -12,7 +12,7 @@ export default function AutopilotForm({ a, sequences, types, prices, balance, ca
   const [budget, setBudget] = useState(Number(a.daily_budget ?? 100));
   const [sources, setSources] = useState(a.sources || ["google_maps"]);
   const [seq, setSeq] = useState(a.sequence_id || "");
-  const [call, setCall] = useState(!!a.call_enabled && callReady);
+  const [call] = useState(!!a.call_enabled && callReady);
   const [queries, setQueries] = useState(a.maps_queries?.length ? a.maps_queries : [{ what: "", areas: "" }]);
   const [run, setRun] = useState(null);
   const steps = sequences.find((s) => s.id === seq)?.sequence_steps || [];
@@ -41,7 +41,7 @@ export default function AutopilotForm({ a, sequences, types, prices, balance, ca
           <div className="notice info" style={{ display: "block" }}>
             <strong>{plan.total} new leads a day</strong> <span className="small">(about {plan.monthly} a month) at about {inr(per)} each</span>
             <div className="small">{plan.split.map((s) => `${label[s.source]}: ${s.leads}`).join(" · ") || "Pick a source below."}</div>
-            <div className="tiny faint">Each lead: {inr(prices.lead_found ?? 2)} to find{steps.length ? ` + ${steps.length} message${steps.length > 1 ? "s" : ""} in your sequence` : ""}{call ? " + a 2-minute AI call" : ""}. Credits left: {inr(balance)}{balance < plan.spend ? " — top up to use the full budget" : ""}. A day with fewer good leads spends less.</div>
+            <div className="tiny faint">Each lead: {inr(prices.lead_found ?? 2)} to find{steps.length ? ` + ${steps.length} message${steps.length > 1 ? "s" : ""} in your sequence` : ""}. Credits left: {inr(balance)}{balance < plan.spend ? " — top up to use the full budget" : ""}. A day with fewer good leads spends less.</div>
           </div>
         </div>
 
@@ -76,18 +76,16 @@ export default function AutopilotForm({ a, sequences, types, prices, balance, ca
                 <option value="">— don't message —</option>
                 {sequences.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.sequence_steps.length} steps{s.active ? "" : ", off"})</option>)}
               </select></div>
-            <div><label htmlFor="ap-link">2. Offer</label>
-              <select id="ap-link" name="link_kind" defaultValue={a.link_kind || "meeting"}>
+            <div><label htmlFor="ap-link">2. Offer <span className="tiny faint">(coming soon)</span></label>
+              <select id="ap-link" defaultValue={a.link_kind || "meeting"} disabled>
                 <option value="meeting">A meeting (booking link)</option><option value="payment">A payment link</option><option value="none">Nothing yet</option>
-              </select></div>
-            <div><label htmlFor="ap-type">Meeting type for the link</label>
-              <select id="ap-type" name="meeting_type_id" defaultValue={a.meeting_type_id || ""}><option value="">—</option>{types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div>
+              </select>
+              <input type="hidden" name="link_kind" value={a.link_kind || "meeting"} /></div>
+            <div><label htmlFor="ap-type">Meeting type for the link <span className="tiny faint">(coming soon)</span></label>
+              <select id="ap-type" defaultValue={a.meeting_type_id || ""} disabled><option value="">—</option>{types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
+              <input type="hidden" name="meeting_type_id" value={a.meeting_type_id || ""} /></div>
           </div>
-          <label className="row" style={{ gap: 10, margin: 0, fontWeight: 500 }}>
-            <input type="checkbox" name="call_enabled" checked={call} disabled={!callReady} onChange={(e) => setCall(e.target.checked)} style={{ width: "auto" }} />
-            AI call to leads that open or reply {callReady ? "" : <span className="tiny faint">(AI calling is being set up)</span>}
-          </label>
-          <label className="row" style={{ gap: 10, margin: 0, fontWeight: 500 }}><input type="checkbox" name="crm_auto" defaultChecked={a.crm_auto ?? true} style={{ width: "auto" }} /> Run the CRM pipeline automatically (every lead gets a deal that moves itself: New → Messaged → Called → Link sent → Meeting → Won)</label>
+          <label className="row" style={{ gap: 10, margin: 0, fontWeight: 500 }}><input type="checkbox" name="crm_auto" defaultChecked={a.crm_auto ?? true} style={{ width: "auto" }} /> Run the CRM pipeline automatically (every lead gets a deal that moves itself: New → Messaged → Meeting → Won)</label>
         </div>
       </fieldset>
       {state?.error && <p className="error" style={{ margin: 0 }}>{state.error}</p>}

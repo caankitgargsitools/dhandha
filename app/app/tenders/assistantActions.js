@@ -46,7 +46,8 @@ export async function techMarking({ matchId }) {
   if (!preparer(role)) return { error: "Only admins, managers and bid preparers can do this." };
   if (!aiTiers().some((t) => !t.free)) return { error: PAID };
   if (!(await enough(supabase, tenant.id, 29))) return { error: "Not enough credits — this needs 29." };
-  const { data: m } = await supabase.from("tender_matches").select("id, tender_id, tenders(tender_ref)").eq("id", matchId).eq("company_id", company.id).single();
+  const { data: m } = await supabase.from("tender_matches").select("id, tender_id, tenders(tender_ref)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
+  if (!m?.tenders) return { error: "Tender not found." };
   const doc = await tenderPdfFor(supabase, m.tender_id);
   if (doc.error) return doc;
   const ai = await runJson({ supabase, tenantId: tenant.id, task: "tech_marking", prompt: EVAL_PROMPT(await vaultFor(supabase, company.id)), pdf: doc.pdf, text: doc.text, private: true, maxTokens: 5000,
@@ -68,7 +69,8 @@ export async function askAssistant({ matchId, question, about, history = [] }) {
   if (!q) return { error: "Type your question." };
   if (!aiTiers().some((t) => !t.free)) return { error: PAID };
   if (!(await enough(supabase, tenant.id, 3))) return { error: "Not enough credits — a question needs 3." };
-  const { data: m } = await supabase.from("tender_matches").select("id, tender_id, score, eligible, reasons, quoted_price, tech_eval, tenders(*)").eq("id", matchId).eq("company_id", company.id).single();
+  const { data: m } = await supabase.from("tender_matches").select("id, tender_id, score, eligible, reasons, quoted_price, tech_eval, tenders(*)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
+  if (!m?.tenders) return { error: "Tender not found." };
   const [{ data: reads }, doc, vault] = await Promise.all([
     supabase.from("tender_reads").select("fields, summary, risks, formats").eq("tender_id", m.tender_id).order("created_at", { ascending: false }).limit(1),
     tenderPdfFor(supabase, m.tender_id),
@@ -88,7 +90,8 @@ Bidder's question: ${q}
 Return JSON: {"answer": string}`;
   const ai = await runJson({ supabase, tenantId: tenant.id, task: "assistant_chat", prompt, pdf: doc.pdf, text: doc.text, private: true, maxTokens: 1200, validate: (d) => (!d.answer ? "no answer" : null) });
   if (ai.error) return { error: ai.error };
-  await supabase.rpc("spend_credits", { p_tenant: tenant.id, p_action: "assistant_chat", p_qty: 1, p_ref: t.tender_ref });
+  const { error: se } = await supabase.rpc("spend_credits", { p_tenant: tenant.id, p_action: "assistant_chat", p_qty: 1, p_ref: t.tender_ref });
+  if (se) return { error: `Could not charge the 3 credits, so the answer is not shown: ${se.message}` };
   return { answer: String(ai.data.answer).slice(0, 4000) };
 }
 

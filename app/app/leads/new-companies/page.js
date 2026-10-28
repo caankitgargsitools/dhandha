@@ -30,12 +30,14 @@ export default async function NewCompanies() {
           <p>Companies and LLPs registered in the last {pref?.mca_days || 60} days in {where}, doing {what}, from the Ministry of Corporate Affairs&apos; public registration data. New businesses need accounts, compliance, premises, software, staff and suppliers.</p>
         </div>
       </div>
-      {!pref && <div className="notice"><Icon name="map" /><span>Set your <Link href="/app/leads">ideal client</Link> industries, cities and states first, so only relevant new companies show up.</span></div>}
+      {!pref && list.length > 0 && <div className="notice"><Icon name="map" /><span>Set your <Link href="/app/leads">ideal client</Link> industries, cities and states first, so only relevant new companies show up.</span></div>}
 
       <div className="grid-main">
         <div className="stack-sm">
           {error && <p className="error">{error.message}</p>}
-          {!list.length ? (
+          {!list.length && !pref ? (
+            <div className="panel stack-sm"><h3 style={{ margin: 0 }}>Save your ideal client first</h3><p className="muted small" style={{ margin: 0 }}>Tell Dhandha your ideal client&apos;s industries, cities and states, so Dhandha can pick the new companies that suit you.</p><div><Link className="btn" href="/app/leads">Set your ideal client</Link></div></div>
+          ) : !list.length ? (
             <div className="panel"><p className="muted" style={{ margin: 0 }}>No new registrations match right now. The register is refreshed every month; widen the period or industries to see more.</p></div>
           ) : (
             <FormState action={addMcaCompanies} submit={`Add selected as leads${cost ? ` · ${cost} credits each` : ""}`}>

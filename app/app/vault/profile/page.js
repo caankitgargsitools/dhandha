@@ -13,8 +13,7 @@ function F({ name, label, c, type = "text", ...rest }) {
   );
 }
 
-export default async function Profile({ searchParams }) {
-  const params = await searchParams;
+export default async function Profile() {
   const { supabase, company, role } = await getContext();
   const { data: c } = await supabase.from("companies").select("*").eq("id", company.id).single();
   const readOnly = role === "viewer";
@@ -24,7 +23,6 @@ export default async function Profile({ searchParams }) {
         <h1>Company profile</h1>
         <p className="muted" style={{ margin: 0 }}>Entered once, used in every bid, annexure and proposal.</p>
       </div>
-      {params?.welcome && <p className="notice small">Welcome! Your trial is active with 500 credits. Start by filling in the company details below.</p>}
       <FormState action={saveProfile} submit="Save profile">
         <fieldset disabled={readOnly} style={{ border: 0, padding: 0, margin: 0 }} className="stack">
           <div className="panel stack">
@@ -89,7 +87,7 @@ export default async function Profile({ searchParams }) {
             <div className="form-grid">
               <F name="signatory_name" label="Name" c={c} />
               <F name="signatory_designation" label="Designation" c={c} placeholder="Director / Partner / Proprietor" />
-              <F name="signatory_mobile" label="Mobile (for signature OTP)" c={c} inputMode="tel" />
+              <F name="signatory_mobile" label="Signatory mobile" c={c} inputMode="tel" />
             </div>
           </div>
           <div className="panel stack">

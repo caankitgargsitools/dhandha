@@ -12,6 +12,10 @@ import { ago } from "@/lib/tickets";
 import { UploadTenderFiles, ReadButtons } from "../TenderDocs";
 import FormatsPanel from "../FormatsPanel";
 import { aiTiers } from "@/lib/ai";
+import { setTenderStatus } from "../actions";
+import { STAGES } from "@/lib/tenderFilters";
+
+const STAGE = Object.fromEntries(STAGES);
 
 // AI steps (reading, filling, marking) can take a few minutes; lib/ai.js keeps the whole chain inside this
 export const maxDuration = 300;
@@ -79,6 +83,14 @@ export default async function TenderDetail({ params }) {
           <Link className="btn ghost" href={`/app/tasks?link_type=tender&link_id=${t.id}&link_label=${encodeURIComponent(t.title.slice(0, 80))}&title=${encodeURIComponent("Prepare bid: " + t.title.slice(0, 120))}`}>Assign to someone</Link>
         </div>
       </div>
+      {!["viewer", "disabled"].includes(role) && (
+        <div className="row small" style={{ gap: 8 }}>
+          <span className="muted">Stage: <strong>{STAGE[m.status] || m.status}</strong> · Mark as</span>
+          {[["submitted", "Submitted"], ["won", "Won"], ["lost", "Lost"]].filter(([s]) => s !== m.status).map(([s, l]) => (
+            <form key={s} action={setTenderStatus}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="status" value={s} /><button className="sm ghost">{l}</button></form>
+          ))}
+        </div>
+      )}
       {m.eligible && m.pending > 0 && (
         <div className="notice"><Icon name="sparkle" /><span><strong>This tender qualifies if you answer {m.pending} question{m.pending === 1 ? "" : "s"}.</strong> <Link href={`/app/tenders/${m.id}/assistant`}>Answer in the assistant</Link> — each answer is saved to your Vault for every tender.</span></div>
       )}
@@ -102,7 +114,8 @@ export default async function TenderDetail({ params }) {
               </div>
             ))}
             {role !== "viewer" && <UploadTenderFiles tenderId={t.id} />}
-            {role !== "viewer" && <ReadButtons matchId={m.id} aiReady={aiTiers().length > 0} hasFiles={fileLinks.length > 0} />}
+            {canMake ? <ReadButtons matchId={m.id} aiReady={aiTiers().length > 0} hasFiles={fileLinks.length > 0} />
+              : role !== "viewer" && <p className="tiny faint" style={{ margin: 0 }}>Reading the tender uses credits, so an admin, manager or bid preparer starts it.</p>}
           </div>
           {read && (
             <div className="panel stack-sm">
@@ -171,7 +184,7 @@ export default async function TenderDetail({ params }) {
           </div>
           <div className="panel stack-sm">
             <h3>Bid pack</h3>
-            <p className="small muted" style={{ margin: 0 }}>{(m.filled_formats || []).length ? "The tender's own formats, in its order and with its titles, filled from your Vault, plus a covering letter and the document checklist" : <>Covering letter and Annexures A–G filled from your Vault: bidder information, turnover, similar works, key people, non-blacklisting{msme ? ", MSE declaration" : ""} and the document checklist</>}{kinds.has("letterhead") ? ", printed on your letterhead" : " (add your letterhead to print on it)"}.</p>
+            <p className="small muted" style={{ margin: 0 }}>{(m.filled_formats || []).length ? "The tender's own formats, in its order and with its titles, filled from your Vault, plus a covering letter and the document checklist" : <>Covering letter and Annexures A–F filled from your Vault: bidder information, turnover, similar works, key people, non-blacklisting{msme ? ", MSE declaration" : ""} and the document checklist</>}{kinds.has("letterhead") ? ", printed on your letterhead" : " (add your letterhead to print on it)"}.</p>
             {gaps.length > 0 && (
               <div className="notice small" style={{ display: "block" }}>
                 <strong>Fill these once and every bid uses them:</strong>

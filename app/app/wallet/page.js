@@ -107,7 +107,7 @@ export default async function Wallet() {
             <thead><tr><th>When</th><th>What</th><th>Credits</th><th>Balance</th></tr></thead>
             <tbody>{ledger.map((l) => (
               <tr key={l.id}>
-                <td className="small">{new Date(l.created_at).toLocaleString("en-IN")}</td>
+                <td className="small">{new Date(l.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</td>
                 <td>{l.reason}{l.ref && <div className="muted small">{l.ref}</div>}</td>
                 <td style={{ color: Number(l.delta) < 0 ? "var(--bad)" : "var(--ok)" }}>{Number(l.delta) > 0 ? "+" : ""}{inr(l.delta)}</td>
                 <td>{inr(l.balance_after)}</td>

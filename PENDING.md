@@ -46,6 +46,8 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 
 ## Done (recent)
 
+- 28 Oct (audit): full self-audit of the portal (tenders, leads/CRM/sales, Vault/admin/billing/layout, crawler/workers) — about 110 findings; all high and medium ones fixed and merged, plus most low ones. Highlights: mandatory-condition warnings no longer block bid files for state preferences or unanswered questions; the database now enforces 2FA for admin powers; GitHub's duplicate crawler and document worker switched off (they split captcha sessions and caused database time-outs); document-expiry phone alerts now actually sent; autopilot survives a Google Maps time-out; no more duplicate deals; India time on all dates; Mark Submitted / Won / Lost on tenders; admin crawler page counts exact; Oracle text replaced with AWS.
+
 - 28 Oct: Lead autopilot — 48 new leads for ₹96. 61 new tender matches for GSC in a day (50 from GeM, 8 Uttarakhand, 3 Gujarat). Fixed: the afternoon pre-fetch no longer queues tenders from portals whose documents we can't fetch yet (a Gujarat job failed). 6 pre-fetches failed yesterday afternoon because nobody typed the captcha (the server restart at 12:20 closed the morning sessions).
 
 - 27 Oct (evening): server updater fixed (owner replaced Watchtower); GeM 6 → 1,802 bids (page's own data call with its real security token); Gujarat nProcure 3,394 → 3,579 tenders; Punjab / Rajasthan / West Bengal no longer lost to a database time-out (batch retry). 

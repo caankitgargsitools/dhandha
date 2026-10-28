@@ -7,7 +7,7 @@
 import { chromium } from "playwright";
 import { readFile } from "node:fs/promises";
 import { GEPNIC } from "./sources.js";
-import { parseDetail } from "./adapters/gepnic.js";
+import { parseDetail, parseTitleCell } from "./adapters/gepnic.js";
 import { unzip } from "./unzip.js";
 import { readResults, RESULTS_LIST } from "./adapters/gepnicResults.js";
 import { sendAwards } from "./ingest.js";
@@ -15,6 +15,8 @@ import { sendAwards } from "./ingest.js";
 const env = process.env;
 for (const k of ["SUPABASE_URL", "SUPABASE_PUBLISHABLE_KEY", "INGEST_KEY"]) if (!env[k]) { console.error(`Missing ${k}`); process.exit(1); }
 const log = (...a) => console.log(new Date().toISOString(), ...a);
+// a stray promise rejection (a page wait left behind by a failed step) is logged instead of ending the worker
+process.on("unhandledRejection", (e) => log("unhandled rejection:", e?.message || e));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const RUNNER = env.RUNNER_NAME || "docs";
 const MAX_FILES = 15, MAX_BYTES = 25 * 1024 * 1024, CHUNK = 512 * 1024; // 512 KB pieces keep each database write well inside its time limit
@@ -92,15 +94,14 @@ async function openTender(page, site, job, say = (step) => update(job, { step })
   for (const o of ordered.length ? ordered : orgs) {
     await say(`Looking in ${o.name}`);
     await page.goto(new URL(o.href, site.base + "/").toString(), { waitUntil: "domcontentloaded", timeout: 60000 });
-    const href = await page.$$eval("table.list_table tr, table#table tr", (trs, ref) => {
-      const row = trs.find((tr) => tr.cells[4]?.innerText.includes(ref));
-      return row?.querySelector("td a")?.getAttribute("href") || null;
-    }, job.tender_ref);
+    // the row whose tender ID (last bracket of the title cell) is exactly this tender's, not one that merely contains it
+    const rows = await page.$$eval("table.list_table tr, table#table tr", (trs) => trs
+      .map((tr) => ({ title: tr.cells[4]?.innerText || "", href: tr.querySelector("td a")?.getAttribute("href") || null })));
+    const href = rows.find((r) => r.href && parseTitleCell(r.title).tenderId === job.tender_ref)?.href;
     if (href) {
       await page.goto(new URL(href, site.base + "/").toString(), { waitUntil: "domcontentloaded", timeout: 60000 });
       return true;
     }
-    if (ordered.length && o === ordered.at(-1)) break;
   }
   return false;
 }
@@ -140,7 +141,7 @@ async function downloadDocs(page, job) {
   const add = (name, data) => {
     if (!data || data.length > MAX_BYTES) return;
     if (/\.zip$/i.test(name) || data.subarray(0, 2).toString() === "PK" && !/\.(xlsx|docx)$/i.test(name)) {
-      try { for (const x of unzip(data)) if (DOC_RX.test(x.name) && !/\.zip$/i.test(x.name)) files.push({ name: x.name, data: x.data }); return; } catch {}
+      try { for (const x of unzip(data, { maxBytes: MAX_BYTES })) if (x.data.length <= MAX_BYTES && DOC_RX.test(x.name) && !/\.zip$/i.test(x.name)) files.push({ name: x.name, data: x.data }); return; } catch {}
     }
     files.push({ name, data });
   };
@@ -165,6 +166,7 @@ async function downloadDocs(page, job) {
       if (got) {
         const p = await got.path();
         const data = p ? await readFile(p) : null;
+        await got.delete().catch(() => {}); // the copy on disk is no longer needed
         add(got.suggestedFilename() || l.name || l.t, data);
         break;
       }
@@ -175,6 +177,7 @@ async function downloadDocs(page, job) {
         if (d2) {
           const p = await d2.path();
           const data = p ? await readFile(p) : null;
+          await d2.delete().catch(() => {});
           add(d2.suggestedFilename() || l.name || l.t, data);
           break;
         }
@@ -217,16 +220,23 @@ async function upload(job, files) {
 const SESSION_IDLE_MS = 45 * 60000, LIVE_IDLE_MS = 24 * 3600000;
 const KEEPALIVE_MS = 4 * 60000;
 const EXPIRED_RX = /session\s+(?:has\s+)?(?:expired|timed?\s*out)|session\s+time\s*out|invalid\s+session/i;
-const sessions = new Map(); // portal -> { ctx, page, last, live }
+const MAX_IDLE_SESSIONS = 8; // non-live sessions kept open at once; the least recently used close first
+const sessions = new Map(); // portal -> { ctx, page, last, live, touched }
 const event = (portal, e, cookies = null) => rpc("session_event", { p_portal: portal, p_event: e, p_runner: RUNNER, p_cookies: cookies }).catch((x) => log("session_event", x.message));
 const saveCookies = async (portal, s) => event(portal, "cookies", await s.ctx.cookies().catch(() => null));
-async function sessionFor(browser, portal) {
+// Close sessions idle past their limit, and the least recently used non-live ones beyond MAX_IDLE_SESSIONS.
+async function evictIdle(keep = null) {
   for (const [p, s] of sessions) {
-    if (Date.now() - s.last > (s.live ? LIVE_IDLE_MS : SESSION_IDLE_MS)) {
+    if (p !== keep && Date.now() - s.last > (s.live ? LIVE_IDLE_MS : SESSION_IDLE_MS)) {
       if (s.live) await event(p, "closed");
-      await s.ctx.close().catch(() => {}); sessions.delete(p);
+      await dropSession(p);
     }
   }
+  const idle = [...sessions].filter(([p, s]) => p !== keep && !s.live).sort((a, b) => a[1].last - b[1].last);
+  for (const [p] of idle.slice(0, Math.max(0, idle.length - MAX_IDLE_SESSIONS))) await dropSession(p);
+}
+async function sessionFor(browser, portal) {
+  await evictIdle(portal);
   let s = sessions.get(portal);
   if (!s || s.page.isClosed()) {
     const ctx = await browser.newContext({ locale: "en-IN", acceptDownloads: true });
@@ -257,10 +267,11 @@ async function openSession(browser, req) {
     if (req.tender_ref && await openTender(s.page, site, { tender_ref: req.tender_ref, authority: req.authority }, say)) {
       if (await hasCaptcha(s.page)) { await captchaFromPerson(s.page, null, ch); asked = true; }
       // the documents usually ask for the captcha: click the first one (the file itself is not kept)
-      const link = (await s.page.$$("a")).length ? await s.page.$("a[id*=docDownoad], a[id*=DirectLink], a:has-text('Download as zip')") : null;
+      const link = await s.page.$("a[id*=docDownoad], a[id*=DirectLink], a:has-text('Download as zip')");
       if (link) {
         await say("Checking the documents page");
         const dl = s.page.waitForEvent("download", { timeout: 20000 }).catch(() => null);
+        dl.then((d) => d?.delete().catch(() => {})); // whenever it comes, the file is not kept
         await link.click().catch(() => {});
         const until = Date.now() + 20000;
         while (Date.now() < until && !(await hasCaptcha(s.page))) { if (await Promise.race([dl, sleep(800).then(() => undefined)]) !== undefined) break; }
@@ -285,18 +296,25 @@ async function openSession(browser, req) {
 // Tender winners: a portal's "Results of Tenders" list only shows after its captcha is typed. The crawler's own runs
 // came at times nobody was watching, so the results captcha is asked here, once a day per portal, while the admin is at
 // the captcha session. Skipped (session stays live) if nobody types it.
+// Done for the day only once the winners reached Dhandha (or there were none). If the person typed the captcha but
+// reading or sending failed, a later session that day tries again only where the page does not ask again.
 const winnersDone = new Map(); // portal -> India date
+const winnersAsked = new Map(); // portal -> India date the results captcha was typed
 async function winnersInSession(site, s, ch, say) {
   const portal = site.portal, today = new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10);
   if (winnersDone.get(portal) === today) return;
   try {
     await say("Tender winners: opening the results page");
     await s.page.goto(site.base + RESULTS_LIST, { waitUntil: "domcontentloaded", timeout: 60000 });
-    if (await hasCaptcha(s.page)) await captchaFromPerson(s.page, null, ch, "Tender winners: the results page asks for a captcha");
-    winnersDone.set(portal, today);
+    if (await hasCaptcha(s.page)) {
+      if (winnersAsked.get(portal) === today) { await rpc("session_update", { p_portal: portal, p_state: "live", p_step: "Live — tender winners could not be read today" }).catch(() => {}); s.last = Date.now(); return; }
+      await captchaFromPerson(s.page, null, ch, "Tender winners: the results page asks for a captcha");
+      winnersAsked.set(portal, today);
+    }
     await rpc("session_update", { p_portal: portal, p_state: "live", p_step: "Live — reading tender winners" });
     const rows = await readResults(s.page, site, { maxPages: 10, maxAwards: 200, log });
     const sent = rows.length ? await sendAwards(`Results: ${portal}`, rows) : null;
+    winnersDone.set(portal, today);
     log(`winners ${portal}: ${rows.length} award(s)`, sent ? JSON.stringify(sent) : "");
     await rpc("session_update", { p_portal: portal, p_state: "live", p_step: `Live — ${rows.length} tender winner${rows.length === 1 ? "" : "s"} read today` });
   } catch (e) {
@@ -306,8 +324,10 @@ async function winnersInSession(site, s, ch, say) {
   s.last = Date.now();
 }
 async function keepAlive() {
+  await evictIdle();
   for (const [portal, s] of sessions) {
-    if (Date.now() - (s.touched || s.last) < KEEPALIVE_MS || s.page.isClosed()) continue;
+    if (Date.now() - Math.max(s.touched || 0, s.last) < KEEPALIVE_MS || s.page.isClosed()) continue;
+    if (!s.live && Date.now() - s.last > SESSION_IDLE_MS) continue; // past its idle time: not kept alive
     s.touched = Date.now();
     const site = GEPNIC.find((x) => x.portal === portal);
     if (site) await s.page.goto(site.base, { timeout: 30000, waitUntil: "domcontentloaded" }).catch(() => {});
@@ -370,6 +390,7 @@ async function runJob(browser, job) {
   const sess = await sessionFor(browser, job.portal);
   const { page } = sess;
   let broken = false;
+  current = job;
   try {
     log(`job ${job.id}: ${job.portal} ${job.tender_ref}`);
     if (!(await openTender(page, site, job))) {
@@ -392,6 +413,7 @@ async function runJob(browser, job) {
     log(`job ${job.id} failed: ${e.message}`);
     await update(job, { status: "failed", error: e.message === "stopped" ? "Stopped." : e.message.split("\n")[0] }).catch(() => {});
   } finally {
+    current = null;
     if (broken) await dropSession(job.portal); else if (sessions.get(job.portal)) sessions.get(job.portal).last = Date.now();
   }
 }
@@ -401,24 +423,47 @@ const waitFirst = Number(args[args.indexOf("--wait") + 1]) || (args.includes("--
 // --forever --hours 5.75: keep watching for jobs (checks every 3 s), then exit so the next run takes over
 const stopAt = args.includes("--hours") ? Date.now() + Number(args[args.indexOf("--hours") + 1]) * 3600000 : Infinity;
 const browser = await chromium.launch();
+// docker stop / a new image: the job being fetched is marked failed with a clear reason (doc_job_update cannot put a
+// job back in the queue) instead of waiting 10 minutes for "stopped responding"; then the browser closes.
+let current = null, stopping = false;
+for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, async () => {
+  if (stopping) return;
+  stopping = true;
+  log(`${sig}: stopping${current ? ` (job ${current.id} given up)` : ""}`);
+  if (current) await update(current, { status: "failed", error: "The document fetcher was restarted. Please ask for the documents again." }).catch(() => {});
+  await browser.close().catch(() => {});
+  process.exit(0);
+});
 try {
   const start = Date.now();
-  let did = 0, lastPortal = null, lastSessionCheck = 0;
+  let did = 0, lastPortal = null, lastSessionCheck = 0, afterSession = false, errors = 0;
   for (;;) {
-    // the admin's captcha session comes first: open each portal that was asked for
-    if (Date.now() - lastSessionCheck > 10000) {
-      lastSessionCheck = Date.now();
-      const req = await rpc("session_claim", { p_runner: RUNNER }).catch((e) => { log("session_claim", e.message); return null; });
-      if (req) { await openSession(browser, req); lastSessionCheck = 0; continue; }
-      const pr = await rpc("probe_claim", { p_runner: RUNNER }).catch(() => null);
-      if (pr) { await runProbe(browser, pr); lastSessionCheck = 0; continue; }
+    try {
+      // the admin's captcha session comes first: open each portal that was asked for — but after each portal, one
+      // waiting job (people's jobs are claimed first) runs, so customers are not held up for the whole session
+      if (!afterSession && Date.now() - lastSessionCheck > 10000) {
+        lastSessionCheck = Date.now();
+        const req = await rpc("session_claim", { p_runner: RUNNER }).catch((e) => { log("session_claim", e.message); return null; });
+        if (req) { await openSession(browser, req); lastSessionCheck = 0; lastPortal = req.portal; afterSession = true; continue; }
+        const pr = await rpc("probe_claim", { p_runner: RUNNER }).catch(() => null);
+        if (pr) { await runProbe(browser, pr); lastSessionCheck = 0; continue; }
+      }
+      const between = afterSession;
+      afterSession = false;
+      // jobs people wait for come first; otherwise stay on the portal whose session is already open
+      const job = await rpc("doc_job_claim", { p_runner: RUNNER, p_portal: lastPortal });
+      errors = 0;
+      if (job) { await runJob(browser, job); did++; lastPortal = job.portal; continue; }
+      if (between) continue; // back to the next captcha-session portal
+      if (!did && Date.now() - start < waitFirst * 1000) { await sleep(5000); continue; }
+      if (args.includes("--forever") && Date.now() < stopAt) { await keepAlive(); await sleep(3000); continue; }
+      break;
+    } catch (e) {
+      // one database or browser blip must not end the worker
+      log("loop:", e.message);
+      if (++errors >= 5 && !args.includes("--forever")) break;
+      await sleep(5000);
     }
-    // jobs people wait for come first; otherwise stay on the portal whose session is already open
-    const job = await rpc("doc_job_claim", { p_runner: RUNNER, p_portal: lastPortal });
-    if (job) { await runJob(browser, job); did++; lastPortal = job.portal; continue; }
-    if (!did && Date.now() - start < waitFirst * 1000) { await sleep(5000); continue; }
-    if (args.includes("--forever") && Date.now() < stopAt) { await keepAlive(); await sleep(3000); continue; }
-    break;
   }
   log(`done: ${did} job(s)`);
 } finally {

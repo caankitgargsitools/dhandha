@@ -25,6 +25,8 @@
   --blood-soft: #fee2e2;
   --sky: #2563eb;
   --sky-soft: #dbeafe;
+  --ok: #059669;
+  --bad: #dc2626;
   --margin-rule: var(--line);
   --radius: 12px;
   --shadow: 0 1px 2px rgba(15, 23, 42, .05), 0 1px 3px rgba(15, 23, 42, .04);
@@ -39,6 +41,7 @@
   --ink: #e2e8f0; --ink-2: #94a3b8; --ink-3: #64748b; --sheet: #0b1020; --panel: #111827; --line: #1f2937; --line-soft: #172033;
   --primary: #818cf8; --primary-deep: #6366f1; --primary-soft: #1e1b4b;
   --marigold-soft: #3b2a07; --leaf-soft: #052e22; --rust-soft: #3a1a08; --blood-soft: #3b0d0d; --sky-soft: #0c2245;
+  --ok: #34d399; --bad: #f87171;
   --shadow: 0 1px 2px rgba(0, 0, 0, .4); --shadow-lg: 0 16px 40px -16px rgba(0, 0, 0, .7); --ring: 0 0 0 3px rgba(129, 140, 248, .28);
   color-scheme: dark;
 }
@@ -47,6 +50,7 @@
     --ink: #e2e8f0; --ink-2: #94a3b8; --ink-3: #64748b; --sheet: #0b1020; --panel: #111827; --line: #1f2937; --line-soft: #172033;
     --primary: #818cf8; --primary-deep: #6366f1; --primary-soft: #1e1b4b;
     --marigold-soft: #3b2a07; --leaf-soft: #052e22; --rust-soft: #3a1a08; --blood-soft: #3b0d0d; --sky-soft: #0c2245;
+    --ok: #34d399; --bad: #f87171;
     --shadow: 0 1px 2px rgba(0, 0, 0, .4); --shadow-lg: 0 16px 40px -16px rgba(0, 0, 0, .7); --ring: 0 0 0 3px rgba(129, 140, 248, .28);
     color-scheme: dark;
   }
@@ -259,6 +263,11 @@ td.right, th.right { text-align: right; }
 
 /* printing an invoice: only the invoice */
 @media print {
+  /* paper is white: print in the light colours even when the screen is in dark mode */
+  :root, :root[data-theme="dark"], :root:not([data-theme="light"]) {
+    --ink: #0f172a; --ink-2: #475569; --ink-3: #94a3b8; --sheet: #ffffff; --panel: #ffffff; --line: #e2e8f0; --line-soft: #f1f5f9;
+    --ok: #059669; --bad: #dc2626; color-scheme: light;
+  }
   .side, .topbar, .no-print, .notice { display: none !important; }
   .shell, .main { display: block; padding: 0; margin: 0; }
   body { background: #fff; }

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { extractConditions, conditionsFromLines, checkConditions, openQuestions } from "../lib/conditions.js";
+import { extractConditions, conditionsFromLines, checkConditions, openQuestions, mandatoryUnmet } from "../lib/conditions.js";
 
 const keys = (cs) => cs.map((c) => c.key);
 
@@ -41,4 +41,15 @@ test("answers decide met / failed / pending; questions are grouped", () => {
   const qs = openQuestions([{ id: "m1", tenders: { title: "A", conditions: c1 } }, { id: "m2", tenders: { title: "B", conditions: [c1[1]] } }], {});
   assert.equal(qs[0].key, "cert.iso_9001");
   assert.equal(qs[0].tenders.length, 2);
+});
+
+test("mandatoryUnmet: preferred states are a preference, unanswered questions are pending", () => {
+  const unmet = mandatoryUnmet([
+    { ok: false, text: "Bihar is not in your preferred states" },
+    { ok: false, text: " is not in your preferred states" },
+    { ok: false, ask: true, text: "Branch or office in Bihar" },
+    { ok: false, text: "Turnover below the minimum" },
+    { ok: true, text: "ISO 9001 certificate" },
+  ]);
+  assert.deepEqual(unmet, ["Turnover below the minimum"]);
 });

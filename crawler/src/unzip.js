@@ -1,7 +1,9 @@
 // Minimal ZIP reader (stored and deflated entries) for portals that only offer "Download as zip file".
 import { inflateRawSync } from "node:zlib";
 
-export function unzip(buf) {
+// An entry that would unpack to more than maxBytes (25 MB by default) is left out, so a zip bomb cannot fill memory.
+export const MAX_BYTES = 25 * 1024 * 1024;
+export function unzip(buf, { maxBytes = MAX_BYTES } = {}) {
   const b = Buffer.from(buf);
   // end of central directory: signature 0x06054b50, searched from the end (comment may follow)
   let eocd = -1;
@@ -20,7 +22,9 @@ export function unzip(buf) {
     if (name.endsWith("/")) continue;
     const start = local + 30 + b.readUInt16LE(local + 26) + b.readUInt16LE(local + 28);
     const raw = b.subarray(start, start + comp);
-    const data = method === 0 ? raw : method === 8 ? inflateRawSync(raw) : null;
+    if (size > maxBytes || (method === 0 && raw.length > maxBytes)) continue;
+    let data = null;
+    try { data = method === 0 ? raw : method === 8 ? inflateRawSync(raw, { maxOutputLength: maxBytes }) : null; } catch { continue; } // larger than it said
     if (data) out.push({ name: name.split("/").pop(), data, size });
   }
   return out;

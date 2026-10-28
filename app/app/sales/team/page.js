@@ -25,7 +25,7 @@ function RepFields({ r = {}, members }) {
         {[["online", "Online calls"], ["field", "Field visits"]].map(([v, l]) => <label key={v} className="row small" style={{ gap: 6, margin: 0, fontWeight: 500 }}><input type="checkbox" name="modes" value={v} defaultChecked={modes.includes(v)} style={{ width: "auto" }} />{l}</label>)}
         <span className="small" style={{ fontWeight: 600, marginLeft: 8 }}>Works:</span>
         {DAYS.map(([v, l]) => <label key={v} className="row small" style={{ gap: 4, margin: 0, fontWeight: 500 }}><input type="checkbox" name="work_days" value={v} defaultChecked={days.includes(v)} style={{ width: "auto" }} />{l}</label>)}
-        {r.id && <label className="row small" style={{ gap: 6, margin: 0, fontWeight: 500 }}><input type="checkbox" name="active" value="off" defaultChecked={false} style={{ width: "auto" }} />Remove from scheduling</label>}
+        {r.id && <label className="row small" style={{ gap: 6, margin: 0, fontWeight: 500 }}><input type="checkbox" name="active" value="off" defaultChecked={!r.active} style={{ width: "auto" }} />Remove from scheduling</label>}
       </div>
     </>
   );

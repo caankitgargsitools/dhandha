@@ -34,6 +34,7 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
   const [asking, setAsking] = useState(false);
   const [editing, setEditing] = useState(null); // { idx, title, segments } — an annexure opened again from "Your formats"
   const [forceNote, setForceNote] = useState("");
+  const [repricing, setRepricing] = useState(false); // the price, opened again after it was saved
   const box = useRef(null);
   const anchor = useRef(null);
   const current = steps.find((s) => !skipped.has(s.id));
@@ -49,7 +50,7 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
   // documents present but not read yet: read them straight away (AI when available, else the free reader)
   const autoRead = useRef(false);
   useEffect(() => {
-    if (current?.kind !== "read" || !current.auto || autoRead.current || !canAnswer || balance < (current.aiReady ? 99 : 10)) return;
+    if (current?.kind !== "read" || !current.auto || autoRead.current || !canPrepare || balance < (current.aiReady ? 99 : 10)) return;
     autoRead.current = true;
     run(null, () => readTender({}, form({ match_id: matchId, mode: current.aiReady ? "ai" : "basic" })), (r) => r.message, { label: "Reading every page of the tender…", seconds: current.aiReady ? 60 : 15 });
   }, [current?.kind]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -122,10 +123,18 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
       <div ref={box} style={{ height: "min(62vh, 640px)", overflowY: "auto", overscrollBehavior: "contain", padding: "18px 18px 8px", display: "flex", flexDirection: "column", gap: 10 }} aria-live="polite">
         <Bubble>Namaste! I'll prepare this tender with you. I'll ask only what I can't find in your Vault, and save every answer so the next tender asks less.</Bubble>
         {done.map((d, i) => <Bubble key={`d${i}`}>{d}</Bubble>)}
-        {redo && (redo.read || redo.tech) && (
+        {redo && (redo.read || redo.tech || redo.price) && (
           <div className="row" style={{ gap: 8, alignSelf: "flex-start" }}>
             {redo.read && <button className="ghost sm" aria-busy={busy} disabled={busy} onClick={() => other("Read the tender again with AI", () => readTender({}, form({ match_id: matchId, mode: "ai" })), (r) => r.message, { label: "AI is reading the tender again…", seconds: 60 })}>↻ Read again with AI · 99 credits</button>}
             {redo.tech && <button className="ghost sm" aria-busy={busy} disabled={busy} onClick={() => other("Redo the technical marking", () => techMarking({ matchId }), (r) => r.message, { label: "Reading the evaluation criteria and marking your firm again…", seconds: 50 })}>↻ Redo technical marking · 29 credits</button>}
+            {redo.price && !repricing && <button className="ghost sm" disabled={busy} onClick={() => setRepricing(true)}>↻ Change price</button>}
+          </div>
+        )}
+        {redo?.price && repricing && (
+          <div style={{ alignSelf: "stretch" }}>
+            <CostPlanner matchId={matchId} initial={redo.price.sheet} estimate={redo.price.estimate} saved={{ price: redo.price.price }}
+              onDone={(label) => { setRepricing(false); say("me", label); say("bot", "Price updated for this tender. It goes on the preparation sheet; you enter it in the portal's price bid."); router.refresh(); }} />
+            <button className="ghost sm" style={{ marginTop: 8 }} onClick={() => setRepricing(false)}>Close</button>
           </div>
         )}
         {log.map((x, i) => (
@@ -228,18 +237,18 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
           )}
           {current.kind === "read" && (
             <div className="row" style={{ gap: 8 }}>
-              <button className="ghost" disabled={busy} onClick={() => run("Read it with the free reader", () => readTender({}, form({ match_id: matchId, mode: "basic" })), (r) => r.message, { label: "Reading the tender (free reader)…", seconds: 15 })}>{busy ? "Reading…" : "Free reader · 10 credits"}</button>
-              <button disabled={busy} onClick={() => run("Read it with AI", () => readTender({}, form({ match_id: matchId, mode: "ai" })), (r) => r.message, { label: "AI is reading the tender…", seconds: 60 })}>{busy ? "Reading…" : "Read with AI · 99 credits"}</button>
+              <button className="ghost" disabled={busy || !canPrepare} onClick={() => run("Read it with basic reading", () => readTender({}, form({ match_id: matchId, mode: "basic" })), (r) => r.message, { label: "Reading the tender (basic reading)…", seconds: 15 })}>{busy ? "Reading…" : "Basic reading · 10 credits"}</button>
+              <button disabled={busy || !canPrepare} onClick={() => run("Read it with AI", () => readTender({}, form({ match_id: matchId, mode: "ai" })), (r) => r.message, { label: "AI is reading the tender…", seconds: 60 })}>{busy ? "Reading…" : "Read with AI · 99 credits"}</button>
             </div>
           )}
           {current.kind === "fill_ai" && (
             <div className="row" style={{ gap: 8 }}>
-              <button disabled={busy} onClick={() => run("Yes, fill them with AI", () => fillCustom({ matchId }), (r) => r.message, { label: "Filling the formats from your masters…", seconds: 45 })}>{busy ? "Filling…" : "Fill with AI · 49 credits"}</button>
+              <button disabled={busy || !current.paidAi || balance < 49} title={!current.paidAi ? "Needs a paid AI key" : balance < 49 ? "Needs 49 credits — top up in Credits & plan" : ""} onClick={() => run("Yes, fill them with AI", () => fillCustom({ matchId }), (r) => r.message, { label: "Filling the formats from your masters…", seconds: 45 })}>{busy ? "Filling…" : "Fill with AI · 49 credits"}</button>
               <button className="ghost" disabled={busy} onClick={skip}>Not now</button>
             </div>
           )}
           {current.kind === "price" && current.ev && <EvalPanel ev={current.ev} estimate={current.estimate} cost={current.cost} quote={current.quote} />}
-          {current.kind === "price" && <CostPlanner matchId={matchId} initial={current.sheet} estimate={current.estimate} fresh={current.fresh} onDone={(label) => { askedNow(); say("me", label); say("bot", "Price saved for this tender. It goes on the preparation sheet; you enter it in the portal's price bid."); router.refresh(); }} />}
+          {current.kind === "price" && <CostPlanner matchId={matchId} initial={current.sheet} estimate={current.estimate} fresh={current.fresh} saved={current.quote ? { price: current.quote } : null} onDone={(label) => { askedNow(); say("me", label); say("bot", "Price saved for this tender. It goes on the preparation sheet; you enter it in the portal's price bid."); router.refresh(); }} />}
           {current.kind === "draft" && (
             <div className="row" style={{ gap: 8 }}>
               <button disabled={busy} onClick={() => run("Make the draft", () => generateBidPack({}, form({ match_id: matchId, kind: "draft" })), (r) => r.message || "Draft ready.", { label: "Putting the bid file together…", seconds: 20 })}>{busy ? "Preparing…" : "Make draft bid pack"}</button>

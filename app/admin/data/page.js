@@ -1,10 +1,12 @@
 import { getAdminContext } from "@/lib/admin";
-
-export const maxDuration = 60;
 import { fmtDate } from "@/lib/session";
 import FormState from "@/app/app/FormState";
+import SubmitButton from "@/components/SubmitButton";
 import Uploader from "./Uploader";
 import { setDatasetStatus, suppress } from "./actions";
+
+// reading and loading a large file (up to 100k rows) runs in the upload's server action
+export const maxDuration = 300;
 
 const BASIS = { public_business_info: "Public business info", consent: "Consent", own_customers: "Own customers" };
 
@@ -36,8 +38,10 @@ export default async function AdminData() {
                   <form action={setDatasetStatus} className="row" style={{ gap: 6, flexWrap: "nowrap" }}>
                     <input type="hidden" name="id" value={s.id} />
                     <input name="price" type="number" step="0.1" min="0.1" defaultValue={s.price_credits} aria-label="Price per record" style={{ width: 70 }} />
+                    {/* first button: Enter in the price box saves the price and keeps the status */}
+                    <SubmitButton name="status" value={s.status} className="sm ghost">Save price</SubmitButton>
                     <span className={`chip ${s.status === "live" ? "ok" : s.status === "draft" ? "warn" : "mute"}`}>{s.status}</span>
-                    {s.status !== "live" ? <button name="status" value="live" className="sm">Go live</button> : <button name="status" value="withdrawn" className="sm ghost">Withdraw</button>}
+                    {s.status !== "live" ? <SubmitButton name="status" value="live" className="sm">Go live</SubmitButton> : <SubmitButton name="status" value="withdrawn" className="sm ghost" confirm="Withdraw this database? Customers can no longer buy from it.">Withdraw</SubmitButton>}
                   </form>
                 </td>
               </tr>

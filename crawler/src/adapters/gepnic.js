@@ -84,17 +84,19 @@ export async function crawlGepnic(browser, site, { maxOrgs = 400, maxDetails = 4
     // detail pages (value, EMD, pre-bid) — links are session-bound, so open them in the same context
     for (const [i, t] of [...detailed].entries()) {
       progress({ phase: "details", done: i, total: detailed.size });
+      let d = null;
       try {
         const href = t._detail.startsWith("http") ? t._detail : new URL(t._detail, site.base + "/").toString();
-        const d = await ctx.newPage();
+        d = await ctx.newPage();
         await d.goto(href, { waitUntil: "domcontentloaded", timeout: 45000 });
         const cells = await d.$$eval("table tr", (trs) => trs.map((tr) => [...tr.querySelectorAll("td")].map((td) => td.innerText)));
         Object.assign(t, Object.fromEntries(Object.entries(parseDetail(cells)).filter(([, v]) => v !== null && v !== undefined)));
         if (!t.state && t.location) t.state = stateFrom(t.location);
-        await d.close();
         await new Promise((r) => setTimeout(r, 1500)); // polite pace
       } catch (e) {
         log(`  detail failed ${site.portal} ${t.tender_ref}: ${e.message}`);
+      } finally {
+        await d?.close().catch(() => {});
       }
     }
     for (const t of out) delete t._detail;

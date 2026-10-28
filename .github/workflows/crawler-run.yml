@@ -1,14 +1,11 @@
-# Runs the tender crawler on GitHub's machines: three times a day and on demand (Actions → crawler run →
-# Run workflow). Progress shows live in Dhandha → Admin → Crawler. Needs the INGEST_KEY repository secret.
-# Budget: each run stops starting new portals after 17 minutes, which keeps 3 runs a day inside the
-# 2,000 free Actions minutes of a private repository; portals rotate so every one is covered during the day.
+# Runs the tender crawler on GitHub's (US) machines on demand only (Actions → crawler run → Run workflow): a
+# manual fallback, a probe of which list pages are public, or a debug run that keeps pages. The scheduled crawl runs
+# on the AWS Mumbai server (crawler/src/server.js); GeM and some state portals refuse GitHub's US machines.
+# Progress shows live in Dhandha → Admin → Crawler. Needs the INGEST_KEY repository secret.
+# Budget: a run stops starting new portals after 17 minutes (budget_minutes); portals rotate between runs.
 name: crawler run
 
 on:
-  schedule:
-    - cron: "40 0 * * *"   # 06:10 IST
-    - cron: "10 7 * * *"   # 12:40 IST
-    - cron: "40 12 * * *"  # 18:10 IST
   workflow_dispatch:
     inputs:
       budget_minutes:

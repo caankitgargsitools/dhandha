@@ -8,6 +8,9 @@ const s = (v) => {
   const t = String(v ?? "").trim();
   return t === "" ? null : t;
 };
+// viewers (and disabled members) can look but not change the Vault
+const VIEW_ONLY = { error: "You have view-only access. Ask your workspace admin to change this." };
+const viewOnly = (role) => role === "viewer" || role === "disabled";
 const n = (v) => {
   const t = s(v);
   if (t === null) return null;
@@ -38,7 +41,8 @@ const PROFILE_FIELDS = ["legal_name", "trade_name", "constitution", "pan", "gsti
 const UPPER = new Set(["pan", "gstin", "cin", "udyam_no", "bank_ifsc"]);
 
 export async function saveProfile(prev, formData) {
-  const { supabase, company } = await getContext();
+  const { supabase, company, role } = await getContext();
+  if (viewOnly(role)) return VIEW_ONLY;
   const row = {};
   for (const f of PROFILE_FIELDS) {
     let v = s(formData.get(f));
@@ -58,7 +62,8 @@ export async function saveProfile(prev, formData) {
 }
 
 export async function saveFact(prev, formData) {
-  const { supabase, tenant, company } = await getContext();
+  const { supabase, tenant, company, role } = await getContext();
+  if (viewOnly(role)) return VIEW_ONLY;
   const key = s(formData.get("key"));
   const value = s(formData.get("value"));
   if (!key || !value) return { error: "Both the fact and its value are needed." };
@@ -80,17 +85,36 @@ export async function saveFact(prev, formData) {
   return { message: "Saved." };
 }
 
-export async function deleteRow(formData) {
-  const { supabase } = await getContext();
+export async function deleteRow(prev, formData) {
+  const { supabase, role } = await getContext();
+  if (viewOnly(role)) return VIEW_ONLY;
   const table = String(formData.get("table"));
   const allowed = { company_facts: "/app/vault/facts", documents: "/app/vault/documents", experience_items: "/app/vault/experience", people: "/app/vault/people" };
-  if (!allowed[table]) return;
-  await supabase.from(table).delete().eq("id", String(formData.get("id")));
+  if (!allowed[table]) return { error: "This cannot be deleted here." };
+  const { error, count } = await supabase.from(table).delete({ count: "exact" }).eq("id", String(formData.get("id")));
+  if (error) return { error: error.message };
+  if (!count) return { error: "Nothing was deleted: it is already gone, or your role cannot delete it." };
   revalidatePath(allowed[table]);
+  return {};
+}
+
+// Letterhead header / footer heights, changed without uploading the file again.
+export async function saveBrandMargins({ kind, meta }) {
+  const { supabase, company, isAdmin } = await getContext();
+  if (!isAdmin) return { error: "Only an admin can change brand assets." };
+  const top = Number(meta?.margin_top_mm), bottom = Number(meta?.margin_bottom_mm);
+  if (!(top >= 0 && top <= 120 && bottom >= 0 && bottom <= 80)) return { error: "Header 0–120 mm, footer 0–80 mm." };
+  const { data: cur } = await supabase.from("brand_assets").select("id, meta").eq("company_id", company.id).eq("kind", kind).maybeSingle();
+  if (!cur) return { error: "Upload the letterhead first." };
+  const { error } = await supabase.from("brand_assets").update({ meta: { ...(cur.meta || {}), margin_top_mm: top, margin_bottom_mm: bottom } }).eq("id", cur.id);
+  if (error) return { error: error.message };
+  revalidatePath("/app/brand");
+  return { ok: true };
 }
 
 export async function addDocument(prev, formData) {
-  const { supabase, tenant, company } = await getContext();
+  const { supabase, tenant, company, role } = await getContext();
+  if (viewOnly(role)) return VIEW_ONLY;
   const type_code = s(formData.get("type_code"));
   if (!type_code) return { error: "Choose the document type." };
   // an uploaded file (DriveUpload fills drive_url + drive_file_id) wins over a pasted link
@@ -117,7 +141,8 @@ export async function addDocument(prev, formData) {
 }
 
 export async function addExperience(prev, formData) {
-  const { supabase, tenant, company } = await getContext();
+  const { supabase, tenant, company, role } = await getContext();
+  if (viewOnly(role)) return VIEW_ONLY;
   const client = s(formData.get("client"));
   const work_name = s(formData.get("work_name"));
   if (!client || !work_name) return { error: "Client and work name are required." };
@@ -135,7 +160,8 @@ export async function addExperience(prev, formData) {
 }
 
 export async function addPerson(prev, formData) {
-  const { supabase, tenant, company } = await getContext();
+  const { supabase, tenant, company, role } = await getContext();
+  if (viewOnly(role)) return VIEW_ONLY;
   const name = s(formData.get("name"));
   if (!name) return { error: "Name is required." };
   const { error } = await supabase.from("people").insert({

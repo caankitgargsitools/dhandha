@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { bookByToken } from "./actions";
 import { groupSlots } from "@/lib/scheduling";
 
@@ -14,6 +15,7 @@ export default function Picker({ token, slots, contact, mode }) {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [out, setOut] = useState(null);
+  const router = useRouter();
   if (out?.ok) return (
     <div className="notice info" style={{ display: "block" }}>
       <strong>Booked — thank you{contact ? `, ${contact}` : ""}!</strong>
@@ -27,6 +29,8 @@ export default function Picker({ token, slots, contact, mode }) {
     const r = await bookByToken({ token, start: pick, note });
     setBusy(false);
     setOut(r);
+    // the time was just taken (or the link changed): load the free times again and ask for a new pick
+    if (r?.error) { setPick(null); router.refresh(); }
   }
   return (
     <div className="stack-sm">
