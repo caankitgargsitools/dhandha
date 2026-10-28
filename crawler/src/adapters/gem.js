@@ -84,19 +84,34 @@ async function crawlGemPage(page, { base, maxPages, words, log, progress }) {
   return [...out.values()];
 }
 
+// GeM's list page asks for its first list itself: its security token and filter are taken from that request, so
+// our own calls look exactly like the page's.
+export async function gemSession(page, base) {
+  const first = page.waitForRequest((r) => r.url().includes("all-bids-data"), { timeout: 60000 }).catch(() => null);
+  await page.goto(`${base}/all-bids`, { waitUntil: "domcontentloaded", timeout: 60000 });
+  const req = await first;
+  const form = new URLSearchParams(req?.postData() || "");
+  let filter = { bidStatusType: "ongoing_bids", byType: "all", highBidValue: "", byEndDate: { from: "", to: "" }, sort: "Bid-End-Date-Oldest" };
+  try { filter = JSON.parse(form.get("payload") || "{}").filter || filter; } catch {}
+  return { csrf: form.get("csrf_bd_gem_nk") || "", filter };
+}
+
+// One page of GeM's own list call, from inside the page.
+export async function gemList(page, base, { csrf, filter, search = "", p = 1 }) {
+  return page.evaluate(async ({ p, base, csrf, filter, search }) => {
+    const payload = { page: p, param: { searchBid: search, searchType: "fullText" }, filter };
+    const body = new URLSearchParams({ payload: JSON.stringify(payload), csrf_bd_gem_nk: csrf });
+    const r = await fetch(`${base}/all-bids-data`, { method: "POST", body, headers: { "x-requested-with": "XMLHttpRequest" } });
+    return r.ok ? r.json() : { error: r.status };
+  }, { p, base, csrf, filter, search });
+}
+
 export async function crawlGem(browser, { maxPages = 20, log = console.log, base = "https://bidplus.gem.gov.in", progress = () => {}, words = (process.env.GEM_SEARCH || "audit,chartered accountant,accounting,accounts,internal audit,GST,taxation,valuation,financial consultant").split(",").map((x) => x.trim()).filter(Boolean) } = {}) {
   const ctx = await browser.newContext({ locale: "en-IN" });
   const page = await ctx.newPage();
   const out = new Map();
   try {
-    // the page asks for its first list itself: take its security token and filter from that request
-    const first = page.waitForRequest((r) => r.url().includes("all-bids-data"), { timeout: 60000 }).catch(() => null);
-    await page.goto(`${base}/all-bids`, { waitUntil: "domcontentloaded", timeout: 60000 });
-    const req = await first;
-    const form = new URLSearchParams(req?.postData() || "");
-    const csrf = form.get("csrf_bd_gem_nk") || "";
-    let filter = { bidStatusType: "ongoing_bids", byType: "all", highBidValue: "", byEndDate: { from: "", to: "" }, sort: "Bid-End-Date-Oldest" };
-    try { filter = JSON.parse(form.get("payload") || "{}").filter || filter; } catch {}
+    const { csrf, filter } = await gemSession(page, base);
     if (!csrf) log("  GeM: no security token seen on the page");
     await page.waitForTimeout(1500);
     // every search word (CA work) in full, plus the first pages of all bids
@@ -105,12 +120,7 @@ export async function crawlGem(browser, { maxPages = 20, log = console.log, base
       let found = null;
       for (let p = 1; p <= limit; p++) {
         progress({ phase: w ? `search “${w}”` : "latest", page: p, of: found ? Math.min(limit, Math.ceil(found / 10)) : limit });
-        const res = await page.evaluate(async ({ p, base, csrf, filter, w }) => {
-          const payload = { page: p, param: { searchBid: w, searchType: "fullText" }, filter };
-          const body = new URLSearchParams({ payload: JSON.stringify(payload), csrf_bd_gem_nk: csrf });
-          const r = await fetch(`${base}/all-bids-data`, { method: "POST", body, headers: { "x-requested-with": "XMLHttpRequest" } });
-          return r.ok ? r.json() : { error: r.status };
-        }, { p, base, csrf, filter, w });
+        const res = await gemList(page, base, { csrf, filter, search: w, p });
         if (res?.error) { log(`  GeM ${w || "all"} page ${p}: HTTP ${res.error}`); break; }
         const r = res?.response?.response || res?.response || {};
         const docs = r.docs || [];

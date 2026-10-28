@@ -373,6 +373,10 @@ async function runProbe(browser, pr) {
     out.links = await page.$$eval("a[href], a[onclick]", (as) => as.slice(0, 400).map((a) => ({ href: a.href, text: a.innerText.trim().slice(0, 120), ...(a.getAttribute("onclick") ? { onclick: a.getAttribute("onclick").slice(0, 300) } : {}), ...(a.id ? { id: a.id } : {}) }))).catch(() => []);
     out.forms = await page.$$eval("form", (fs) => fs.slice(0, 10).map((f) => ({ action: f.action, method: f.method,
       fields: [...f.querySelectorAll("input,select,textarea,button")].slice(0, 40).map((e) => ({ tag: e.tagName.toLowerCase(), type: e.type || "", name: e.name || e.id || "", value: e.tagName === "SELECT" ? [...e.options].slice(0, 15).map((o) => o.text).join(" | ") : (e.type === "hidden" ? "" : String(e.value || "").slice(0, 60)) })) }))).catch(() => []);
+    // fields and buttons outside any form (filters on single-page portals), with their label text
+    out.forms = [...(out.forms || []), { action: "(no form)", method: "", fields: await page.$$eval("input:not(form input), select:not(form select), button:not(form button)", (es) => es.slice(0, 80).map((e) => ({
+      tag: e.tagName.toLowerCase(), type: e.type || "", name: e.name || e.id || "", value: e.tagName === "SELECT" ? [...e.options].slice(0, 15).map((o) => `${o.value}:${o.text}`).join(" | ") : String(e.value || "").slice(0, 60),
+      label: (e.labels?.[0]?.innerText || e.closest("label")?.innerText || e.innerText || e.getAttribute("aria-label") || "").trim().slice(0, 60) }))).catch(() => []) }];
     out.captcha = await hasCaptcha(page).catch(() => false);
     out.screenshot = `data:image/jpeg;base64,${(await page.screenshot({ type: "jpeg", quality: 35 })).toString("base64")}`;
   } catch (e) {
