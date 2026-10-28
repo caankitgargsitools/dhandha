@@ -117,18 +117,20 @@ export async function readResults(page, site, { maxPages = 10, maxAwards = 300, 
     list.push(...parseResultsList(header, rows, site));
     const next = await page.$("a#linkFwd, a:has-text('Next >')");
     if (!next || rows.length === 0) break;
-    await Promise.all([page.waitForLoadState("domcontentloaded"), next.click()]);
+    // wait for the next page itself (waitForLoadState alone returns at once: the current page is already loaded)
+    await Promise.all([page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 45000 }).catch(() => {}), next.click()]);
   }
   const todo = list.slice(0, maxAwards);
   for (const [i, a] of todo.entries()) {
     progress({ phase: "details", done: i, total: todo.length });
     if (!a._detail) continue;
+    let d = null;
     try {
       const href = a._detail.startsWith("http") ? a._detail : new URL(a._detail, site.base + "/").toString();
-      const d = await page.context().newPage();
+      d = await page.context().newPage();
       await d.goto(href, { waitUntil: "domcontentloaded", timeout: 45000 });
       const tables = await d.$$eval("table", (ts) => ts.map((t) => [...t.querySelectorAll(":scope > tbody > tr, :scope > tr")].map((tr) => [...tr.querySelectorAll(":scope > td, :scope > th")].map((td) => td.innerText))));
-      await d.close();
+      await d.close().catch(() => {}); d = null;
       for (const b of parseAoc(tables)) {
         const { _detail, listed_on, ...award } = a;
         out.push({ ...award, ...b, contract_date: b.contract_date || listed_on, bidder_city: cityFrom(b.bidder_address), url: site.base + LIST }); // detail links are session-bound
@@ -136,6 +138,8 @@ export async function readResults(page, site, { maxPages = 10, maxAwards = 300, 
       await new Promise((r) => setTimeout(r, 1500)); // polite pace
     } catch (e) {
       log(`  result failed ${site.portal} ${a.tender_ref}: ${e.message}`);
+    } finally {
+      await d?.close().catch(() => {});
     }
   }
   return out;

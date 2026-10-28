@@ -15,3 +15,8 @@ test("reads deflated and stored entries", () => {
 test("rejects a non-zip", () => {
   assert.throws(() => unzip(Buffer.from("%PDF-1.4 not a zip at all, just some bytes here")), /not a zip/);
 });
+
+test("leaves out entries that unpack beyond the limit", () => {
+  const files = unzip(Buffer.from(ZIP, "base64"), { maxBytes: 1000 });
+  assert.deepEqual(files.map((f) => f.name), ["b.txt"]);
+});

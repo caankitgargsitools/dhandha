@@ -1,11 +1,11 @@
-# Fetches tender documents for the tender assistant. A worker stays up for ~6 hours watching for jobs (every 3 s);
-# the hourly schedule keeps one queued behind it, so there is always one running. Free on a public repository.
-# Captchas are shown to the person in the assistant chat; nothing is solved automatically.
+# Manual fallback / debugging only: fetches tender documents for the tender assistant from GitHub's (US) machines.
+# The main document worker is the AWS Mumbai server (crawler/src/server.js → docs.js --forever); there is no schedule
+# here, so two workers never claim the same jobs and captcha sessions. Run it by hand (Actions → tender docs → Run
+# workflow) only while the server is down, or to probe a tender page. Captchas go to Dhandha's admin captcha desk and
+# a person types them; nothing is solved automatically.
 name: tender docs
 
 on:
-  schedule:
-    - cron: "7 * * * *"
   workflow_dispatch:
     inputs:
       probe:

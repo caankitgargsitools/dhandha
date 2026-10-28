@@ -68,17 +68,20 @@ export async function crawlGemResults(browser, { maxPages = 5, maxBids = 200, lo
     const todo = bids.slice(0, maxBids);
     for (const [i, b] of todo.entries()) {
       progress({ phase: "details", done: i, total: todo.length });
+      let d = null;
       try {
-        const d = await ctx.newPage();
+        d = await ctx.newPage();
         await d.goto(b.resultUrl, { waitUntil: "domcontentloaded", timeout: 45000 });
-        if (await d.$("img#captchaImage, input[name*=captcha i]")) { await d.close(); log("  GeM result page asks for a captcha — stopping"); break; }
+        if (await d.$("img#captchaImage, input[name*=captcha i]")) { log("  GeM result page asks for a captcha — stopping"); break; }
         const tables = await d.$$eval("table", (ts) => ts.map((t) => [...t.querySelectorAll("tr")].map((tr) => [...tr.querySelectorAll("td, th")].map((td) => td.innerText))));
-        await d.close();
+        await d.close().catch(() => {}); d = null;
         const { resultUrl, ...award } = b;
         for (const w of parseGemResult(tables)) out.push({ ...award, ...w, url: `${base}/all-bids` });
         await new Promise((r) => setTimeout(r, 1500)); // polite pace
       } catch (e) {
         log(`  GeM result failed ${b.tender_ref}: ${e.message}`);
+      } finally {
+        await d?.close().catch(() => {});
       }
     }
   } finally {

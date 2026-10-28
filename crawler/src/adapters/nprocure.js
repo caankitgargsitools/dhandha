@@ -50,9 +50,12 @@ export async function crawlNprocure(browser, { maxPages = 400, log = console.log
   };
   const isList = (r) => r.url().includes("beforeLoginTenderTableList");
   try {
-    const first = page.waitForResponse(isList, { timeout: 60000 });
+    // .catch: if goto throws first, this wait must not become an unhandled rejection
+    const first = page.waitForResponse(isList, { timeout: 60000 }).catch(() => null);
     await page.goto(`${site.base}/`, { waitUntil: "domcontentloaded", timeout: 60000 });
-    await take(await first);
+    const r1 = await first;
+    if (!r1) throw new Error("the tender table's data call did not come");
+    await take(r1);
     const pages = Math.min(maxPages, Math.ceil((total || 10) / 10));
     for (let p = 2; p <= pages; p++) {
       progress({ phase: "listing", page: p, of: pages });

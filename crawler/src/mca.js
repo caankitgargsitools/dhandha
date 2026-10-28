@@ -2,7 +2,8 @@
 // finds the monthly spreadsheets of the last six months, and loads it into Dhandha's New companies (ingest_mca) — the same file the
 // admin used to upload by hand. A file already loaded is skipped. Where MCA's site answers with a bot check or a
 // captcha, nothing is attempted: the run reports it and the admin gets a phone alert to upload by hand.
-//   node src/mca.js            check once (GitHub Actions runs it daily: .github/workflows/mca-monthly.yml)
+// MCA refuses cloud machines (GitHub's US runners and AWS Mumbai both got 403), so the working route is a laptop:
+//   node src/mca.js            check once (by hand: .github/workflows/mca-monthly.yml, or the server with MCA=1)
 //   MCA_VISIBLE=1 node src/mca.js   on a laptop (tools/mca-upload.sh): a visible Chrome window on the person's own
 //                              connection; if MCA shows a check, the person completes it in that window and the run waits
 const VISIBLE = process.env.MCA_VISIBLE === "1";
@@ -64,7 +65,8 @@ async function waitForPerson(page) {
   }
   return false;
 }
-try {
+// `break main` ends the run early; finally still closes the browser (process.exit would skip it)
+try { main: {
   const ctx = await browser.newContext({ locale: "en-IN", acceptDownloads: true });
   const page = await ctx.newPage();
   // what the page loads in the background (the monthly list may come from a data address, not plain links)
@@ -97,7 +99,8 @@ try {
     }
     let html = "";
     for (let i = 0; i < 5 && !html; i++) html = await page.content().catch(async () => { await page.waitForTimeout(2000); return ""; });
-    if (looksBlocked(res.status(), html) && !(VISIBLE && await waitForPerson(page))) { await report({ status: "blocked", url, detail: `MCA answered ${res.status()} with a bot check` }); process.exit(0); }
+    const status = res?.status?.() ?? 0; // goto gives null for some navigations
+    if (looksBlocked(status, html) && !(VISIBLE && await waitForPerson(page))) { await report({ status: "blocked", url, detail: `MCA answered ${status} with a bot check` }); break main; }
     seenPage = url;
     const links = await page.$$eval("a[href]", (as) => as.map((a) => ({ href: a.href, text: a.innerText.trim().slice(0, 200) }))).catch(() => []);
     // MCA's own document list for "Companies and LLPs registered in <month>" (folder 403), asked as the page asks it
@@ -144,7 +147,7 @@ try {
   }
   if (!files.length) {
     await report({ status: seenPage ? "no_file" : "failed", url: seenPage || PAGES[0], detail: seenPage ? "the page opened but no monthly file link was found" : "MCA's pages did not open" });
-    process.exit(0);
+    break main;
   }
   for (const found of files) {
     const tail = decodeURIComponent(found.href.split("/").pop().split("?")[0]);
@@ -179,7 +182,7 @@ try {
     log(`loaded ${name}: ${t.inserted} new, ${t.updated} updated, ${skipped} skipped`);
     await report({ status: "loaded", name, url: found.href, rows: companies.length, inserted: t.inserted, updated: t.updated, detail: skipped ? `${skipped} rows without a valid CIN skipped` : null });
   }
-} catch (e) {
+} } catch (e) {
   log("failed:", e.message);
   await report({ status: "failed", detail: e.message.split("\n")[0] }).catch(() => {});
 } finally {
