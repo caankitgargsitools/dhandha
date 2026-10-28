@@ -33,13 +33,13 @@ export async function POST(request) {
           if (!b64) continue;
           try { pages.push(...(await pdfPages(new Uint8Array(Buffer.from(b64, "base64")))).pages); } catch {}
         }
-        if (!pages.length) continue;
-        const rules = readTenderText(pages);
-        const read = {
+        // nothing readable (no PDF, scanned only, too big): still report, so the job is marked pre-checked and not claimed again
+        const rules = pages.length ? readTenderText(pages) : null;
+        const read = !rules ? { fields: { _note: "Automatic pre-check: no readable PDF" }, required_docs: [], formats: [], risks: [], confidence: 0 } : {
           fields: { ...rules.fields, prereq: findPrerequisites(pages), _evidence: rules.evidence, _note: "Automatic pre-check (free reader)" },
           required_docs: rules.required_docs, formats: rules.formats, risks: rules.risks, confidence: rules.confidence,
         };
-        const { error: re } = await supabase.rpc("precheck_report", { p_key: key, p_job: j.job, p_read: read, p_conditions: extractConditions(pages, { state: j.state }) });
+        const { error: re } = await supabase.rpc("precheck_report", { p_key: key, p_job: j.job, p_read: read, p_conditions: rules ? extractConditions(pages, { state: j.state }) : [] });
         if (re) console.error("precheck report", re.message); else done++;
       } catch (e) { console.error("precheck", j.job, e.message); }
     }

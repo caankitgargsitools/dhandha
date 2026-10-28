@@ -69,12 +69,18 @@ export default async function TenderAssistant({ params }) {
   // 1. documents: fetched from the portal by the crawler (captcha typed here), or uploaded
   const pdfs = (files || []).filter((x) => /\.pdf$/i.test(x.file_name));
   if (pdfs.length) done.push(`I have ${files.length} tender document${files.length === 1 ? "" : "s"}: ${files.map((x) => x.file_name).join(", ").slice(0, 200)}.`);
-  else steps.push({ id: "fetch", kind: "fetch", job: job && ["queued", "running", "captcha", "fetched", "failed"].includes(job.status) ? job : null, portal: t.portal, aiReady: aiTiers().length > 0, typer: isPlatformAdmin,
-    say: files?.length ? `I have ${files.map((x) => x.file_name).join(", ")} but not the tender's PDF yet, so I'll fetch again from ${t.portal}.` : `First I'll fetch the tender documents from ${t.portal}. This usually takes a few minutes — you can leave this page; I'll notify you when they're in.` });
+  else {
+    // the last fetch finished without a PDF: ask for an upload instead of queuing another fetch on every visit
+    const noPdf = job?.status === "collected";
+    steps.push({ id: "fetch", kind: "fetch", job: job && ["queued", "running", "captcha", "fetched", "failed", "collected"].includes(job.status) ? job : null, portal: t.portal, aiReady: aiTiers().length > 0, typer: isPlatformAdmin, canRead: canPrepare,
+      say: noPdf ? `I fetched ${files?.length ? files.map((x) => x.file_name).join(", ") : "the tender's files"} from ${t.portal}, but there was no PDF I can read. Please upload the tender's PDF (NIT) below, or try fetching again.`
+        : files?.length ? `I have ${files.map((x) => x.file_name).join(", ")} but not the tender's PDF yet, so I'll fetch again from ${t.portal}.` : `First I'll fetch the tender documents from ${t.portal}. This usually takes a few minutes — you can leave this page; I'll notify you when they're in.` });
+  }
 
   // 2. read them, then 3. the brief — nothing is prepared until you say it looks good
-  // the automatic pre-check (free reader) is a first look; the full reading still runs here
-  if (pdfs.length && (!read || read.engine === "precheck")) steps.push({ id: "read", kind: "read", auto: true, say: "Reading the documents now…", aiReady: aiTiers().length > 0 });
+  // the automatic pre-check (free reader) is a first look; the full reading still runs here (by those who may spend credits)
+  if (pdfs.length && (!read || read.engine === "precheck")) steps.push({ id: "read", kind: "read", auto: canPrepare, aiReady: aiTiers().length > 0,
+    say: canPrepare ? "Reading the documents now…" : "The documents are in. Reading them uses credits, so an admin, manager or bid preparer starts it — ask one of them to open this assistant." });
   if (read && !confirmed) {
     steps.push({ id: "brief", kind: "brief", say: "Here is the tender in one page. Shall we go ahead and prepare the bid?" });
   }
@@ -147,11 +153,12 @@ export default async function TenderAssistant({ params }) {
   }
 
   // 7. the price — the one thing asked for every tender: typed, or worked out in the cost planner
+  const f = read?.fields || {};
+  const estimate = Number(f.value_inr || t.value_inr || job?.detail?.value_inr) || null;
+  const sheet = () => m.cost_sheet || emptySheet({ months: monthsFrom(f.completion_period || job?.detail?.period_of_work), value: estimate, scope: f.work_scope || [], travel: !!(t.state && c.state && t.state !== c.state) });
   if (m.quoted_price) done.push(`Your price: ₹${Number(m.quoted_price).toLocaleString("en-IN")} + GST${m.price_note ? ` (${m.price_note})` : ""}.`);
   else if (canPrepare && read) {
-    const f = read.fields || {};
-    steps.push({ id: "price", kind: "price", fresh: !m.cost_sheet, ev: m.tech_eval || null, cost: m.cost_sheet ? computeSheet(m.cost_sheet).cost : null, quote: m.quoted_price || null, estimate: Number(f.value_inr || t.value_inr || job?.detail?.value_inr) || null,
-      sheet: m.cost_sheet || emptySheet({ months: monthsFrom(f.completion_period || job?.detail?.period_of_work), value: Number(f.value_inr || t.value_inr || job?.detail?.value_inr) || null, scope: f.work_scope || [], travel: !!(t.state && c.state && t.state !== c.state) }),
+    steps.push({ id: "price", kind: "price", fresh: !m.cost_sheet, ev: m.tech_eval || null, cost: m.cost_sheet ? computeSheet(m.cost_sheet).cost : null, quote: m.quoted_price || null, estimate, sheet: sheet(),
       say: "Last, your price. Type it if you know it, or let's work out the cost together — items, manpower with PF/ESI/bonus, travel and stay, overheads and margin — and I'll suggest a quote." });
   }
 
@@ -160,7 +167,7 @@ export default async function TenderAssistant({ params }) {
 
   const left = daysLeft(t.due_at);
   // results can be redone (e.g. after a bad read of a big scanned document)
-  const redo = canPrepare && read ? { read: aiTiers().length > 0, tech: !!m.tech_eval && paidAi } : null;
+  const redo = canPrepare && read ? { read: aiTiers().length > 0, tech: !!m.tech_eval && paidAi, price: m.quoted_price ? { price: m.quoted_price, sheet: sheet(), estimate } : null } : null;
   return page({ m, t, left, done, steps, role, canPrepare, files, history, balance: Number(wallet?.balance || 0), formatsView, redo, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} msme={!!msme} /> : null });
 }
 

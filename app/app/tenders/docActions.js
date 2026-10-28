@@ -20,7 +20,8 @@ export async function answerDocCaptcha({ jobId, answer }) {
 }
 
 export async function cancelDocJob({ jobId }) {
-  const { supabase } = await getContext();
+  const { supabase, role } = await getContext();
+  if (["viewer", "disabled"].includes(role)) return { error: "Viewers cannot stop a fetch." };
   const { error } = await supabase.rpc("mark_doc_job", { p_job: jobId, p_status: "cancelled" });
   return error ? { error: error.message } : { ok: true };
 }

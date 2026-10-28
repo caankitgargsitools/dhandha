@@ -4,8 +4,7 @@ import { getContext } from "@/lib/session";
 import { classifyFormat } from "@/lib/formatLibrary";
 import { aiFillFormats } from "@/lib/formatAi";
 import { aiTiers } from "@/lib/ai";
-
-const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 60);
+import { labelKey } from "@/lib/masters";
 
 export async function prepareFormats(prev, formData) {
   const { supabase, tenant, company, role } = await getContext();
@@ -21,10 +20,12 @@ export async function prepareFormats(prev, formData) {
   if (!formats.length) return { error: "Read the tender first so Dhandha knows its formats." };
 
   const previous = Object.fromEntries((m.filled_formats || []).map((f) => [f.title, f]));
+  // a format seen before keeps the kind chosen for it, the text typed into it and its review mark
   let plan = formats.map((f) => {
-    const kind = classifyFormat(f.title, f.text);
     const old = previous[f.title];
-    return { title: f.title, page: f.page, kind, text: f.text || "", filled_text: old?.kind === "custom" ? old.filled_text : undefined, engine: kind === "custom" ? old?.engine : "library", missing: old?.missing || [] };
+    const kind = old?.kind || classifyFormat(f.title, f.text);
+    return { title: f.title, page: f.page, kind, text: f.text || "", filled_text: old?.kind === "custom" ? old.filled_text : undefined, engine: kind === "custom" ? old?.engine : "library", missing: old?.missing || [],
+      ...(old?.edited_text ? { edited_text: old.edited_text } : {}), ...(old?.reviewed ? { reviewed: old.reviewed } : {}) };
   });
 
   const custom = plan.filter((p) => p.kind === "custom");
@@ -48,7 +49,7 @@ export async function prepareFormats(prev, formData) {
   } else if (custom.length) {
     message += ` ${custom.length} custom format(s) need AI filling or manual text.`;
   }
-  const gaps = plan.flatMap((p) => (p.missing || []).map((g) => ({ ...g, format: p.title, key: `form.${slug(g.label)}` })));
+  const gaps = plan.flatMap((p) => (p.missing || []).map((g) => ({ ...g, format: p.title, key: labelKey(g.label) })));
   await supabase.from("tender_matches").update({ filled_formats: plan, gaps }).eq("id", matchId);
   revalidatePath(`/app/tenders/${matchId}`);
   return { message };
@@ -63,14 +64,23 @@ export async function answerGaps(prev, formData) {
   for (const [k, v] of formData.entries()) {
     if (!k.startsWith("gap:")) continue;
     const value = String(v).trim();
-    if (value) rows.push({ tenant_id: tenant.id, company_id: company.id, key: k.slice(4), period: "", value, source: "gap window" });
+    if (value) rows.push({ gap: k.slice(4), value });
   }
   if (!rows.length) return { error: "Answer at least one question." };
-  const { error } = await supabase.from("company_facts").upsert(rows, { onConflict: "company_id,key,period" });
+  const { data: m } = await supabase.from("tender_matches").select("gaps").eq("id", matchId).eq("company_id", company.id).maybeSingle();
+  if (!m) return { error: "Tender not found." };
+  // saved under the master.* key the bid file fills its blanks from (gaps saved earlier were keyed form.*)
+  const labels = Object.fromEntries((m.gaps || []).map((g) => [g.key, g.label]));
+  const facts = [...new Map(rows.map((r) => {
+    const key = labelKey(labels[r.gap] || r.gap.replace(/^(form|master)\./, ""));
+    return [key, { tenant_id: tenant.id, company_id: company.id, key, period: "", value: r.value.slice(0, 2000), source: "gap window" }];
+  })).values()].filter((r) => r.key.length > 7);
+  if (!facts.length) return { error: "Answer at least one question." };
+  const { error } = await supabase.from("company_facts").upsert(facts, { onConflict: "company_id,key,period" });
   if (error) return { error: error.message };
-  const { data: m } = await supabase.from("tender_matches").select("gaps").eq("id", matchId).single();
-  const answered = new Set(rows.map((r) => r.key));
-  await supabase.from("tender_matches").update({ gaps: (m?.gaps || []).filter((g) => !answered.has(g.key)) }).eq("id", matchId);
+  const answered = new Set(rows.map((r) => r.gap));
+  await supabase.from("tender_matches").update({ gaps: (m.gaps || []).filter((g) => !answered.has(g.key)) }).eq("id", matchId).eq("company_id", company.id);
   revalidatePath(`/app/tenders/${matchId}`);
-  return { message: `Saved ${rows.length} answer(s) to your Vault. Run “Fill with AI” again to put them into the formats; future tenders will use them automatically.` };
+  revalidatePath(`/app/tenders/${matchId}/assistant`);
+  return { message: `Saved ${facts.length} answer(s) to your Vault. They go into the formats' blanks in the bid file automatically — no need to fill with AI again. Future tenders will use them too.` };
 }

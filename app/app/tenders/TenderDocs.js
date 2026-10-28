@@ -44,7 +44,7 @@ export function ReadButtons({ matchId, aiReady, hasFiles }) {
     <form action={action} className="stack-sm">
       <input type="hidden" name="match_id" value={matchId} />
       <div className="row">
-        <button aria-busy={!!pending} name="mode" value="basic" className="ghost" disabled={pending || !hasFiles}>{pending ? "Reading…" : "Read (free engine · 10 credits)"}</button>
+        <button aria-busy={!!pending} name="mode" value="basic" className="ghost" disabled={pending || !hasFiles}>{pending ? "Reading…" : "Basic reading · 10 credits"}</button>
         <button aria-busy={!!pending} name="mode" value="ai" disabled={pending || !hasFiles || !aiReady} title={aiReady ? "" : "AI not configured yet"}>{pending ? "Reading…" : "Read with AI · 99 credits"}</button>
       </div>
       <p className="tiny faint" style={{ margin: 0 }}>

@@ -67,13 +67,17 @@ export async function generateBidPack(prev, formData) {
   let pack;
   try { pack = await buildBidPack(ctx); } catch (e) { return { error: `Could not build the PDF: ${e.message}` }; }
 
-  if (kind === "final") {
-    const { error: se } = await supabase.rpc("spend_credits", { p_tenant: tenant.id, p_action: "bid_pack", p_qty: 1, p_ref: match.tenders.tender_ref });
-    if (se) return { error: se.message.includes("insufficient") ? "Not enough credits — a signed bid pack costs 299 credits." : se.message };
-  }
+  // save first, then charge: a failed upload never costs credits; a failed charge removes the saved file
   const path = `${tenant.id}/${company.id}/${match.id}/${kind}-${Date.now()}.pdf`;
   const { error: ue } = await supabase.storage.from("bids").upload(path, pack.bytes, { contentType: "application/pdf" });
   if (ue) return { error: `Could not save the PDF: ${ue.message}` };
+  if (kind === "final") {
+    const { error: se } = await supabase.rpc("spend_credits", { p_tenant: tenant.id, p_action: "bid_pack", p_qty: 1, p_ref: match.tenders.tender_ref });
+    if (se) {
+      await supabase.storage.from("bids").remove([path]).then(() => {}, () => {});
+      return { error: se.message.includes("insufficient") ? "Not enough credits — a signed bid pack costs 299 credits." : se.message };
+    }
+  }
   await supabase.from("bid_packs").insert({ tenant_id: tenant.id, company_id: company.id, match_id: match.id, tender_id: match.tender_id, kind, storage_path: path, annexures: pack.annexures, pages: pack.pages, created_by: user.id });
   if (kind === "final") {
     await supabase.rpc("log_signature_use", { p_company: company.id, p_label: `Bid pack: ${pack.annexures.length} documents`, p_context: `${match.tenders.portal} ${match.tenders.tender_ref}`, p_otp_ref: `TOTP ${new Date().toISOString()}` });
@@ -84,8 +88,13 @@ export async function generateBidPack(prev, formData) {
   return { message: kind === "final" ? `Signed bid pack ready: ${pack.pages} pages, 299 credits used.` : `Draft ready: ${pack.pages} pages (unsigned, marked DRAFT).`, url: signed?.signedUrl };
 }
 
+// viewers (and disabled members) only look; everyone else may change the tender list
+const READ_ONLY = ["viewer", "disabled"];
+const readOnly = (role) => (READ_ONLY.includes(role) ? { error: "Viewers cannot change this." } : null);
+
 export async function savePreferences(prev, formData) {
-  const { supabase, tenant, company } = await getContext();
+  const { supabase, tenant, company, role } = await getContext();
+  if (readOnly(role)) return readOnly(role);
   const list = (k) => String(formData.get(k) || "").split(",").map((s) => s.trim()).filter(Boolean);
   const num = (k) => { const v = String(formData.get(k) || "").replace(/,/g, "").trim(); return v ? Number(v) * (formData.get(`${k}_unit`) === "cr" ? 1e7 : 1e5) : null; };
   const { index } = await loadCatalog(supabase, tenant.id);
@@ -116,18 +125,21 @@ export async function savePreferences(prev, formData) {
 
 // AI tender check: start a run now (it also runs every hour), and a person's word on one tender.
 export async function aiCheckNow() {
-  const { supabase, company } = await getContext();
+  const { supabase, company, role } = await getContext();
+  if (readOnly(role)) return readOnly(role);
   await supabase.rpc("ai_check_now", { p_company: company.id });
   revalidatePath("/app/tenders");
 }
 export async function setAiFit(formData) {
-  const { supabase } = await getContext();
+  const { supabase, role } = await getContext();
+  if (readOnly(role)) return readOnly(role);
   await supabase.rpc("set_ai_fit", { p_match: String(formData.get("id")), p_fit: formData.get("fit") === "no" ? "no" : "yes" });
   revalidatePath("/app/tenders");
 }
 
 export async function rescore() {
-  const { supabase, company } = await getContext();
+  const { supabase, company, role } = await getContext();
+  if (readOnly(role)) return readOnly(role);
   await supabase.rpc("rescore_company", { p_company: company.id });
   revalidatePath("/app/tenders");
   revalidatePath("/app");
@@ -135,7 +147,8 @@ export async function rescore() {
 
 // "Never match this word": the word stops counting for this company; its tenders are hidden on re-score.
 export async function muteTenderWord(formData) {
-  const { supabase, company, tenant } = await getContext();
+  const { supabase, company, tenant, role } = await getContext();
+  if (readOnly(role)) return readOnly(role);
   const word = String(formData.get("word") || "").trim().toLowerCase();
   if (!word) return;
   const { data: p } = await supabase.from("tender_preferences").select("services, custom_keywords, muted").eq("company_id", company.id).maybeSingle();

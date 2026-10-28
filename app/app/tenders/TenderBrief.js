@@ -36,7 +36,7 @@ export default function TenderBrief({ t, m, read, detail = {}, checklist = [], f
   const list = (items) => <ul style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 4 }} className="small">{items.map((x, i) => <li key={i}>{x}</li>)}</ul>;
 
   return (
-    <article className="stack-sm" style={{ background: "var(--paper, #fff)", border: "1px solid var(--line)", borderRadius: 14, padding: 18, width: "100%" }}>
+    <article className="stack-sm" style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 14, padding: 18, width: "100%" }}>
       <header>
         <div className="row" style={{ gap: 8, marginBottom: 6 }}>
           <span className={`chip ${mandatoryUnmet(m.reasons).length || m.pending ? "warn" : "ok"}`}>{mandatoryUnmet(m.reasons).length ? (m.forced_at ? "Filing despite a warning" : "⚠ Mandatory condition not met") : m.pending ? `Qualifies if you answer ${m.pending}` : "Qualified"}</span>

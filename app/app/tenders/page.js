@@ -161,7 +161,7 @@ export default async function Tenders({ searchParams }) {
                 )}
                 <ul className="reasons">
                   {(m.reasons || []).map((r, i) => (
-                    <li key={i}><Icon name={r.ok ? "check" : "cross"} size={14} style={{ color: r.ok ? "var(--leaf)" : "var(--blood)" }} />{r.text}</li>
+                    <li key={i}><Icon name={r.ok ? "check" : r.ask ? "alert" : "cross"} size={14} style={{ color: r.ok ? "var(--leaf)" : r.ask ? "var(--marigold)" : "var(--blood)" }} />{r.text}</li>
                   ))}
                 </ul>
                 {canWrite && left >= 0 && (
@@ -182,7 +182,8 @@ export default async function Tenders({ searchParams }) {
                 )}
               </div>
               <div className="due">
-                {left >= 0 ? (<><span className="tiny faint">Closes in</span><strong className={left <= 5 ? "error" : ""}>{left} day{left === 1 ? "" : "s"}</strong><span className="tiny faint">{fmtDate(t.due_at)}</span></>)
+                {left == null ? <span className="tiny faint">Closing date not known</span>
+                  : left >= 0 ? (<><span className="tiny faint">Closes in</span><strong className={left <= 5 ? "error" : ""}>{left} day{left === 1 ? "" : "s"}</strong><span className="tiny faint">{fmtDate(t.due_at)}</span></>)
                   : (<><span className="tiny faint">Closed</span><strong>{fmtDate(t.due_at)}</strong></>)}
                 {t.prebid_on && left >= 0 && <div className="tiny faint" style={{ marginTop: 6 }}>Pre-bid {fmtDate(t.prebid_on)}</div>}
               </div>

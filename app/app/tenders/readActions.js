@@ -23,7 +23,7 @@ export async function readTender(prev, formData) {
   const { supabase, tenant, company, role, user } = await getContext();
   const matchId = String(formData.get("match_id"));
   const mode = formData.get("mode") === "ai" ? "ai" : "basic";
-  if (role === "viewer") return { error: "Viewers cannot run tender reading." };
+  if (!["admin", "manager", "bid_preparer"].includes(role)) return { error: "Only admins, managers and bid preparers can read a tender (it uses credits)." };
   const { data: m } = await supabase.from("tender_matches").select("id, tender_id, tenders(id, tender_ref, state)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
   if (!m) return { error: "Tender not found." };
   const { data: files } = await supabase.from("tender_files").select("*").eq("tender_id", m.tender_id).order("created_at");

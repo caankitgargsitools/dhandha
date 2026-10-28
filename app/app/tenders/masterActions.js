@@ -102,11 +102,16 @@ export async function chooseFormats({ matchId, choices }) {
   const text = Object.fromEntries((withText?.formats || []).map((f) => [f.title, f.text || ""]));
   const old = Object.fromEntries((m.filled_formats || []).map((f) => [f.title, f]));
   const KINDS = ["covering_letter", "bidder_info", "turnover", "similar_works", "key_personnel", "non_blacklisting", "mse", "custom", "price", "manual"];
-  const plan = (choices || []).slice(0, 40).filter((c) => KINDS.includes(c.kind)).map((c) => ({
-    title: String(c.title).slice(0, 200), page: c.page || null, kind: c.kind, text: text[c.title] || "",
-    filled_text: c.kind === "custom" && old[c.title]?.kind === "custom" ? old[c.title].filled_text : undefined,
-    engine: c.kind === "custom" ? old[c.title]?.engine : "library", missing: [],
-  }));
+  const plan = (choices || []).slice(0, 40).filter((c) => KINDS.includes(c.kind)).map((c) => {
+    const o = old[c.title], same = o?.kind === c.kind;
+    return {
+      title: String(c.title).slice(0, 200), page: c.page || null, kind: c.kind, text: text[c.title] || "",
+      filled_text: c.kind === "custom" && o?.kind === "custom" ? o.filled_text : undefined,
+      engine: c.kind === "custom" ? o?.engine : "library", missing: [],
+      // the same format with the same choice keeps what the user typed into it and its review mark
+      ...(same && o.edited_text ? { edited_text: o.edited_text } : {}), ...(same && o.reviewed ? { reviewed: o.reviewed } : {}),
+    };
+  });
   const { error } = await supabase.from("tender_matches").update({ filled_formats: plan, gaps: [] }).eq("id", matchId);
   if (error) return { error: error.message };
   done(matchId);
@@ -118,8 +123,9 @@ export async function fillCustom({ matchId }) {
   const { supabase, tenant, company, role } = await getContext();
   if (!["admin", "manager", "bid_preparer"].includes(role)) return { error: "Only admins, managers and bid preparers can do this." };
   if (!aiTiers().some((t) => !t.free)) return { error: "Paid AI is not switched on for this site, so I can't fill these yet (your company data never goes to free AI). The owner adds ANTHROPIC_API_KEY in Vercel → Settings → Environment Variables for Production, then redeploys. Meanwhile tap Not now — the formats stay in the bid file for you to fill by hand." };
-  const { data: m } = await supabase.from("tender_matches").select("id, filled_formats, tenders(*)").eq("id", matchId).eq("company_id", company.id).single();
-  const plan = m?.filled_formats || [];
+  const { data: m } = await supabase.from("tender_matches").select("id, filled_formats, tenders(*)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
+  if (!m?.tenders) return { error: "Tender not found." };
+  const plan = m.filled_formats || [];
   const todo = plan.filter((p) => p.kind === "custom" && !p.filled_text);
   if (!todo.length) return { ok: true, message: "Nothing to fill." };
   const { data: w } = await supabase.from("wallets").select("balance").eq("tenant_id", tenant.id).maybeSingle();

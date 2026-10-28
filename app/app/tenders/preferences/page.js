@@ -5,8 +5,10 @@ import { savePreferences } from "../bidActions";
 import ServicePicker from "@/components/ServicePicker";
 import WordChips from "@/components/WordChips";
 import { loadCatalog } from "@/lib/catalog";
+import { STATES as ALL_STATES } from "@/lib/conditions";
 
-const STATES = ["Andhra Pradesh","Assam","Bihar","Chandigarh","Chhattisgarh","Delhi","Goa","Gujarat","Haryana","Himachal Pradesh","Jammu and Kashmir","Jharkhand","Karnataka","Kerala","Madhya Pradesh","Maharashtra","Odisha","Punjab","Rajasthan","Tamil Nadu","Telangana","Uttar Pradesh","Uttarakhand","West Bengal"];
+// every state and union territory, A to Z
+const STATES = [...ALL_STATES].sort((a, b) => a.localeCompare(b));
 
 export default async function Preferences({ searchParams }) {
   const params = await searchParams;
