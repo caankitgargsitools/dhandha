@@ -41,7 +41,7 @@ export default function AutopilotForm({ a, sequences, types, prices, balance, ca
           <div className="notice info" style={{ display: "block" }}>
             <strong>{plan.total} new leads a day</strong> <span className="small">(about {plan.monthly} a month) at about {inr(per)} each</span>
             <div className="small">{plan.split.map((s) => `${label[s.source]}: ${s.leads}`).join(" · ") || "Pick a source below."}</div>
-            <div className="tiny faint">Each lead: {inr(prices.lead_found ?? 2)} to find{steps.length ? ` + ${steps.length} message${steps.length > 1 ? "s" : ""} in your sequence` : ""}. Credits left: {inr(balance)}{balance < plan.spend ? " — top up to use the full budget" : ""}. A day with fewer good leads spends less.</div>
+            <div className="tiny faint">Each lead: {inr(prices.lead_found ?? 2)} to find{steps.length ? ` + ${steps.length} step${steps.length > 1 ? "s" : ""} in your playbook` : ""}. Credits left: {inr(balance)}{balance < plan.spend ? " — top up to use the full budget" : ""}. A day with fewer good leads spends less.</div>
           </div>
         </div>
 
@@ -71,9 +71,9 @@ export default function AutopilotForm({ a, sequences, types, prices, balance, ca
         <div className="panel stack-sm">
           <h3 style={{ margin: 0 }}>Then, automatically</h3>
           <div className="form-grid">
-            <div><label htmlFor="ap-seq">1. Message them with this sequence</label>
+            <div><label htmlFor="ap-seq">1. Then run this Lead Playbook</label>
               <select id="ap-seq" name="sequence_id" value={seq} onChange={(e) => setSeq(e.target.value)}>
-                <option value="">— don't message —</option>
+                <option value="">— none (a new-lead playbook still starts by itself) —</option>
                 {sequences.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.sequence_steps.length} steps{s.active ? "" : ", off"})</option>)}
               </select></div>
             <div><label htmlFor="ap-link">2. Offer <span className="tiny faint">(coming soon)</span></label>
