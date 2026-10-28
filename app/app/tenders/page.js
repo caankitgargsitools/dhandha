@@ -7,7 +7,7 @@ import { rescore, muteTenderWord, aiCheckNow, setAiFit } from "./bidActions";
 import QuestionCards from "./QuestionCards";
 import { openQuestions, mandatoryUnmet } from "@/lib/conditions";
 import { prerequisiteList } from "@/lib/prereq";
-import { parseFilters, applyFilters, activeCount, facets, STAGES, LEFT, WORK, SORTS, ELIG } from "@/lib/tenderFilters";
+import { parseFilters, applyFilters, activeCount, facets, STAGES, LEFT, WORK, SORTS, ELIG, KINDS } from "@/lib/tenderFilters";
 
 const TABS = [["open", "Worth bidding"], ["shortlisted", "Shortlisted"], ["all", "All matches"], ["done", "Results"]];
 const STATUS_CHIP = { new: ["info", "New"], shortlisted: ["warn", "Shortlisted"], preparing: ["warn", "Preparing bid"], submitted: ["info", "Submitted"], won: ["ok", "Won"], lost: ["bad", "Lost"], skipped: ["mute", "Skipped"] };
@@ -107,6 +107,7 @@ export default async function Tenders({ searchParams }) {
             <div><label htmlFor="f-stage">Stage</label><select id="f-stage" name="stage" defaultValue={f.stage[0] || ""}><option value="">Any</option>{STAGES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
             <div><label htmlFor="f-left">Time left</label><select id="f-left" name="left" defaultValue={f.left}><option value="">Any</option>{LEFT.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
             <div><label htmlFor="f-work">Type of work</label><select id="f-work" name="work" defaultValue={f.work}><option value="">Any</option>{WORK.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
+            <div><label htmlFor="f-kind">Kind of notice</label><select id="f-kind" name="kind" defaultValue={f.kind}><option value="">Any</option>{KINDS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
             <div><label htmlFor="f-vmin">Value from (₹ lakh)</label><input id="f-vmin" name="vmin" type="number" min={0} step="any" defaultValue={f.vmin ?? ""} /></div>
             <div><label htmlFor="f-vmax">Value up to (₹ lakh)</label><input id="f-vmax" name="vmax" type="number" min={0} step="any" defaultValue={f.vmax ?? ""} /></div>
             <div><label htmlFor="f-elig">Eligibility</label><select id="f-elig" name="elig" defaultValue={f.elig}><option value="">Any</option>{ELIG.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>

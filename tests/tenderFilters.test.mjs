@@ -35,3 +35,14 @@ test("search, portal, state, eligibility and sorting", () => {
   assert.equal(activeCount(parseFilters({ q: "x", stage: "new", bogus: "1", left: "nope" })), 2);
   assert.deepEqual(facets(rows).portals, ["CPPP", "GeM", "Haryana"]);
 });
+
+test("kind of notice: empanelments, rate contracts, EOI", async () => {
+  const { kindOf, applyFilters, parseFilters } = await import("../lib/tenderFilters.js");
+  assert.deepEqual(kindOf("Empanelment of Chartered Accountant firms for concurrent audit"), ["empanelment"]);
+  assert.deepEqual(kindOf("Panel of CA firms for stock audit 2026-27"), ["empanelment"]);
+  assert.deepEqual(kindOf("Annual rate contract for stationery"), ["rate_contract"]);
+  assert.deepEqual(kindOf("Expression of Interest for financial consultant"), ["eoi"]);
+  assert.deepEqual(kindOf("Construction of boundary wall"), []);
+  const rows = [{ score: 1, tenders: { title: "Empanelment of CA firms" } }, { score: 2, tenders: { title: "Road repair" } }];
+  assert.equal(applyFilters(rows, parseFilters({ kind: "empanelment" })).length, 1);
+});

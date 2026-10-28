@@ -83,6 +83,7 @@ export default async function DealDetail({ params }) {
               <div className="form-grid">
                 <div><label htmlFor="next_action">Next step</label><input id="next_action" name="next_action" defaultValue={d.next_action || ""} maxLength={120} /></div>
                 <div><label htmlFor="next_at">By</label><input id="next_at" name="next_at" type="date" defaultValue={toDate(d.next_action_at)} /></div>
+                <div><label htmlFor="renews_on">Renews on <span className="tiny faint">(for won, recurring work)</span></label><input id="renews_on" name="renews_on" type="date" defaultValue={d.renews_on || ""} /></div>
               </div>
               <div><label htmlFor="lost_reason">If lost, why</label><input id="lost_reason" name="lost_reason" defaultValue={d.lost_reason || ""} maxLength={200} placeholder="Price, went with competitor, no budget…" /></div>
               <div><label htmlFor="notes">Notes</label><textarea id="notes" name="notes" rows={4} defaultValue={d.notes || ""} /></div>

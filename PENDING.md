@@ -26,8 +26,8 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 10a | **Daily captcha session** — Admin → Captcha session → "Start today's session" each morning (reminder 09:31 IST), type each portal's captcha; re-verify a portal when its alert comes. Needs the phone app (step 5) for alerts | You | Portals show Live; tenders show "✓ Pre-checked" before anyone opens them; the page learns each portal's session length | From 25 Oct |
 | 10b | **Big document hand-over time-outs** — 2 fetches on 24 Oct failed at `doc_job_put_chunk` (database statement time-out); make the chunk writes smaller/faster and retry (G) | Claude | No fetch fails at "Handing over" | Done 25 Oct — 512 KB pieces, no compression attempt, five retries |
 | 11 | **Tender winners after the captcha** — results pages show nothing until their captcha is typed, and the crawler asked at times nobody was watching (all expired). 27 Oct: moved into the morning captcha session — after each portal goes live you get one more captcha "Tender winners: …" (A) | Both | Real award results arrive in Tender winners | Built 27 Oct; reached the server 27 Oct afternoon — first results at today's captcha session (28 Oct) |
-| 12 | **More tender detail per crawl** (value, EMD) and a Haryana portal re-test (D) | Claude | Values / EMD filled on new tenders; Haryana tenders arrive | Haryana tenders arrive again (26 Oct crawl); value / EMD per crawl still planned |
-| 13 | **BOQ Excel (.xls) into the cost planner** (B) | Claude | Upload the portal's BOQ and its items fill the planner | Planned |
+| 12 | **More tender detail per crawl** (value, EMD) and a Haryana portal re-test (D) | Claude | Values / EMD filled on new tenders; Haryana tenders arrive | Done 28 Oct — matched tenders' detail pages (value, EMD) are opened first every crawl |
+| 13 | **BOQ Excel (.xls) into the cost planner** (B) | Claude | Upload the portal's BOQ and its items fill the planner | Done 28 Oct — Import BOQ from Excel (.xls / .xlsx) in the cost planner, or use the BOQ from the tender documents |
 | 14 | **Razorpay switch-on** — keys in Vercel, webhook in Razorpay, secret in Supabase Vault, seller GSTIN in Admin → Billing (#7) | You | Webhook secret + GSTIN present; a test top-up adds credits | Open |
 | 15 | **Facebook / Instagram (Meta app)** — Business app, keys in Vercel, app secret in Vault, App Review (#9) | You | A test lead-ad lead arrives | Open |
 | 16 | **Google Drive** — OAuth client (Web), `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` in Vercel (#10) | You | Drive connect button works | Open |
@@ -35,7 +35,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 18 | **First database for the data marketplace** — upload, declare source and lawful basis, set a price, Go live (#17) | You | A live database | Open |
 | 19 | **Indian server (Oracle Mumbai VM)** + make the crawler image public on GitHub (#1, #13) | You | The server reports in | Done 26 Oct — AWS Mumbai server (t4g.small) running the crawler, document fetcher and probes; GeM opens from India (42,206 ongoing bids) |
 | 19a | **AWS budget alert** — Billing → Budgets → Create budget → monthly $20, alert to your email | You | A $20 alert exists (protects against surprise bills) | Open |
-| 20 | **GeM tenders and winners** — runs on the Indian server (E) | Claude | GeM tenders and awards arrive | Tenders done 27 Oct — 1,802 GeM bids, 50 CA matches; GeM winners still 0 (next) |
+| 20 | **GeM tenders and winners** — runs on the Indian server (E) | Claude | GeM tenders and awards arrive | GeM tenders done 27 Oct (1,802 bids); GeM winners — being fixed (token done, results filter being checked) |
 | 20a | **State portals (A)** — Gujarat ✅ (3,579 tenders); Karnataka needs its captcha → add to the morning session; AP / Telangana lists sit behind scripts (probing); Bihar resets our server's connection (retry at other hours) | Claude | Tenders from these states arrive | Gujarat done 27 Oct; rest in progress |
 | 20b | **Large PSU portals (B)** then **IREPS (C)** | Claude | NTPC, ONGC, IOCL, BHEL, SAIL, Coal India…, then railway tenders arrive | After A |
 | 20c | **Lead Playbook for new leads** — built 28 Oct (Win the business → Lead Playbook). Next for you: open it, press "Start from the ready-made playbook", adjust the steps (WhatsApp template names, scripts), switch it on. Who owns autopilot leads (round-robin to telecallers etc.) is still to decide, with AI calling | You | A playbook is on and new leads show "In progress" | Open |
@@ -48,13 +48,13 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 27 | **Before launch** — remove demo data (`demo_seed`), move pg_net out of the public schema (J) | Claude | No demo rows; Supabase lint clean | At launch |
 | 28 | **Price-to-win & rival tracking** — from award results: who won similar tenders, at what L1 price, win rates, which buyers favour whom; "bid ₹X to win" in the cost planner (TenderTiger TigerIQ, ₹500/rival) | Claude | Built and working | To do — one by one, in the order you choose |
 | 29 | **Dhandha on WhatsApp** — search tenders by chat (Hindi/English), morning matches, approve bid steps, lead alerts (TenderTiger: ₹250/tender, ₹2,000/mo) | Both | Built and working | To do — one by one, in the order you choose |
-| 30 | **Empanelment notices** — bank branch audits, C&AG / RBI panels, PSU vendor lists as a source (TenderTiger empanelment leads) | Claude | Built and working | To do — one by one, in the order you choose |
+| 30 | **Empanelment notices** — bank branch audits, C&AG / RBI panels, PSU vendor lists as a source (TenderTiger empanelment leads) | Claude | Built and working | Done 28 Oct — Tenders → Filter → Kind of notice: Empanelments & panels (also Rate contracts, EOI / RFP) |
 | 31 | **Partner finder: consortium / JV and sub-contracting** — suggest partners from Dhandha users when eligibility is short; winners post sub-work (TenderTiger: ₹500/lead, ₹5,000/mo) | Claude | Built and working | To do — one by one, in the order you choose |
 | 32 | **GeM done-for-you services** — GeM registration, catalogue upload, brand approval, vendor assessment as paid services | Both | Built and working | To do — one by one, in the order you choose |
 | 33 | **Bid manager on demand** — marketplace of CA / consultant users who prepare bids for a fee; Dhandha takes a share (TenderTiger bid consultancy) | Both | Built and working | To do — one by one, in the order you choose |
 | 34 | **Past tender results & BOQ library** — searchable results (L1, rates) and BOQs of closed tenders | Claude | Built and working | To do — one by one, in the order you choose |
 | 35 | **Auction leads** — e-auction / reverse-auction notices as a source | Claude | Built and working | To do — one by one, in the order you choose |
-| 36 | **Google Sheets sync and AI-assistant plug-in (MCP)** — live sheet of tenders/leads; connect Dhandha to ChatGPT / Claude / Gemini | Claude | Built and working | To do — one by one, in the order you choose |
+| 36 | **Google Sheets sync and AI-assistant plug-in (MCP)** — live sheet of tenders/leads; connect Dhandha to ChatGPT / Claude / Gemini | Claude | Built and working | Sheets / Excel done 28 Oct — Account → Google Sheets & Excel (live link, =IMPORTDATA); AI-assistant plug-in (MCP) still to do |
 | 37 | **Buyer side** — publish a tender/RFQ on Dhandha; private tenders; e-auction for buyers | Claude | Built and working | To do — one by one, in the order you choose |
 | 38 | **Global tenders** (World Bank, ADB, other countries) | Claude | Built and working | To do — one by one, in the order you choose |
 | 39 | **Simple website / landing page builder** with lead form, SEO basics | Claude | Built and working | To do — one by one, in the order you choose |
@@ -65,14 +65,16 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 44 | **WhatsApp broadcasts** to opted-in lists | Claude | Built and working | To do — one by one, in the order you choose |
 | 45 | **Exhibitions / trade-fair leads** | Claude | Built and working | To do — one by one, in the order you choose |
 | 46 | **Quotation & proposal builder** on the letterhead with e-sign and a **payment link** (Razorpay); e-invoice when won | Claude | Built and working | To do — one by one, in the order you choose |
-| 47 | **Referral programme, renewal reminders, win-back / upsell campaigns** | Claude | Built and working | To do — one by one, in the order you choose |
+| 47 | **Referral programme, renewal reminders, win-back / upsell campaigns** | Claude | Built and working | Renewal reminders done 28 Oct — "Renews on" on a won deal → task + phone alert 30 and 7 days before; referral and win-back still to do |
 | 48 | **Festival greetings & social posts with logo**, auto-posted to Google Profile / social (part of Phase 4, step 22) | Both | Built and working | To do — one by one, in the order you choose |
 | 49 | **EMD / bank guarantee and working-capital finance** via bank / NBFC tie-ups (referral fee) | Both | Built and working | To do — one by one, in the order you choose |
 | 50 | **Government schemes & subsidies finder** | Claude | Built and working | To do — one by one, in the order you choose |
-| 51 | **Morning brief on WhatsApp** — today's tenders, follow-ups, hot leads, money due | Claude | Built and working | To do — one by one, in the order you choose |
+| 51 | **Morning brief on WhatsApp** — today's tenders, follow-ups, hot leads, money due | Claude | Built and working | Done 28 Oct as a phone alert at 09:05 (new tenders, bids closing, follow-ups, tasks, meetings, new leads); on WhatsApp once Dhandha's WhatsApp is set up (step 29) |
 | 52 | **Pricing of Dhandha** — set plans and credits against competitors (notes in CLAUDE.md "Competitors"); suggestion: free tier + ~₹999/mo or ₹9,999/yr all-in + credits | Both | Built and working | To do — one by one, in the order you choose |
 
 ## Done (recent)
+
+- 28 Oct (night): small items cleared — morning brief on the phone, empanelment / rate-contract / EOI filter, live Google Sheets & Excel links, renewal reminders, value/EMD first for matched tenders, BOQ import, Bihar and 12 more portals (Indian Oil, Coal India, BHEL, NE states, Chandigarh, Puducherry, Ladakh).
 
 - 28 Oct (evening): **Lead Playbook** built (Win the business → Lead Playbook): design what happens to every new lead — AI call, WhatsApp, email, booking link, tasks — in any order, any number of steps, with waits, only in your office hours; starts by itself on new leads (all or chosen sources) or for chosen leads. Tested end to end. Vault: Facts, Experience and Key people can now be edited.
 
