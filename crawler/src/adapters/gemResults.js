@@ -2,6 +2,7 @@
 // price and rank. The L1 seller (or the row marked awarded / contract) is the winner and becomes a tender-winner lead.
 // Uses the same public listing endpoint the GeM page itself calls; never touches captcha-protected pages.
 import { stateFrom, industryPack } from "../classify.js";
+import { gemSession, gemList } from "./gem.js";
 
 const norm = (s) => String(s || "").replace(/\s+/g, " ").trim();
 const first = (v) => (Array.isArray(v) ? v[0] : v);
@@ -47,18 +48,12 @@ export async function crawlGemResults(browser, { maxPages = 5, maxBids = 200, lo
   const bids = [];
   const out = [];
   try {
-    await page.goto(`${base}/all-bids`, { waitUntil: "domcontentloaded", timeout: 60000 });
+    // the page's own token and filter; only the status (finished bids) and sort are changed
+    const { csrf, filter } = await gemSession(page, base);
+    const resultFilter = { ...filter, bidStatusType: status, sort: "Bid-End-Date-Latest" };
     for (let p = 1; p <= maxPages && bids.length < maxBids; p++) {
       progress({ phase: "listing", page: p, of: maxPages });
-      const res = await page.evaluate(async ({ p, base, status }) => {
-        const csrf = document.querySelector("input[name=csrf_bd_gem_nk]")?.value
-          || document.cookie.split("; ").find((c) => c.startsWith("csrf_gem_cookie="))?.split("=")[1] || "";
-        const payload = { page: p, param: { searchBid: "", searchType: "fullText" },
-          filter: { bidStatusType: status, byType: "all", highBidValue: "", byEndDate: { from: "", to: "" }, sort: "Bid-End-Date-Latest" } };
-        const body = new URLSearchParams({ payload: JSON.stringify(payload), csrf_bd_gem_nk: csrf });
-        const r = await fetch(`${base}/all-bids-data`, { method: "POST", body, headers: { "x-requested-with": "XMLHttpRequest" } });
-        return r.ok ? r.json() : { error: r.status };
-      }, { p, base, status });
+      const res = await gemList(page, base, { csrf, filter: resultFilter, p });
       if (res?.error) { log(`  GeM results page ${p}: HTTP ${res.error}`); break; }
       const docs = res?.response?.response?.docs || res?.response?.docs || [];
       for (const d of docs) { const m = mapGemResultDoc(d, base); if (m) bids.push(m); }
