@@ -49,7 +49,7 @@ export default async function Facts() {
         {!facts?.length ? (
           <p className="muted small">No facts saved yet. Turnover and net worth for the last 3 years are the most asked.</p>
         ) : (
-          <table>
+          <div className="table-wrap"><table>
             <thead><tr><th>Fact</th><th>Period</th><th>Value</th><th>Source</th><th>Updated</th><th></th></tr></thead>
             <tbody>
               {facts.map((f) => (
@@ -63,7 +63,7 @@ export default async function Facts() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </div>

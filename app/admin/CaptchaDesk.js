@@ -1,12 +1,16 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 // "Captcha needed" card on every admin page. The crawler has stopped at a portal page that asks for a captcha;
 // a person reads the picture and types it, and the crawler carries on with that answer. Shown to platform admins on
 // admin pages and on /app pages. Covers the crawler's captchas and document fetches (tender assistant, prefetches).
 export default function CaptchaDesk() {
-  const [items, setItems] = useState([]);
+  const path = usePathname();
+  const [all, setItems] = useState([]);
+  // the Captcha session page shows session captchas itself: don't ask for the same one twice there
+  const items = path === "/admin/captcha" ? all.filter((c) => !c.session) : all;
   const [busy, setBusy] = useState(null);
   const [err, setErr] = useState("");
   const [now, setNow] = useState(() => Date.now());
@@ -75,7 +79,7 @@ export default function CaptchaDesk() {
             <img src={c.image} alt={`Captcha from ${c.portal}`} style={{ maxWidth: "100%", background: "#fff", borderRadius: 6, imageRendering: "pixelated", minHeight: 40 }} />
             <div className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
               <input name="answer" autoComplete="off" autoCapitalize="off" spellCheck={false} required maxLength={40} aria-label="Captcha text" autoFocus style={{ flex: 1, width: "auto" }} />
-              <button className="sm" disabled={busy === c.id}>Send</button>
+              <button className="sm" disabled={busy === c.id} aria-busy={busy === c.id}>Send</button>
               <button type="button" className="ghost sm" disabled={busy === c.id} onClick={() => act(c, null)}>Skip</button>
             </div>
           </form>

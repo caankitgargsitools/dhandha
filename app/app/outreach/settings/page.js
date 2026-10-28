@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getContext, fmtDate } from "@/lib/session";
 import FormState from "../../FormState";
+import SubmitButton from "@/components/SubmitButton";
 import { emailReady } from "@/lib/outreach";
 import { saveOutreachSettings, disconnectWhatsApp } from "../actions";
 
@@ -31,7 +32,7 @@ export default async function OutreachSettings() {
           </div>
         </div>
       </FormState>
-      {isAdmin && s?.wa_connected_at && <form action={disconnectWhatsApp}><button className="danger">Disconnect WhatsApp</button></form>}
+      {isAdmin && s?.wa_connected_at && <form action={disconnectWhatsApp}><SubmitButton className="danger" confirm="Disconnect WhatsApp? Sequences stop sending WhatsApp messages.">Disconnect WhatsApp</SubmitButton></form>}
     </div>
   );
 }

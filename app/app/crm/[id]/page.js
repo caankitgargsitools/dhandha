@@ -64,7 +64,7 @@ export default async function DealDetail({ params }) {
           {canWrite && (
             <div className="panel">
               <h3>Log what happened</h3>
-              <LogActivity leadId={d.lead_id} dealId={d.id} defaultKind="meeting" />
+              <LogActivity leadId={d.lead_id} dealId={d.id} />
             </div>
           )}
           <div className="panel"><h3>Timeline</h3><Timeline items={acts} name={name} /></div>

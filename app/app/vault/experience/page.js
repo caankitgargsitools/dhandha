@@ -35,7 +35,7 @@ export default async function Experience() {
       <div className="panel">
         <h3>{items?.length || 0} works · ₹{inr(total)} in total</h3>
         {!!items?.length && (
-          <table>
+          <div className="table-wrap"><table>
             <thead><tr><th>Client</th><th>Work</th><th>Value</th><th>Period</th><th>Status</th><th></th></tr></thead>
             <tbody>
               {items.map((i) => (
@@ -49,7 +49,7 @@ export default async function Experience() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </div>

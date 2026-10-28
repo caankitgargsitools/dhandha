@@ -4,26 +4,36 @@ import { ago } from "@/lib/tickets";
 import KeyForm from "./KeyForm";
 import LiveCrawler from "./LiveCrawler";
 import { revokeKey } from "./actions";
+import SubmitButton from "@/components/SubmitButton";
 
 export default async function Crawler() {
   const { supabase } = await getAdminContext();
-  const [{ data: keys }, { data: runs }, { data: tenders }, { data: changes }, { data: liveRunners }, { data: stepStats }] = await Promise.all([
+  const nowIso = new Date().toISOString();
+  const liveCount = (portal) => {
+    let q = supabase.from("tenders").select("id", { count: "exact", head: true }).eq("status", "live").gt("due_at", nowIso);
+    if (portal) q = q.eq("portal", portal);
+    return q.then((r) => r.count || 0);
+  };
+  const [{ data: keys }, { data: runs }, liveTotal, { count: changes }, { data: liveRunners }, { data: stepStats }] = await Promise.all([
     supabase.rpc("list_ingest_keys"),
     supabase.from("crawl_runs").select("*").order("started_at", { ascending: false }).limit(40),
-    supabase.from("tenders").select("portal, status, due_at, last_seen_at"),
-    supabase.from("tender_changes").select("id, field, seen_at").gte("seen_at", new Date(Date.now() - 7 * 864e5).toISOString()),
+    liveCount(),
+    supabase.from("tender_changes").select("id", { count: "exact", head: true }).gte("seen_at", new Date(Date.now() - 7 * 864e5).toISOString()),
     supabase.from("crawler_live").select("*").order("updated_at", { ascending: false }),
     supabase.from("crawler_step_stats").select("step, avg_seconds"),
   ]);
   const stats = Object.fromEntries((stepStats || []).map((x) => [x.step, x]));
-  const live = (tenders || []).filter((t) => t.status === "live" && new Date(t.due_at) > new Date());
-  const byPortal = Object.entries(live.reduce((m, t) => ((m[t.portal] = (m[t.portal] || 0) + 1), m), {})).sort((a, b) => b[1] - a[1]);
+  // the crawler's steps are named "<portal> · tenders": that gives the portal list; each count is exact
+  const portals = [...new Set((stepStats || []).map((x) => x.step).filter((st) => / · tenders$/.test(st)).map((st) => st.replace(/ · tenders$/, "")))];
+  const counts = await Promise.all(portals.map(liveCount));
+  const byPortal = portals.map((p, i) => [p, counts[i]]).filter(([, n]) => n).sort((a, b) => b[1] - a[1]);
+  const other = liveTotal - counts.reduce((t, n) => t + n, 0);
   return (
     <div className="stack">
-      <div className="page-head"><div><h1>Crawler</h1><p>Dhandha's own tender crawler runs on GitHub Actions three times a day (and on a server in India if you set one up) and posts here with an ingest key. Setup steps are in <code>crawler/README.md</code>.</p></div></div>
+      <div className="page-head"><div><h1>Crawler</h1><p>Dhandha&apos;s own tender crawler runs on the AWS Mumbai server (Docker; Watchtower pulls the newest image every hour) and posts here with an ingest key. The GitHub Actions workflow is only a manual fallback. Setup steps are in <code>crawler/README.md</code>.</p></div></div>
       <div className="grid-3">
-        <div className="panel ledger"><div className="kpi-label">Live tenders</div><div className="kpi">{live.length}</div><div className="faint small">open for bidding</div></div>
-        <div className="panel ledger"><div className="kpi-label">Changes, last 7 days</div><div className="kpi">{changes?.length || 0}</div><div className="faint small">corrigenda and date extensions</div></div>
+        <div className="panel ledger"><div className="kpi-label">Live tenders</div><div className="kpi">{liveTotal}</div><div className="faint small">open for bidding</div></div>
+        <div className="panel ledger"><div className="kpi-label">Changes, last 7 days</div><div className="kpi">{changes || 0}</div><div className="faint small">corrigenda and date extensions</div></div>
         <div className="panel ledger"><div className="kpi-label">Last run</div><div className="kpi" style={{ fontSize: 22 }}>{runs?.[0] ? ago(runs[0].started_at) : "Never"}</div><div className="faint small">{runs?.[0]?.source || "no crawler connected yet"}</div></div>
       </div>
       <LiveCrawler runners={liveRunners || []} stats={stats} />
@@ -48,7 +58,7 @@ export default async function Crawler() {
               <table><tbody>
                 {(keys || []).map((k) => (
                   <tr key={k.id}><td><strong>{k.name}</strong><div className="tiny faint">created {fmtDate(k.created_at)}{k.last_used_at ? ` · used ${ago(k.last_used_at)}` : " · never used"}</div></td>
-                    <td>{k.revoked_at ? <span className="chip mute">Revoked</span> : <form action={revokeKey}><input type="hidden" name="id" value={k.id} /><button className="danger">Revoke</button></form>}</td></tr>
+                    <td>{k.revoked_at ? <span className="chip mute">Revoked</span> : <form action={revokeKey}><input type="hidden" name="id" value={k.id} /><SubmitButton className="danger" confirm="Revoke this key? The crawler using it stops posting.">Revoke</SubmitButton></form>}</td></tr>
                 ))}
               </tbody></table>
             </div>
@@ -56,6 +66,8 @@ export default async function Crawler() {
           <div className="panel">
             <h3>Live tenders by portal</h3>
             {byPortal.map(([p, n]) => <div key={p} className="row between small" style={{ padding: "4px 0" }}><span>{p}</span><strong className="num">{n}</strong></div>)}
+            {other > 0 && <div className="row between small" style={{ padding: "4px 0" }}><span className="muted">Other portals</span><strong className="num">{other}</strong></div>}
+            {!liveTotal && <p className="small muted" style={{ margin: 0 }}>No live tenders yet.</p>}
           </div>
         </div>
       </div>

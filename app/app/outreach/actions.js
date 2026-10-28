@@ -33,8 +33,12 @@ export async function saveStep(prev, formData) {
   };
   if (channel === "email" && (!row.subject || !row.body)) return { error: "An email step needs a subject and a message." };
   if (channel === "whatsapp" && !/^[a-z0-9_]+$/.test(row.wa_template || "")) return { error: "Enter the approved template name exactly as in WhatsApp Manager (small letters, numbers, _)." };
-  const { error } = await supabase.from("sequence_steps").upsert(row, { onConflict: "sequence_id,step_no" });
-  if (error) return { error: error.message };
+  // editing a step changes that step (by id); a new step is added only if its number is free
+  const id = String(formData.get("id") || "");
+  const { error } = id
+    ? await supabase.from("sequence_steps").update(row).eq("id", id).eq("sequence_id", seq)
+    : await supabase.from("sequence_steps").insert(row);
+  if (error) return { error: error.code === "23505" ? `There is already a step ${row.step_no}. Pick another number or edit that step.` : error.message };
   revalidatePath(`/app/outreach/${seq}`);
   return { message: "Step saved." };
 }

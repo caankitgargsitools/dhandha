@@ -24,7 +24,7 @@ export default async function Outreach() {
   return (
     <div className="stack">
       <div className="page-head">
-        <div><h1>Outreach</h1><p>Email and WhatsApp sequences that follow up for you, step by step, and stop by themselves when someone replies or a call is logged.</p></div>
+        <div><h1>Outreach</h1><p>Email and WhatsApp sequences that follow up for you, step by step, and stop by themselves when a call or meeting is logged.</p></div>
         <Link href="/app/outreach/settings" className="btn ghost">Sender settings</Link>
       </div>
       <div className="grid-3">

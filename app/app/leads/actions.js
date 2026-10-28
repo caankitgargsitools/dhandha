@@ -4,10 +4,11 @@ import { redirect } from "next/navigation";
 import { getContext } from "@/lib/session";
 import { readXlsx } from "@/lib/xlsx";
 import { isLinkedInExport, leadsFromLinkedIn } from "@/lib/social";
-import { leadsFromRows, parseCsv, scoreLead, listField, SOURCES, LEAD_STATUS, ACTIVITY, OUTCOMES, PACKS } from "@/lib/leads";
+import { leadsFromRows, parseCsv, scoreLead, listField, SOURCES, LEAD_STATUS, ACTIVITY, OUTCOMES, PACKS, STAGES } from "@/lib/leads";
 
 const str = (f, k, max = 200) => String(f.get(k) || "").trim().slice(0, max);
 const istDate = (d, hh = "10:00") => (d ? new Date(`${d}T${hh}:00+05:30`).toISOString() : null);
+const STAGE_KEYS = STAGES.map(([k]) => k);
 const canSeeAll = (role) => ["admin", "manager", "bid_preparer", "viewer"].includes(role);
 
 async function loadIdeal(supabase, companyId) {
@@ -31,7 +32,8 @@ export async function addLead(prev, formData) {
   };
   if (lead.name.length < 2) return { error: "Give the business a name." };
   if (!lead.phone && !lead.email) return { error: "Add a phone number or an email so the lead can be reached." };
-  const source = SOURCES[formData.get("source")] ? String(formData.get("source")) : "referral";
+  if (!SOURCES[formData.get("source")]) return { error: "Pick where this lead came from." };
+  const source = String(formData.get("source"));
   const owner = String(formData.get("owner_id") || "") || ctx.user.id;
   const { data, error } = await runImport(ctx, source, owner, [lead]);
   if (error) return { error: error.message };
@@ -148,6 +150,21 @@ export async function createDealFromLead(prev, formData) {
   if (!lead) return { error: "Lead not found." };
   const title = str(formData, "title") || `Work for ${lead.name}`;
   const value = Number(String(formData.get("value_inr") || "").replace(/[^\d.]/g, "")) || null;
+  // one open deal per lead: if there is one already, bring it up to date instead of opening a second
+  const { data: open } = await supabase.from("deals").select("id, stage").eq("lead_id", lead.id).eq("company_id", company.id).not("stage", "in", "(won,lost)").order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (open) {
+    const patch = {
+      title, next_action: str(formData, "next_action", 120) || "Send proposal",
+      next_action_at: istDate(str(formData, "next_at", 10)) || new Date(Date.now() + 2 * 864e5).toISOString(),
+    };
+    if (value) patch.value_inr = value;
+    // deals only move forward
+    if (STAGE_KEYS.indexOf(open.stage) < STAGE_KEYS.indexOf("qualified")) patch.stage = "qualified";
+    const { error } = await supabase.from("deals").update(patch).eq("id", open.id).eq("company_id", company.id);
+    if (error) return { error: error.message };
+    revalidatePath("/app/crm");
+    redirect(`/app/crm/${open.id}`);
+  }
   const { data, error } = await supabase.from("deals").insert({
     tenant_id: tenant.id, company_id: company.id, lead_id: lead.id, title, value_inr: value, stage: "qualified",
     owner_id: canSeeAll(role) ? lead.owner_id || user.id : user.id, created_by: user.id,

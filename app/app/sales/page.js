@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getContext } from "@/lib/session";
 import { local, addDays, hhmm, at, leadAddress } from "@/lib/scheduling";
 import BookForLead from "@/components/BookForLead";
+import SubmitButton from "@/components/SubmitButton";
 import { setMeetingStatus } from "./actions";
 
 const STATUS = { booked: ["info", "Booked"], done: ["ok", "Done"], cancelled: ["mute", "Cancelled"], no_show: ["bad", "No-show"] };
@@ -86,7 +87,7 @@ export default async function TeamCalendar({ searchParams }) {
                     {canWrite && m.status === "booked" && (
                       <div className="row" style={{ gap: 4, marginTop: 4 }}>
                         {[["done", "Done"], ["no_show", "No-show"], ["cancelled", "Cancel"]].map(([st, l]) => (
-                          <form key={st} action={setMeetingStatus}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="status" value={st} /><button className="sm ghost" style={{ padding: "3px 8px", fontSize: 12 }}>{l}</button></form>
+                          <form key={st} action={setMeetingStatus}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="status" value={st} /><SubmitButton className="sm ghost" style={{ padding: "3px 8px", fontSize: 12 }}>{l}</SubmitButton></form>
                         ))}
                       </div>
                     )}

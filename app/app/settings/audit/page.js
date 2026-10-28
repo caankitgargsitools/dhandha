@@ -12,17 +12,17 @@ export default async function Audit() {
         <p className="muted" style={{ margin: 0 }}>Every change to the Vault, brand assets and signature use. Latest 200 shown.</p>
       </div>
       <div className="panel">
-        <table>
+        <div className="table-wrap"><table>
           <thead><tr><th>When</th><th>Action</th><th>What</th><th>Detail</th></tr></thead>
           <tbody>{(rows || []).map((r) => (
             <tr key={r.id}>
-              <td className="small">{new Date(r.created_at).toLocaleString("en-IN")}</td>
+              <td className="small">{new Date(r.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</td>
               <td><span className="chip info">{r.action}</span></td>
               <td>{r.entity}</td>
               <td className="small muted">{Object.entries(r.detail || {}).map(([k, v]) => `${k}: ${v}`).join(", ")}</td>
             </tr>
           ))}</tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   );

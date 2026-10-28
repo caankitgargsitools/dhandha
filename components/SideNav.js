@@ -54,6 +54,7 @@ export default function SideNav({ sections, admin = false, foot }) {
 
 // A menu item with a submenu: opens on hover or tap, and stays open while one of its pages is showing.
 function NavGroup({ it, isActive }) {
+  const path = usePathname();
   const [hover, setHover] = useState(false);
   const [tapped, setTapped] = useState(false);
   const here = isActive(it.href, it);
@@ -67,6 +68,11 @@ function NavGroup({ it, isActive }) {
       </button>
       {open && (
         <div className="sub">
+          {/* the parent's own page, so it stays reachable now that the parent opens the submenu */}
+          <Link href={it.href} className={`nav${path === it.href ? " active" : ""}`} aria-current={path === it.href ? "page" : undefined}>
+            <Icon name={it.icon} size={15} />
+            <span>Overview</span>
+          </Link>
           {it.children.map((c) => (
             <Link key={c.href} href={c.href} className={`nav${isActive(c.href, c) ? " active" : ""}`} aria-current={isActive(c.href, c) ? "page" : undefined}>
               <Icon name={c.icon} size={15} />

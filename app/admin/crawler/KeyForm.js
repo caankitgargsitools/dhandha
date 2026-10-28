@@ -7,7 +7,7 @@ export default function KeyForm() {
   return (
     <form action={action} className="stack-sm">
       <div className="row" style={{ flexWrap: "nowrap" }}>
-        <input name="name" placeholder="e.g. Bangalore server" aria-label="Key name" style={{ maxWidth: 280 }} />
+        <input name="name" placeholder="e.g. AWS Mumbai server" aria-label="Key name" style={{ maxWidth: 280 }} />
         <button aria-busy={!!pending} disabled={pending}>{pending ? "Creating…" : "Create key"}</button>
       </div>
       {state?.error && <p className="error">{state.error}</p>}
@@ -15,8 +15,8 @@ export default function KeyForm() {
         <div className="notice small" style={{ display: "block" }}>
           <strong>Copy this now — the key is shown only once.</strong>
           <ol style={{ margin: "8px 0", paddingLeft: 18 }}>
-            <li>Oracle Cloud → Compute → Create instance: region Mumbai or Hyderabad, shape first: Ampere → VM.Standard.A1.Flex (Always Free, 2 OCPU / 12 GB); then image Oracle Linux 9 (or an ARM build of Ubuntu if offered).</li>
-            <li>Show advanced options → Management → Initialization script → Paste cloud-init script → paste everything below → Create.</li>
+            <li>AWS console → EC2 in Asia Pacific (Mumbai) → Launch instance: image Ubuntu Server 24.04 LTS (64-bit Arm), instance type t4g (e.g. t4g.small).</li>
+            <li>Advanced details → User data → paste everything below → Launch instance.</li>
             <li>In about 10 minutes the first run appears under Recent runs on this page.</li>
           </ol>
           <textarea readOnly rows={12} value={state.script} onFocus={(e) => e.target.select()} style={{ width: "100%", fontFamily: "monospace", fontSize: 12 }} aria-label="Server setup script" />

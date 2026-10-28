@@ -77,7 +77,7 @@ export default async function AdminBilling() {
           {(events || []).map((e) => (
             <div key={e.id} className="small" style={{ padding: "5px 0", borderTop: "1px solid var(--line-soft)" }}>
               <strong>{e.event}</strong> → <span className={e.result === "paid" ? "success" : /rejected/.test(e.result) ? "error" : ""}>{e.result}</span>
-              <div className="tiny faint">{new Date(e.received_at).toLocaleString("en-IN")} · {e.razorpay_payment_id || e.razorpay_order_id}</div>
+              <div className="tiny faint">{new Date(e.received_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })} · {e.razorpay_payment_id || e.razorpay_order_id}</div>
             </div>
           ))}
         </div>

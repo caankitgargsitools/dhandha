@@ -25,8 +25,8 @@ export default async function Brand() {
       <div>
         <h1>Letterhead & signature</h1>
         <p className="muted" style={{ margin: 0 }}>
-          Stored privately for this company. The signature and seal are placed only on documents Dhandha generates, only after an OTP
-          approval by the signatory, and every use is logged below.
+          Stored privately for this company. The signature and seal are placed only on documents Dhandha generates, only after the
+          admin enters the code from their authenticator app (TOTP), and every use is logged below.
         </p>
       </div>
       {!isAdmin && <p className="notice small">Only an admin can change these.</p>}
@@ -59,13 +59,13 @@ export default async function Brand() {
       </div>
       <div className="panel">
         <h3>Signature use log</h3>
-        {!uses?.length ? <p className="muted small">Not used yet. Each bid document signed by Dhandha will appear here with its OTP reference.</p> : (
-          <table>
-            <thead><tr><th>When</th><th>Document</th><th>Context</th><th>OTP ref</th></tr></thead>
+        {!uses?.length ? <p className="muted small">Not used yet. Each bid document signed by Dhandha will appear here with its approval reference.</p> : (
+          <div className="table-wrap"><table>
+            <thead><tr><th>When</th><th>Document</th><th>Context</th><th>Approval ref</th></tr></thead>
             <tbody>{uses.map((u) => (
-              <tr key={u.id}><td className="small">{new Date(u.used_at).toLocaleString("en-IN")}</td><td>{u.document_label}</td><td>{u.context || "—"}</td><td className="small">{u.otp_ref || "—"}</td></tr>
+              <tr key={u.id}><td className="small">{new Date(u.used_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</td><td>{u.document_label}</td><td>{u.context || "—"}</td><td className="small">{u.otp_ref || "—"}</td></tr>
             ))}</tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </div>

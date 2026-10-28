@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function MfaChallenge() {
+export default function MfaChallenge({ next = "/app" }) {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -27,7 +27,7 @@ export default function MfaChallenge() {
       setBusy(false);
       return;
     }
-    router.replace("/app");
+    router.replace(next);
     router.refresh();
   }
 

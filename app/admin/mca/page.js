@@ -20,9 +20,13 @@ export default async function AdminMca() {
         <div className="panel ledger"><div className="kpi-label">Latest registration</div><div className="kpi" style={{ fontSize: 22 }}>{fmtDate(latest?.[0]?.incorporated_on)}</div></div>
       </div>
       <div className="panel stack-sm">
-        <div className="panel-head" style={{ marginBottom: 0 }}><h3>Automatic monthly fetch</h3><span className="small faint">daily at 10:55 IST · GitHub Actions “mca monthly”</span></div>
-        <p className="small muted" style={{ margin: 0 }}>Dhandha opens MCA&apos;s “incorporated during the month” page every day, loads the last six monthly files (each once), and sends you a phone alert. If MCA shows a bot check, nothing is attempted — you get an alert and upload the file below.</p>
-        {!(fetches || []).length && <p className="small muted" style={{ margin: 0 }}>No automatic fetch yet.</p>}
+        <div className="panel-head" style={{ marginBottom: 0 }}><h3>Getting MCA&apos;s monthly files</h3></div>
+        <p className="small muted" style={{ margin: 0 }}>MCA refuses cloud servers (GitHub and AWS Mumbai both got “403 Forbidden”), so the files come in one of two ways:</p>
+        <ol className="small" style={{ margin: 0, paddingLeft: 18 }}>
+          <li><strong>From your own computer</strong> (needs Chrome and Node.js): run <code style={{ wordBreak: "break-all" }}>bash &lt;(curl -fsSL https://raw.githubusercontent.com/caankitgargsitools/dhandha/main/tools/mca-upload.sh)</code> in a terminal. It asks once for an upload key (Admin → Crawler → Create key), opens MCA in a Chrome window on your broadband, loads the last six monthly files (each once) and reports below. If MCA shows a check, you complete it in that window.</li>
+          <li><strong>By hand:</strong> download the file from MCA and upload it below.</li>
+        </ol>
+        {!(fetches || []).length && <p className="small muted" style={{ margin: 0 }}>No fetch reported yet.</p>}
         {(fetches || []).map((f) => (
           <div key={f.id} className="row between small" style={{ padding: "6px 0", borderTop: "1px solid var(--line-soft)", gap: 8 }}>
             <span><span className={`chip ${(LABEL[f.status] || LABEL.failed)[0]}`}>{(LABEL[f.status] || LABEL.failed)[1]}</span> {f.file_name || ""}{f.detail ? <span className="tiny faint"> · {f.detail}</span> : null}</span>

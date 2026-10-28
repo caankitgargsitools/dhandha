@@ -2,12 +2,13 @@ import Link from "next/link";
 import Icon from "@/components/Icon";
 import { ScoreRing } from "@/components/Charts";
 
+// the fourth entry is what is still being built — shown as "coming soon", never as if it works today
 const features = [
   ["vault", "Business Vault", "PAN, GST, audited accounts, work orders, letterhead and signature — entered once, reused in every bid."],
-  ["tender", "Tender Engine", "GeM, CPPP and every state portal checked through the day. Each tender scored with reasons, read in full and filled for you."],
-  ["leads", "Lead Engine", "New companies from MCA, local businesses, buyers from your IndiaMART account — filtered to the clients you want."],
-  ["crm", "CRM & Outreach", "WhatsApp, email, SMS and AI calls in Hindi and English. Every lead has a next step and a date."],
-  ["content", "Content Studio", "Your industry's news turned into LinkedIn posts and short videos, waiting for your approval."],
+  ["tender", "Tender Engine", "GeM, CPPP and state portals checked through the day. Each tender scored with reasons, read in full and filled for you."],
+  ["leads", "Lead Engine", "New companies from MCA, local businesses from Google Maps, tender winners and your own lists — filtered to the clients you want.", "Buyers from your IndiaMART account"],
+  ["crm", "CRM & Outreach", "WhatsApp and email follow-ups, a deal pipeline and your sales team's calendar. Every lead has a next step and a date.", "SMS and AI calls in Hindi and English"],
+  ["content", "Content Studio", "", "Your industry's news turned into LinkedIn posts and short videos, waiting for your approval"],
   ["wallet", "Pay as you use", "A small monthly fee per module and credits only for the work you run. GST invoice every time."],
 ];
 
@@ -38,10 +39,13 @@ export default function Home() {
       <section>
         <h2 style={{ fontSize: 28, maxWidth: "24ch" }}>One suite, from the first lead to the signed bid.</h2>
         <div className="grid-2" style={{ gap: "0 48px" }}>
-          {features.map(([icon, t, d]) => (
+          {features.map(([icon, t, d, soon]) => (
             <div key={t} className="feature">
               <div className="ic"><Icon name={icon} size={22} /></div>
-              <div><h3 style={{ margin: "2px 0 4px" }}>{t}</h3><p className="muted" style={{ margin: 0 }}>{d}</p></div>
+              <div><h3 style={{ margin: "2px 0 4px" }}>{t}{!d && soon && <span className="chip mute" style={{ marginLeft: 8, verticalAlign: "middle" }}>Coming soon</span>}</h3>
+                {d && <p className="muted" style={{ margin: 0 }}>{d}</p>}
+                {soon && <p className="small faint" style={{ margin: d ? "4px 0 0" : 0 }}>{d ? <><strong>Coming soon:</strong> {soon}.</> : `${soon}.`}</p>}
+              </div>
             </div>
           ))}
         </div>
@@ -51,7 +55,7 @@ export default function Home() {
         <div className="grid-2" style={{ alignItems: "center" }}>
           <div>
             <h2 style={{ marginTop: 0 }}>Built for Indian businesses, contractors and CA firms.</h2>
-            <p className="muted">Reads tenders in English, Hindi and regional languages. Knows Udyam EMD exemptions, bid capacity formulas and DLT rules. Runs on servers in India.</p>
+            <p className="muted">Reads English tenders today (Hindi and regional languages coming soon). Knows Udyam EMD exemptions, bid capacity formulas and DLT rules. Runs on servers in India.</p>
           </div>
           <div>
             {[["Full suite, per month", "₹2,499"], ["Tenders module", "₹999"], ["Bid pack, per tender", "299 credits"], ["Verified lead", "2 credits"]].map(([a, b]) => (
