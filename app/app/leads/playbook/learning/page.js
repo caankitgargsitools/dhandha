@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getContext, fmtDate } from "@/lib/session";
 import { lineStats, callFunnel } from "@/lib/callLearning";
+import { callInsights, objectionStats, MOOD } from "@/lib/callInsights";
 import { CallFunnel, LineTable } from "@/components/CallLines";
 import SubmitButton from "@/components/SubmitButton";
 import Transcript from "./Transcript";
@@ -10,6 +11,7 @@ import { setLesson } from "./actions";
 export const metadata = { title: "Call learning" };
 
 const OUT = { interested: "Interested", call_back: "Call back", not_interested: "Not interested", connected: "Talked" };
+const MOOD_CHIP = { positive: "ok", neutral: "mute", negative: "bad" };
 const SCOPE = { playbook: "One playbook", company: "Every call", global: "All Dhandha customers" };
 
 export default async function Learning({ searchParams }) {
@@ -25,6 +27,8 @@ export default async function Learning({ searchParams }) {
   const stats = lineStats(list);
   const funnel = callFunnel(list);
   const call = sp?.call ? list.find((c) => c.token === sp.call) : null;
+  const ins = call ? callInsights(call) : null;
+  const objStats = objectionStats(list);
   const focus = sp?.turn != null ? Number(sp.turn) : null;
   const ours = (lessons || []).filter((l) => l.company_id === company.id);
   const shared = (lessons || []).filter((l) => l.tenant_id == null && l.status === "active");
@@ -52,26 +56,50 @@ export default async function Learning({ searchParams }) {
             <Link className="small" href="/app/leads/playbook/learning">Close</Link>
           </div>
           <p className="small muted">{OUT[call.outcome] || "No result"} · {call.ended_by === "client" ? "the client hung up" : call.ended_by === "ai" ? "Dhandha AI ended it" : "ended"}{call.sequence_id ? ` · ${bookName[call.sequence_id] || "playbook"}` : ""}</p>
-          {call.summary && <p className="small">{call.summary}</p>}
+          <div className="row small" style={{ gap: 6 }}>
+            <span className={`chip ${MOOD_CHIP[ins.mood]}`}>{MOOD[ins.mood]}</span>
+            {ins.objections.map((o) => <a key={o.kind} className="chip warn" href={`#line-${o.turn}`} title={o.text}>{o.label}</a>)}
+          </div>
+          <p className="small" style={{ margin: "6px 0" }}>{call.summary || ins.summary} <strong>Next:</strong> {ins.next}.</p>
           <Transcript call={call} playbooks={books || []} canTeach focus={Number.isInteger(focus) ? focus : null} />
         </div>
       )}
 
       {list.length > 0 && (
         <>
+          {objStats.length > 0 && (
+            <div className="panel flush table-wrap">
+              <h3 style={{ padding: "14px 16px 0" }}>Objections clients raise</h3>
+              <p className="tiny faint" style={{ padding: "0 16px" }}>Read free from what clients said. &ldquo;Still went well&rdquo; = the call ended interested or with a call-back. Open an example and teach Dhandha AI a better answer.</p>
+              <table>
+                <thead><tr><th>Objection</th><th>Calls</th><th>Still went well</th><th>Example</th></tr></thead>
+                <tbody>
+                  {objStats.map((o) => (
+                    <tr key={o.kind}>
+                      <td className="small"><strong>{o.label}</strong></td>
+                      <td>{o.calls}</td>
+                      <td className="small">{Math.round((o.saved / o.calls) * 100)}%</td>
+                      <td className="small"><Link href={`/app/leads/playbook/learning?call=${o.example.token}&turn=${o.example.turn}#line-${o.example.turn}`}>&ldquo;{o.example.text.slice(0, 80)}&rdquo;</Link></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           <LineTable title="Lines that lose people" hint="The client hung up right after it, cut in, or the call ended 'not interested'." rows={stats.worst} link={link} />
           <LineTable title="Last line before the client hung up" rows={stats.exits} link={link} />
           <LineTable title="Lines that work" hint="The client answered, and calls with this line ended interested or with a call-back." rows={stats.best} link={link} />
           <div className="panel flush table-wrap">
             <h3 style={{ padding: "14px 16px 0" }}>Calls (last 90 days)</h3>
             <table>
-              <thead><tr><th>When</th><th>With</th><th>Result</th><th>Lines</th><th /></tr></thead>
+              <thead><tr><th>When</th><th>With</th><th>Result</th><th>Mood</th><th>Lines</th><th /></tr></thead>
               <tbody>
                 {list.slice(0, 50).map((c) => (
                   <tr key={c.token}>
                     <td className="small">{fmtDate(c.ended_at)}</td>
                     <td className="small">{c.lead_name || "Test call"}{c.sequence_id ? <div className="tiny faint">{bookName[c.sequence_id]}</div> : null}</td>
                     <td className="small">{OUT[c.outcome] || "No result"}<div className="tiny faint">{c.ended_by === "client" ? "client hung up" : c.ended_by === "ai" ? "AI ended" : ""}</div></td>
+                    <td className="small">{(() => { const x = callInsights(c); return <>{MOOD[x.mood]}{x.objections.length ? <div className="tiny faint">{x.objections.map((o) => o.label).join(", ")}</div> : null}</>; })()}</td>
                     <td>{(c.transcript || []).length}</td>
                     <td><Link className="small" href={`/app/leads/playbook/learning?call=${c.token}#call`}>Open</Link></td>
                   </tr>
