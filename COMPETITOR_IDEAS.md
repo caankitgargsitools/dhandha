@@ -28,7 +28,7 @@ Priority: H = high, M = medium, L = low · Effort: S = small, M = medium, L = la
 | C15 | **Batch AI-call campaigns**: many calls at once, retries, voicemail detection, branded caller ID | Retell, Bland, Bolna | Scale | M | M | Waiting for approval (needs GPU + telecom) |
 | C16 | **AI receptionist for incoming calls**: answers your number, qualifies, books a meeting | Bolna, Retell, Exotel, Ozonetel | Missed calls are lost leads | M | M | Waiting for approval (needs telecom) |
 | C17 | **Regional languages** for calls (Tamil, Telugu, Marathi, Bengali, Gujarati) | Bolna (Sarvam) | Tier-2/3 buyers | M | M | Waiting for approval |
-| C18 | **Field check-in / check-out with GPS**, visit proof, attendance, distance | LeadSquared Field Force | We plan routes but cannot prove visits | M | M | Waiting for approval |
+| C18 | **Field check-in / check-out with GPS**, visit proof, attendance, distance | LeadSquared Field Force | We plan routes but cannot prove visits | M | M | Approved and built 28 Oct (My day → 📍 Check in / out; Sales team → Visits (GPS)) |
 | C19 | **Lead routing rules**: round-robin, territory, product, capacity | LeadSquared, Zoho, Freshsales | Fair, fast assignment | S | M | Approved and built 28 Oct (Leads → Lead routing) |
 | C20 | **Website chat widget and web forms**, click-to-WhatsApp ads | Interakt, WATI, HubSpot, Pipedrive | Captures website and ad traffic | S–M | M | Waiting for approval (with PENDING 39) |
 | C21 | **Which companies visit your website** | Apollo, Pipedrive | Warm B2B leads | M | L | Waiting for approval |
