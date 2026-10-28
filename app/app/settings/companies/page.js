@@ -11,10 +11,10 @@ export default async function Companies() {
         <p className="muted" style={{ margin: 0 }}>Each company has its own Vault, documents, letterhead and signature. Switch between them from the top bar.</p>
       </div>
       <div className="panel">
-        <table>
+        <div className="table-wrap"><table>
           <thead><tr><th>Company</th><th></th></tr></thead>
           <tbody>{companies.map((c) => <tr key={c.id}><td>{c.legal_name}</td><td>{c.id === company.id && <span className="chip info">Selected</span>}</td></tr>)}</tbody>
-        </table>
+        </table></div>
       </div>
       {isAdmin && (
         <div className="panel">

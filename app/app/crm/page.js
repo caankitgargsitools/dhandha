@@ -5,7 +5,8 @@ import Icon from "@/components/Icon";
 import FormState from "../FormState";
 import OwnerSelect from "@/components/OwnerSelect";
 import { STAGES } from "@/lib/leads";
-import { createDeal, moveDeal } from "./actions";
+import { createDeal } from "./actions";
+import MoveDeal from "./MoveDeal";
 
 const OPEN = STAGES.filter(([k]) => !["won", "lost"].includes(k));
 
@@ -70,13 +71,7 @@ export default async function Crm({ searchParams }) {
                       </div>
                     )}
                     {canWrite && (
-                      <form action={moveDeal} className="row" style={{ gap: 6, marginTop: 8, flexWrap: "nowrap" }}>
-                        <input type="hidden" name="id" value={d.id} />
-                        <select name="stage" defaultValue={d.stage} aria-label={`Move ${d.title}`} style={{ padding: "4px 8px", fontSize: 12 }}>
-                          {STAGES.map(([s, l]) => <option key={s} value={s}>{l}</option>)}
-                        </select>
-                        <button className="ghost sm">Move</button>
-                      </form>
+                      <MoveDeal id={d.id} stage={d.stage} title={d.title} stages={STAGES} />
                     )}
                   </div>
                 );

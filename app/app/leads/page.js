@@ -17,24 +17,47 @@ export default async function Leads({ searchParams }) {
   const q = String(params?.q || "").replace(/[^\p{L}\p{N}@.\s-]/gu, "").trim().slice(0, 60);
   const source = SOURCES[params?.source] ? params.source : "";
 
-  let query = supabase.from("leads").select("*").eq("company_id", company.id);
-  if (q) query = query.or(`name.ilike.%${q}%,contact_person.ilike.%${q}%,phone.ilike.%${q}%,city.ilike.%${q}%,industry.ilike.%${q}%`);
-  if (source) query = query.eq("source", source);
-  const [{ data: all }, { data: members }, { data: ideal }] = await Promise.all([
-    query.order("score", { ascending: false }).order("created_at", { ascending: false }).limit(1000),
+  const page = Math.max(1, Math.floor(Number(params?.page)) || 1);
+  const PAGE = 100;
+  const CLOSED = ["converted", "junk", "not_interested"];
+  const notClosed = `(${CLOSED.join(",")})`;
+  // start of tomorrow, India time: a follow-up before it is due today or overdue
+  const ist = new Date(Date.now() + 330 * 60000);
+  const tomorrow = new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate() + 1) - 330 * 60000).toISOString();
+  const base = (sel, opts) => {
+    let b = supabase.from("leads").select(sel, opts).eq("company_id", company.id);
+    if (q) b = b.or(`name.ilike.%${q}%,contact_person.ilike.%${q}%,phone.ilike.%${q}%,city.ilike.%${q}%,industry.ilike.%${q}%`);
+    if (source) b = b.eq("source", source);
+    return b;
+  };
+  const view = (k, b) => ({
+    all: () => b.not("status", "in", notClosed),
+    mine: () => b.eq("owner_id", user.id).not("status", "in", notClosed),
+    due: () => b.not("status", "in", notClosed).lt("next_follow_up_at", tomorrow),
+    new: () => b.eq("status", "new"),
+    hot: () => b.not("status", "in", notClosed).gte("score", 70),
+    closed: () => b.in("status", CLOSED),
+  })[k]();
+  // counts are exact (not limited by how many rows a query returns); the table is paged
+  const count = (b) => b.then((r) => r.count || 0);
+  const head = () => base("id", { count: "exact", head: true });
+  const listQuery = tab === "due"
+    ? view(tab, base("*")).order("next_follow_up_at", { ascending: true })
+    : view(tab, base("*")).order("score", { ascending: false }).order("created_at", { ascending: false });
+  const srcKeys = Object.keys(SOURCES);
+  const [{ data: pageRows }, { data: members }, { data: ideal }, total, tabCounts, srcCounts] = await Promise.all([
+    listQuery.range((page - 1) * PAGE, page * PAGE - 1),
     supabase.from("tenant_members").select("user_id, role, profiles(full_name, email)").eq("tenant_id", tenant.id).neq("role", "disabled"),
     supabase.from("lead_preferences").select("*").eq("company_id", company.id).maybeSingle(),
+    count(head()),
+    Promise.all(TABS.map(([k]) => count(view(k, head())))),
+    Promise.all(srcKeys.map((k) => count(head().eq("source", k)))),
   ]);
-  const rows = all || [];
-  const open = (l) => !["converted", "junk", "not_interested"].includes(l.status);
-  const due = (l) => open(l) && l.next_follow_up_at && calDays(l.next_follow_up_at) <= 0;
-  const lists = {
-    all: rows.filter(open), mine: rows.filter((l) => l.owner_id === user.id && open(l)), due: rows.filter(due).sort((a, b) => new Date(a.next_follow_up_at) - new Date(b.next_follow_up_at)),
-    new: rows.filter((l) => l.status === "new"), hot: rows.filter((l) => open(l) && l.score >= 70), closed: rows.filter((l) => !open(l)),
-  };
-  const list = lists[tab].slice(0, 300);
+  const counts = Object.fromEntries(TABS.map(([k], i) => [k, tabCounts[i]]));
+  const list = pageRows || [];
+  const pages = Math.max(1, Math.ceil(counts[tab] / PAGE));
   const name = (id) => { const m = (members || []).find((x) => x.user_id === id); return m ? (m.user_id === user.id ? "You" : m.profiles?.full_name || m.profiles?.email) : "—"; };
-  const bySource = Object.entries(SOURCES).map(([k, label], i) => ({ label, value: rows.filter((l) => l.source === k).length, color: COLORS[i] })).filter((r) => r.value);
+  const bySource = srcKeys.map((k, i) => ({ label: SOURCES[k], value: srcCounts[i], color: COLORS[i % COLORS.length] })).filter((r) => r.value);
   const canWrite = role !== "viewer";
   const isLead = ["admin", "manager"].includes(role);
   const sellers = (members || []).filter((m) => ["admin", "manager", "telecaller", "field"].includes(m.role));
@@ -53,10 +76,10 @@ export default async function Leads({ searchParams }) {
       {!ideal && isLead && <div className="notice"><Icon name="sparkle" /><span><strong>Tell Dhandha who your ideal client is</strong> (industries, cities, states) so leads are scored on fit. Use the panel on the right.</span></div>}
 
       <div className="grid-3">
-        <div className="panel ledger"><div className="kpi-label">Follow-ups due</div><div className="kpi" style={{ color: lists.due.length ? "var(--blood)" : undefined }}>{lists.due.length}</div><div className="faint small">today or overdue</div></div>
-        <div className="panel ledger"><div className="kpi-label">Hot leads (70+)</div><div className="kpi">{lists.hot.length}</div><div className="faint small">{lists.new.length} not contacted yet</div></div>
+        <div className="panel ledger"><div className="kpi-label">Follow-ups due</div><div className="kpi" style={{ color: counts.due ? "var(--blood)" : undefined }}>{counts.due}</div><div className="faint small">today or overdue</div></div>
+        <div className="panel ledger"><div className="kpi-label">Hot leads (70+)</div><div className="kpi">{counts.hot}</div><div className="faint small">{counts.new} not contacted yet</div></div>
         <div className="panel">
-          <div className="panel-head"><h3 style={{ fontSize: 15 }}>Where leads come from</h3><span className="faint small">{rows.length}</span></div>
+          <div className="panel-head"><h3 style={{ fontSize: 15 }}>Where leads come from</h3><span className="faint small">{total}</span></div>
           {bySource.length ? <StageBars rows={bySource} /> : <p className="small muted" style={{ margin: 0 }}>No leads yet.</p>}
         </div>
       </div>
@@ -64,7 +87,7 @@ export default async function Leads({ searchParams }) {
       <div className="grid-main">
         <div className="stack-sm">
           <div className="row" role="tablist">
-            {TABS.map(([k, l]) => <Link key={k} role="tab" aria-selected={tab === k} href={`/app/leads?${qs({ tab: k })}`} className={`btn sm ${tab === k ? "" : "ghost"}`}>{l} <span className="faint">({lists[k].length})</span></Link>)}
+            {TABS.map(([k, l]) => <Link key={k} role="tab" aria-selected={tab === k} href={`/app/leads?${qs({ tab: k })}`} className={`btn sm ${tab === k ? "" : "ghost"}`}>{l} <span className="faint">({counts[k]})</span></Link>)}
           </div>
           <form className="row" action="/app/leads" style={{ gap: 8 }}>
             <input type="hidden" name="tab" value={tab} />
@@ -79,7 +102,7 @@ export default async function Leads({ searchParams }) {
             <table>
               <thead><tr><th>Score</th><th>Business</th><th>Contact</th><th>Status</th><th>Owner</th><th>Follow-up</th></tr></thead>
               <tbody>
-                {!list.length && <tr><td colSpan={6} className="muted" style={{ padding: 22 }}>{rows.length ? "Nothing in this view." : "No leads yet. Add one or import a CSV."}</td></tr>}
+                {!list.length && <tr><td colSpan={6} className="muted" style={{ padding: 22 }}>{total ? "Nothing in this view." : "No leads yet. Add one or import a CSV."}</td></tr>}
                 {list.map((l) => {
                   const d = l.next_follow_up_at ? calDays(l.next_follow_up_at) : null;
                   const wa = !l.dnd && waLink(l.phone, fillTemplate(tpl, l, company));
@@ -105,12 +128,18 @@ export default async function Leads({ searchParams }) {
               </tbody>
             </table>
           </div>
-          {lists[tab].length > list.length && <p className="small muted">Showing the top {list.length} of {lists[tab].length}. Search or filter to narrow down.</p>}
+          {pages > 1 && (
+            <div className="row small" style={{ gap: 8 }}>
+              {page > 1 && <Link className="btn ghost sm" href={`/app/leads?${qs({ page: page - 1 })}`}>Previous</Link>}
+              <span className="muted">Page {page} of {pages} · {counts[tab]} leads</span>
+              {page < pages && <Link className="btn ghost sm" href={`/app/leads?${qs({ page: page + 1 })}`}>Next</Link>}
+            </div>
+          )}
         </div>
 
         <div className="stack-sm">
           {canWrite && (
-            <details className="panel" open={!rows.length}>
+            <details className="panel" open={!total}>
               <summary><strong>Add a lead</strong></summary>
               <FormState action={addLead} submit="Add lead">
                 <div><label htmlFor="name">Business name</label><input id="name" name="name" required maxLength={200} /></div>
@@ -123,7 +152,7 @@ export default async function Leads({ searchParams }) {
                   <div><label htmlFor="state">State</label><input id="state" name="state" maxLength={80} /></div>
                 </div>
                 <div className="form-grid">
-                  <div><label htmlFor="source">Source</label><select id="source" name="source" defaultValue="referral">{Object.entries(SOURCES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
+                  <div><label htmlFor="source">Source</label><select id="source" name="source" defaultValue="" required><option value="" disabled>Where did it come from?</option>{Object.entries(SOURCES).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></div>
                   {isLead && <OwnerSelect members={sellers} me={user.id} />}
                 </div>
                 <div><label htmlFor="notes">Notes</label><textarea id="notes" name="notes" rows={2} /></div>

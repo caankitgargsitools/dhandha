@@ -3,6 +3,7 @@ import { apolloSearch, mapApolloPerson } from "@/lib/connectors";
 import { listField } from "@/lib/leads";
 import FormState from "../../FormState";
 import FoundList from "../FoundList";
+import SubmitButton from "@/components/SubmitButton";
 import { saveApolloKey, disconnectApollo } from "../actions";
 
 // Apollo: decision-makers by job title, place and keywords, using the workspace's own Apollo account.
@@ -38,14 +39,14 @@ export default async function Apollo({ searchParams }) {
             <div style={{ flex: "2 1 220px" }}><label htmlFor="titles">Job titles</label><input id="titles" name="titles" defaultValue={titles.join(", ")} placeholder="e.g. CFO, Finance Head, Procurement Manager" /></div>
             <div style={{ flex: "1 1 160px" }}><label htmlFor="places">Places</label><input id="places" name="places" defaultValue={places.join(", ")} placeholder="e.g. Gurugram, Haryana" /></div>
             <div style={{ flex: "1 1 160px" }}><label htmlFor="keywords">Industry / keywords</label><input id="keywords" name="keywords" defaultValue={keywords} placeholder="e.g. construction" /></div>
-            <button>Search</button>
+            <SubmitButton>Search</SubmitButton>
           </form>
           {res?.error && <p className="error small">{res.error}</p>}
           {res && !res.error && !rows.length && <p className="muted small">Nobody found. Try fewer filters.</p>}
           {res?.total ? <p className="small muted" style={{ margin: 0 }}>{res.total.toLocaleString("en-IN")} people match; showing 25 at a time. Emails and phones are revealed in Apollo (uses your Apollo credits).</p> : null}
           {role !== "viewer" && <FoundList source="apollo" rows={rows} />}
           {rows.length === 25 && <a className="btn ghost sm" href={`/app/leads/apollo?${new URLSearchParams({ titles: titles.join(","), places: places.join(","), keywords, page: page + 1 })}`}>Next 25</a>}
-          {isAdmin && <form action={disconnectApollo}><button className="ghost sm">Disconnect Apollo</button></form>}
+          {isAdmin && <form action={disconnectApollo}><SubmitButton className="ghost sm" confirm="Disconnect Apollo?">Disconnect Apollo</SubmitButton></form>}
         </>
       )}
     </div>

@@ -31,12 +31,14 @@ export default async function Winners() {
           <p>Firms that recently won government tenders in {where}, read from award-of-contract results on public portals by Dhandha&apos;s own crawler. Fresh contract wins need finance, audit, supplies, equipment and staff.</p>
         </div>
       </div>
-      {!pref && <div className="notice"><Icon name="map" /><span>Set your <Link href="/app/leads">ideal client</Link> cities and states first, so only winners near you show up.</span></div>}
+      {!pref && list.length > 0 && <div className="notice"><Icon name="map" /><span>Set your <Link href="/app/leads">ideal client</Link> cities and states first, so only winners near you show up.</span></div>}
 
       <div className="grid-main">
         <div className="stack-sm">
           {error && <p className="error">{error.message}</p>}
-          {!list.length ? (
+          {!list.length && !pref ? (
+            <div className="panel stack-sm"><h3 style={{ margin: 0 }}>Save your ideal client first</h3><p className="muted small" style={{ margin: 0 }}>Tell Dhandha your ideal client&apos;s cities and states, so Dhandha can pick the tender winners near you.</p><div><Link className="btn" href="/app/leads">Set your ideal client</Link></div></div>
+          ) : !list.length ? (
             <div className="panel"><p className="muted" style={{ margin: 0 }}>No new winners match right now. Award results arrive as the crawler reads the portals; widen the work types or period on the right to see more.</p></div>
           ) : (
             <FormState action={addWinners} submit={`Add selected as leads${cost ? ` · ${cost} credits each` : ""}`}>

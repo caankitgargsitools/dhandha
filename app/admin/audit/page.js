@@ -11,7 +11,7 @@ export default async function AdminAudit() {
           <thead><tr><th>When</th><th>Workspace</th><th>Action</th><th>What</th><th>Detail</th></tr></thead>
           <tbody>{(rows || []).map((r) => (
             <tr key={r.id}>
-              <td className="small faint">{new Date(r.created_at).toLocaleString("en-IN")}</td>
+              <td className="small faint">{new Date(r.created_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</td>
               <td className="small">{r.tenants?.name || "—"}</td>
               <td><span className="chip info plain">{r.action}</span></td>
               <td className="small">{r.entity}</td>

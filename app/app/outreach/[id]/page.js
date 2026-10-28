@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getContext, fmtDate } from "@/lib/session";
 import FormState from "../../FormState";
+import SubmitButton from "@/components/SubmitButton";
 import { SOURCES } from "@/lib/leads";
 import { saveStep, removeStep, toggleSequence, enrollByFilter, setEnrollment } from "../actions";
 
@@ -12,6 +13,7 @@ function StepForm({ seq, step, next }) {
   return (
     <FormState action={saveStep} submit={step ? "Save step" : "Add step"}>
       <input type="hidden" name="sequence_id" value={seq} />
+      {step && <input type="hidden" name="id" value={step.id} />}
       <div className="form-grid">
         <div><label>Step</label><input name="step_no" type="number" min={1} max={10} defaultValue={s.step_no} /></div>
         <div><label>Day (from enrolment)</label><input name="day_offset" type="number" min={0} max={90} defaultValue={s.day_offset} /></div>
@@ -48,7 +50,7 @@ export default async function Sequence({ params }) {
         <div><h1>{seq.name}</h1><p>{(steps || []).length} steps · {(enr || []).filter((e) => e.status === "active").length} leads active</p></div>
         {isLead && (
           <form action={toggleSequence}><input type="hidden" name="id" value={seq.id} /><input type="hidden" name="active" value={seq.active ? "0" : "1"} />
-            <button className={seq.active ? "ghost" : "gold"}>{seq.active ? "Switch off" : "Switch on"}</button></form>
+            <SubmitButton className={seq.active ? "ghost" : "gold"}>{seq.active ? "Switch off" : "Switch on"}</SubmitButton></form>
         )}
       </div>
       {!seq.active && <div className="notice small"><span>This sequence is switched off: nothing is sent and no one new can be enrolled.</span></div>}
@@ -60,7 +62,7 @@ export default async function Sequence({ params }) {
               <summary><strong>Step {s.step_no} · day {s.day_offset} · {s.channel === "email" ? `Email: ${s.subject}` : `WhatsApp: ${s.wa_template}`}</strong></summary>
               {isLead ? <>
                 <StepForm seq={seq.id} step={s} />
-                <form action={removeStep} style={{ marginTop: 8 }}><input type="hidden" name="id" value={s.id} /><input type="hidden" name="sequence_id" value={seq.id} /><button className="danger">Remove step</button></form>
+                <form action={removeStep} style={{ marginTop: 8 }}><input type="hidden" name="id" value={s.id} /><input type="hidden" name="sequence_id" value={seq.id} /><SubmitButton className="danger" confirm="Remove this step?">Remove step</SubmitButton></form>
               </> : <p className="small" style={{ whiteSpace: "pre-wrap" }}>{s.body}</p>}
             </details>
           ))}
@@ -99,8 +101,8 @@ export default async function Sequence({ params }) {
                     <td>{canWrite && ["active", "paused"].includes(e.status) && (
                       <form action={setEnrollment} className="row" style={{ gap: 4 }}>
                         <input type="hidden" name="id" value={e.id} /><input type="hidden" name="sequence_id" value={seq.id} />
-                        <button name="status" value={e.status === "active" ? "paused" : "active"} className="ghost sm">{e.status === "active" ? "Pause" : "Resume"}</button>
-                        <button name="status" value="stopped" className="ghost sm">Stop</button>
+                        <SubmitButton name="status" value={e.status === "active" ? "paused" : "active"} className="ghost sm">{e.status === "active" ? "Pause" : "Resume"}</SubmitButton>
+                        <SubmitButton name="status" value="stopped" className="ghost sm">Stop</SubmitButton>
                       </form>
                     )}</td>
                   </tr>

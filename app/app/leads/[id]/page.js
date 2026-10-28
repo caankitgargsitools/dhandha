@@ -10,6 +10,7 @@ import { SOURCES, LEAD_STATUS, STAGES, telLink, waLink, fillTemplate, DEFAULT_TE
 import { updateLead, createDealFromLead } from "../actions";
 import { sendOne, enrollOne } from "../../outreach/actions";
 import BookMeeting from "@/components/BookMeeting";
+import { emailReady } from "@/lib/outreach";
 import { leadAddress, local, hhmm } from "@/lib/scheduling";
 
 const toDate = (d) => (d ? new Date(new Date(d).getTime() + 330 * 60000).toISOString().slice(0, 10) : "");
@@ -85,7 +86,8 @@ export default async function LeadDetail({ params }) {
             <details className="panel">
               <summary><strong>Send an email or WhatsApp</strong></summary>
               <div className="stack-sm" style={{ marginTop: 10 }}>
-                {l.email && !l.email_opt_out && (
+                {l.email && !l.email_opt_out && !emailReady() && <p className="small muted" style={{ margin: 0 }}>Email sending is not switched on yet.</p>}
+                {l.email && !l.email_opt_out && emailReady() && (
                   <FormState action={sendOne} submit="Send email">
                     <input type="hidden" name="lead_id" value={l.id} /><input type="hidden" name="channel" value="email" />
                     <div><label htmlFor="msubject">Subject</label><input id="msubject" name="subject" maxLength={200} required /></div>

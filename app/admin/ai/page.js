@@ -19,9 +19,12 @@ export default async function AdminAi() {
   const freeShare = usage.length ? Math.round((usage.filter((r) => r.ok && Number(r.cost_usd) === 0).length / Math.max(1, usage.filter((r) => r.ok).length)) * 100) : 0;
   const ALL = [
     ["Free reader (rules)", "Built in, always on", true, "Typed English tenders: value, EMD, eligibility, documents, formats, dates"],
+    // the same six tiers, in the same order, as aiTiers() in lib/ai.js
     ["Gemini Flash free tier", "GEMINI_API_KEY", !!process.env.GEMINI_API_KEY, "Public tender documents only (free tier may train on inputs)"],
-    ["Claude Haiku", "ANTHROPIC_API_KEY", !!process.env.ANTHROPIC_API_KEY, "$1 / $5 per million tokens in / out; private data allowed"],
-    ["Claude Sonnet", "ANTHROPIC_API_KEY", !!process.env.ANTHROPIC_API_KEY, "$2 / $10 per million tokens; only when cheaper engines fail"],
+    ["Gemini Flash-Lite free tier", "GEMINI_API_KEY", !!process.env.GEMINI_API_KEY, "Second free try when Flash is busy; public documents only"],
+    ["Claude Haiku 5.5", "ANTHROPIC_API_KEY", !!process.env.ANTHROPIC_API_KEY, "Lowest-cost paid engine; private data allowed"],
+    ["Claude Haiku 4.5", "ANTHROPIC_API_KEY", !!process.env.ANTHROPIC_API_KEY, "$1 / $5 per million tokens in / out; private data allowed"],
+    ["Claude Sonnet 5.5", "ANTHROPIC_API_KEY", !!process.env.ANTHROPIC_API_KEY, "Strongest and costliest; only when cheaper engines fail"],
   ];
   return (
     <div className="stack">

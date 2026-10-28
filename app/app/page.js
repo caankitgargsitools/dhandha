@@ -14,8 +14,9 @@ export default async function Dashboard() {
     supabase.from("documents").select("id, type_code, title, valid_until, document_types(name)").eq("company_id", company.id),
     supabase.from("wallets").select("balance").eq("tenant_id", tenant.id).maybeSingle(),
     supabase.from("brand_assets").select("kind").eq("company_id", company.id),
-    supabase.from("credit_ledger").select("delta, balance_after, created_at, reason").eq("tenant_id", tenant.id).order("created_at"),
-    supabase.from("tender_matches").select("score, status, eligible, tenders(title, authority, value_inr, due_at)").eq("company_id", company.id).order("score", { ascending: false }),
+    // the latest 60 entries (newest first, turned round below) — not the oldest ones
+    supabase.from("credit_ledger").select("delta, balance_after, created_at, reason").eq("tenant_id", tenant.id).order("created_at", { ascending: false }).limit(60),
+    supabase.from("tender_matches").select("score, status, eligible, unfit, ai_fit, tenders(title, authority, value_inr, due_at)").eq("company_id", company.id).order("score", { ascending: false }),
     supabase.from("deals").select("id, stage, value_inr, title, next_action, next_action_at").eq("company_id", company.id),
   ]);
   const fieldsDone = CORE_FIELDS.filter((f) => c?.[f]).length;
@@ -25,7 +26,9 @@ export default async function Dashboard() {
   const brandDone = ["letterhead", "signature", "seal"].filter((k) => brandKinds.has(k)).length;
   const pct = Math.round(((fieldsDone + docsDone + brandDone) / (CORE_FIELDS.length + CORE_DOCS.length + 3)) * 100);
   const expiring = (docs || []).filter((d) => d.valid_until && daysLeft(d.valid_until) <= 60).sort((a, b) => new Date(a.valid_until) - new Date(b.valid_until));
-  const openTenders = (matches || []).filter((m) => m.eligible && m.tenders && daysLeft(m.tenders.due_at) >= 0 && !["skipped", "won", "lost"].includes(m.status));
+  // same as the Tenders page: matches that no longer fit, or the AI check said are not your work, are hidden unless acted on
+  const hidden = (m) => ["new", "skipped"].includes(m.status) && (m.unfit || m.ai_fit === "no");
+  const openTenders = (matches || []).filter((m) => m.eligible && m.tenders && !hidden(m) && daysLeft(m.tenders.due_at) >= 0 && !["skipped", "won", "lost"].includes(m.status));
   const pipeline = STAGES.map(([k, label]) => ({ label, value: (deals || []).filter((d) => d.stage === k).reduce((s, d) => s + Number(d.value_inr || 0), 0), color: k === "won" ? "var(--leaf)" : undefined }));
   const openValue = (deals || []).filter((d) => !["won", "lost"].includes(d.stage)).reduce((s, d) => s + Number(d.value_inr || 0), 0);
   const followUps = (deals || []).filter((d) => d.next_action_at && !["won", "lost"].includes(d.stage)).sort((a, b) => new Date(a.next_action_at) - new Date(b.next_action_at)).slice(0, 4);
@@ -55,7 +58,7 @@ export default async function Dashboard() {
         <div className="panel ledger">
           <div className="kpi-label">Credits left</div>
           <div className="kpi num">{inr(wallet?.balance)}</div>
-          <Sparkline points={(ledger || []).map((l) => Number(l.balance_after))} height={38} label="Credit balance over time" />
+          <Sparkline points={(ledger || []).slice().reverse().map((l) => Number(l.balance_after))} height={38} label="Credit balance over time" />
         </div>
       </div>
 

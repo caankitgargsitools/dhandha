@@ -22,8 +22,13 @@ export default function PayButton({ getOrder, label, className = "gold", disable
     setState({ busy: true });
     const ok = await loadCheckout();
     if (!ok) return setState({ error: "Could not load Razorpay. Check your internet connection." });
-    const o = await startCheckout(getOrder());
-    if (o.error) return setState({ error: o.error });
+    let o;
+    try {
+      o = await startCheckout(getOrder());
+    } catch (e) {
+      return setState({ error: `Could not start the payment: ${e?.message || "network error"}. Please try again.` });
+    }
+    if (!o || o.error) return setState({ error: o?.error || "Could not start the payment. Please try again." });
     const rzp = new window.Razorpay({
       key: o.keyId, order_id: o.orderId, amount: o.amount, currency: "INR", name: o.name, description: o.description,
       prefill: o.prefill, theme: { color: "#4f46e5" },
@@ -39,7 +44,7 @@ export default function PayButton({ getOrder, label, className = "gold", disable
   }
   return (
     <div className="stack-sm">
-      <button type="button" className={className} onClick={pay} disabled={disabled || state.busy}>{state.busy ? "Opening…" : label}</button>
+      <button type="button" className={className} onClick={pay} disabled={disabled || state.busy} aria-busy={!!state.busy}>{state.busy ? "Opening…" : label}</button>
       {state.error && <p className="error" style={{ margin: 0 }}>{state.error}</p>}
       {state.done && <p className="small" style={{ margin: 0, color: "var(--ok)" }}>Payment received. Credits and your GST invoice appear here in a few seconds.</p>}
     </div>

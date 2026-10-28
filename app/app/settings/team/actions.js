@@ -23,25 +23,31 @@ export async function addMember(prev, formData) {
   return { message: `Invite ready. Dhandha does not email it yet — send ${email} this link (Copy / WhatsApp under Pending invites), or ask them to sign up at Dhandha with this email; either way they join automatically:`, link: `${await origin()}/login?invite=${data.token}` };
 }
 
-export async function changeRole(formData) {
+export async function changeRole(prev, formData) {
   const { supabase, tenant } = await getContext();
   const tenantId = String(formData.get("tenant_id") || tenant.id);
-  await supabase.rpc("set_member_role", { p_tenant: tenantId, p_user: String(formData.get("user_id")), p_role: String(formData.get("role")) });
+  const { error } = await supabase.rpc("set_member_role", { p_tenant: tenantId, p_user: String(formData.get("user_id")), p_role: String(formData.get("role")) });
+  if (error) return { error: error.message };
   revalidatePath("/app/settings/team");
   revalidatePath(`/admin/tenants/${tenantId}`);
+  return { message: "Saved." };
 }
 
-export async function disableMember(formData) {
+export async function disableMember(prev, formData) {
   const { supabase, tenant } = await getContext();
   const tenantId = String(formData.get("tenant_id") || tenant.id);
-  await supabase.rpc("disable_member", { p_tenant: tenantId, p_user: String(formData.get("user_id")) });
+  const { error } = await supabase.rpc("disable_member", { p_tenant: tenantId, p_user: String(formData.get("user_id")) });
+  if (error) return { error: error.message };
   revalidatePath("/app/settings/team");
   revalidatePath(`/admin/tenants/${tenantId}`);
+  return { message: "Removed." };
 }
 
-export async function revokeInvite(formData) {
+export async function revokeInvite(prev, formData) {
   const { supabase, tenant } = await getContext();
-  await supabase.rpc("revoke_invite", { p_invite: String(formData.get("invite_id")) });
+  const { error } = await supabase.rpc("revoke_invite", { p_invite: String(formData.get("invite_id")) });
+  if (error) return { error: error.message };
   revalidatePath("/app/settings/team");
   revalidatePath(`/admin/tenants/${String(formData.get("tenant_id") || tenant.id)}`);
+  return { message: "Invite cancelled." };
 }

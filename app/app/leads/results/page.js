@@ -68,7 +68,7 @@ export default async function SourceResults({ searchParams }) {
           </div>
         </details>
       )}
-      <p className="tiny faint" style={{ margin: 0 }}>Spent = credits for finding each lead plus the emails, WhatsApp messages and AI calls sent to it, plus any spend you record outside Dhandha for months in the period. Business closed = value of deals marked Won (enter the value on the deal). Leads are counted in the period they were added.</p>
+      <p className="tiny faint" style={{ margin: 0 }}>Spent = credits for finding each lead plus the emails and WhatsApp messages sent to it, plus any spend you record outside Dhandha for months in the period. Business closed = value of deals marked Won (enter the value on the deal). Leads are counted in the period they were added.</p>
     </div>
   );
 }
