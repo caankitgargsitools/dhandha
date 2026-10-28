@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { changeText, realChange } from "@/lib/tenderChanges";
 import { prerequisiteList } from "@/lib/prereq";
 import GetReady from "@/components/GetReady";
 import { mandatoryUnmet } from "@/lib/conditions";
@@ -169,10 +170,11 @@ export default async function TenderDetail({ params }) {
               </tbody>
             </table>
           </div>
-          {!!changes?.length && (
+          {!!changes?.filter(realChange).length && (
             <div className="panel">
-              <h3>Changes since published</h3>
-              {changes.map((ch) => <div key={ch.id} className="small row between" style={{ padding: "4px 0" }}><span>{{ due_at: "Due date", value_inr: "Value", emd_inr: "EMD", status: "Status" }[ch.field] || ch.field} changed</span><span className="faint">{ago(ch.seen_at)}</span></div>)}
+              <h3>Changes since published (corrigenda)</h3>
+              {changes.filter(realChange).map((ch) => <div key={ch.id} className="small row between" style={{ padding: "4px 0" }}><span>{changeText(ch)}</span><span className="faint">{ago(ch.seen_at)}</span></div>)}
+              <p className="tiny faint" style={{ margin: "6px 0 0" }}>Shortlist a tender (or start preparing it) and Dhandha alerts your phone when it changes.</p>
             </div>
           )}
         </div>

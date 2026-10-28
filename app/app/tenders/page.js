@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { changeText, latestByTender } from "@/lib/tenderChanges";
 import { getContext, daysLeft, lakh, fmtDate } from "@/lib/session";
 import { ScoreRing, Donut } from "@/components/Charts";
 import Icon from "@/components/Icon";
@@ -48,10 +49,14 @@ export default async function Tenders({ searchParams }) {
   const canWrite = role !== "viewer";
   // pre-check state of the open tenders shown: fetching / waiting for a captcha / done
   const openIds = list.filter((m) => live(m) && !m.tenders.prechecked_at).map((m) => m.tenders.id).slice(0, 150);
-  const [{ data: facts }, { data: jobs }] = await Promise.all([
+  const shownIds = list.filter(live).map((m) => m.tenders.id).slice(0, 200);
+  const [{ data: facts }, { data: jobs }, { data: recentChanges }] = await Promise.all([
     supabase.from("company_facts").select("key, value").eq("company_id", company.id).eq("period", ""),
     openIds.length ? supabase.from("tender_doc_jobs").select("tender_id, status").in("tender_id", openIds).order("created_at", { ascending: false }) : { data: [] },
+    shownIds.length ? supabase.from("tender_changes").select("tender_id, field, old_value, new_value, seen_at").in("tender_id", shownIds)
+      .gte("seen_at", new Date(Date.now() - 7 * 864e5).toISOString()).order("seen_at", { ascending: false }).limit(600) : { data: [] },
   ]);
+  const changesOf = latestByTender(recentChanges);
   const jobOf = {};
   for (const j of jobs || []) jobOf[j.tender_id] ||= j.status;
   const answers = Object.fromEntries((facts || []).map((f) => [f.key, f.value]));
@@ -140,6 +145,7 @@ export default async function Tenders({ searchParams }) {
                   {t.prechecked_at ? <span className="chip ok plain" title="Documents fetched and checked in advance">✓ Pre-checked</span>
                     : ["queued", "running"].includes(jobOf[t.id]) ? <span className="chip info plain">Pre-check: fetching documents…</span>
                     : jobOf[t.id] === "captcha" ? <span className="chip warn plain">Pre-check: waiting for the portal's captcha</span> : null}
+                  {changesOf[t.id] && <Link href={`/app/tenders/${m.id}`} className="chip warn plain" title={changesOf[t.id].map(changeText).join("; ")}>Changed: {changeText(changesOf[t.id][0])}</Link>}
                   <span className="tiny faint">{t.portal} · {t.tender_ref}</span>
                 </div>
                 <h4><Link href={`/app/tenders/${m.id}`} style={{ color: "inherit" }}>{t.title}</Link></h4>

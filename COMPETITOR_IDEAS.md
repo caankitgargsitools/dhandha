@@ -16,7 +16,7 @@ Priority: H = high, M = medium, L = low · Effort: S = small, M = medium, L = la
 | C3 | **Rival intelligence**: a rival's bids, wins, losses, buyers and tenders we missed | TenderTiger TigerIQ (₹500 a rival) | Upsell built on our award data | M | H | = PENDING 28 |
 | C4 | **Past L1 prices per item / BOQ line** in the cost planner | TenderTiger, BidAssist | Sharper prices | M | H | = PENDING 34 |
 | C5 | **Tender search and alerts on WhatsApp** in English, Hindi and Gujarati | TenderTiger (₹250 a tender), BidAssist | Owners live on WhatsApp | M | H | = PENDING 29 |
-| C6 | **Corrigendum alerts with "what changed"** for tenders you follow | BidAssist, TenderTiger | A missed corrigendum means a rejected bid | S | H | Waiting for approval |
+| C6 | **Corrigendum alerts with "what changed"** for tenders you follow | BidAssist, TenderTiger | A missed corrigendum means a rejected bid | S | H | Approved and built 28 Oct → PENDING 21d |
 | C7 | **Call recording and logging from the telecaller's own phone** (Android app), auto-dialler, call lists | TeleCRM (₹799 a user), Kylas, LeadSquared | Telecallers dial from their own SIM | L | H | Waiting for approval |
 | C8 | **Calling compliance for AI calls**: DND/NCPR scrub before each call, calling hours, consent log, opt-out words | Exotel, Ozonetel | Needed before public AI calls (TRAI) | M | H | Part of PENDING 21 |
 | C9 | **Quotes and proposals** with GST, client acceptance, then invoice | Zoho, Freshsales, Kylas, Pipedrive | CAs and consultants quote every day | M | H | = PENDING 46 |
