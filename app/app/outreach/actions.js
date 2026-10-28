@@ -141,3 +141,14 @@ export async function disconnectWhatsApp() {
   await supabase.rpc("disconnect_whatsapp", { p_tenant: tenant.id });
   revalidatePath("/app/outreach/settings");
 }
+
+// WhatsApp inbox set-up (webhook address, verify token, app secret, auto-reply, assignment)
+export async function saveInboxSetup(v) {
+  const { supabase, tenant, isAdmin } = await getContext();
+  if (!isAdmin) return { error: "Only the workspace admin can set this up." };
+  const { data, error } = await supabase.rpc("wa_inbox_setup", {
+    p_tenant: tenant.id, p_app_secret: String(v.secret || "").trim() || null, p_auto_reply: v.auto_reply ?? null, p_auto_when: v.auto_when || null, p_assign: v.assign || null,
+  });
+  if (error) return { error: /does not exist/.test(error.message) ? "The WhatsApp inbox is being switched on — try again shortly." : error.message.replace(/^.*?ERROR:\s*/, "") };
+  return { data };
+}

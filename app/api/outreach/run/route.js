@@ -1,5 +1,5 @@
 import { anonClient } from "@/lib/supabase/anon";
-import { sendEmail, sendWhatsApp, emailReady } from "@/lib/outreach";
+import { sendEmail, sendWhatsApp, sendInboxMessage, emailReady } from "@/lib/outreach";
 import { onlineSlots, local, addDays } from "@/lib/scheduling";
 
 export const maxDuration = 60;
@@ -30,7 +30,8 @@ export async function POST(request) {
     if (e2) console.error("outreach report", e2.message);
   }
   const links = await bookingLinks(supabase, key);
-  return Response.json({ sent: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok).length, links });
+  const inbox = await inboxReplies(supabase, key);
+  return Response.json({ sent: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok).length, links, inbox });
 }
 
 // Lead Playbook "booking link" steps: work out the company's free times for the next 14 days (every salesperson,
@@ -59,4 +60,20 @@ async function bookingLinks(supabase, key) {
     if (e2) console.error("booking done", e2.message); else if (!err) made++;
   }
   return made;
+}
+
+// WhatsApp inbox: replies typed by the team (and auto-replies), sent from the workspace's own number.
+async function inboxReplies(supabase, key) {
+  const { data: msgs, error } = await supabase.rpc("wa_inbox_claim", { p_key: key, p_limit: 30 });
+  if (error) { if (!/does not exist/.test(error.message)) console.error("inbox claim", error.message); return 0; }
+  const results = [];
+  for (const m of msgs || []) {
+    try { results.push({ id: m.id, ok: true, provider_id: await sendInboxMessage(m) }); }
+    catch (e) { results.push({ id: m.id, ok: false, error: e.message }); }
+  }
+  if (results.length) {
+    const { error: e2 } = await supabase.rpc("wa_inbox_report", { p_key: key, p_results: results });
+    if (e2) console.error("inbox report", e2.message);
+  }
+  return results.filter((r) => r.ok).length;
 }
