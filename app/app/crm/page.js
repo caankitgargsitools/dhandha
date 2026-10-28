@@ -39,6 +39,7 @@ export default async function Crm({ searchParams }) {
         <div><h1>CRM pipeline</h1><p>Every deal has a next step and a date. Steps overdue by more than 24 hours go to a manager as a task.</p></div>
         <div className="row">
           <Link href="/app/crm/quotes" className="btn ghost sm">Quotations</Link>
+          <Link href="/app/crm/winback" className="btn ghost sm">Win-back &amp; referrals</Link>
           <Link href={`/app/crm?${mineOnly ? "" : "who=mine"}`} className="btn ghost sm">{mineOnly ? "Show everyone's" : "Only my deals"}</Link>
           <Link href={`/app/crm?${new URLSearchParams({ ...(mineOnly ? { who: "mine" } : {}), ...(showLost ? {} : { lost: "1" }) })}`} className="btn ghost sm">{showLost ? "Hide lost" : "Show lost"}</Link>
         </div>

@@ -10,6 +10,7 @@ import { SOURCES, LEAD_STATUS, STAGES, telLink, waLink, fillTemplate, DEFAULT_TE
 import { updateLead, createDealFromLead } from "../actions";
 import { sendOne, enrollOne } from "../../outreach/actions";
 import BookMeeting from "@/components/BookMeeting";
+import ReferralLink from "@/components/ReferralLink";
 import { emailReady } from "@/lib/outreach";
 import { leadAddress, local, hhmm } from "@/lib/scheduling";
 
@@ -144,6 +145,7 @@ export default async function LeadDetail({ params }) {
               </div>
             ))}
             {canWrite && <Link href={`/app/crm/quotes/new?lead=${l.id}`} className="btn ghost sm">New quotation</Link>}
+            {canWrite && <ReferralLink leadId={l.id} phone={l.phone} name={l.contact_person || l.name} />}
             {canWrite && <BookMeeting leadId={l.id} types={mtypes || []} address={leadAddress(l)} phone={l.phone} contact={l.contact_person} business={company.name} />}
           </div>
           <div className="panel">
