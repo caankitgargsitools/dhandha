@@ -15,14 +15,14 @@ export default function AnnexureEditor({ title, segments: initial, busy, onSave,
   const save = () => onSave(extra.trim() ? [...segs, { t: "text", v: `\n${extra.trim()}\n` }] : segs);
 
   return (
-    <div className="stack-sm" style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 12, padding: 14 }}>
+    <div className="stack-sm" style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 12, padding: 14 }}>
       <div className="row between"><strong>{title}</strong><span className={`chip ${missing ? "warn" : "ok"}`}>{missing ? `${missing} to fill` : "Complete"}</span></div>
       <div style={{ fontSize: 14, lineHeight: 1.7 }}>
         {segs.map((s, i) => {
           if (s.t === "text") return <span key={i} contentEditable suppressContentEditableWarning onBlur={(e) => set(i, { v: e.currentTarget.innerText })} style={{ whiteSpace: "pre-wrap", outline: "none" }}>{s.v}</span>;
           if (s.t === "field") return (
             <input key={i} value={s.value || ""} onChange={(e) => set(i, { value: e.target.value })} placeholder={s.label} title={s.label} aria-label={s.label}
-              style={{ display: "inline-block", width: `${Math.min(Math.max((s.value || s.label).length + 2, 12), 48)}ch`, padding: "2px 6px", margin: "0 2px", fontSize: 14, background: s.value ? "rgba(46,125,50,.06)" : "#fff7d6", border: `1px solid ${s.value ? "var(--line)" : "var(--marigold)"}`, borderRadius: 6 }} />
+              style={{ display: "inline-block", width: `${Math.min(Math.max((s.value || s.label).length + 2, 12), 48)}ch`, padding: "2px 6px", margin: "0 2px", fontSize: 14, background: s.value ? "var(--leaf-soft)" : "var(--marigold-soft)", border: `1px solid ${s.value ? "var(--line)" : "var(--marigold)"}`, borderRadius: 6 }} />
           );
           return (
             <div key={i} className="stack-sm" style={{ margin: "10px 0" }}>
@@ -33,7 +33,7 @@ export default function AnnexureEditor({ title, segments: initial, busy, onSave,
                   <tbody>
                     {!s.rows.length && <tr><td colSpan={s.cols.length + 2} className="muted small">No rows yet — add one.</td></tr>}
                     {s.rows.map((row, r) => (
-                      <tr key={r} style={s.newRows.includes(r) ? { background: "#fffbea" } : undefined}>
+                      <tr key={r} style={s.newRows.includes(r) ? { background: "var(--marigold-soft)" } : undefined}>
                         <td className="tiny faint">{r + 1}</td>
                         {s.cols.map((c, ci) => <td key={ci} style={{ padding: 4 }}><input value={row[ci] || ""} onChange={(e) => cellSet(i, r, ci, e.target.value)} aria-label={`${c}, row ${r + 1}`} style={{ padding: "4px 6px", fontSize: 13, minWidth: 90 }} /></td>)}
                         <td style={{ padding: 4 }}><button type="button" className="ghost sm" onClick={() => dropRow(i, r)} aria-label={`Remove row ${r + 1}`}>×</button></td>

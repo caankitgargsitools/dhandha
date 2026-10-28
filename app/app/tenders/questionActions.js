@@ -43,21 +43,3 @@ export async function saveTurnover({ values, matchId }) {
   await rescoreAll(supabase, company, matchId);
   return { ok: true };
 }
-
-// One blank from a tender format (the gap window), asked in the chat.
-export async function answerGap({ matchId, key, value }) {
-  const { supabase, tenant, company, role } = await getContext();
-  if (role === "viewer") return { error: "Viewers cannot answer." };
-  const v = String(value || "").trim();
-  if (!/^form\.[a-z0-9_]{1,60}$/.test(String(key)) || !v) return { error: "Type an answer, or skip." };
-  const { error } = await supabase.from("company_facts").upsert(
-    { tenant_id: tenant.id, company_id: company.id, key, period: "", value: v.slice(0, 2000), source: "gap window" },
-    { onConflict: "company_id,key,period" },
-  );
-  if (error) return { error: error.message };
-  const { data: m } = await supabase.from("tender_matches").select("gaps").eq("id", matchId).eq("company_id", company.id).single();
-  await supabase.from("tender_matches").update({ gaps: (m?.gaps || []).filter((g) => g.key !== key) }).eq("id", matchId);
-  revalidatePath(`/app/tenders/${matchId}`);
-  revalidatePath(`/app/tenders/${matchId}/assistant`);
-  return { ok: true };
-}
