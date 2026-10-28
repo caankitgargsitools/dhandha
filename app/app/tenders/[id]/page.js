@@ -15,6 +15,7 @@ import FormatsPanel from "../FormatsPanel";
 import { aiTiers } from "@/lib/ai";
 import { setTenderStatus } from "../actions";
 import { STAGES } from "@/lib/tenderFilters";
+import { summarise, adviceLine, discountPct } from "@/lib/pastResults";
 
 const STAGE = Object.fromEntries(STAGES);
 
@@ -39,10 +40,12 @@ export default async function TenderDetail({ params }) {
     supabase.from("tender_changes").select("*").eq("tender_id", t.id).order("seen_at", { ascending: false }),
     supabase.from("wallets").select("balance").eq("tenant_id", m.tenant_id).maybeSingle(),
   ]);
-  const [{ data: files }, { data: reads }] = await Promise.all([
+  const [{ data: files }, { data: reads }, { data: similar }] = await Promise.all([
     supabase.from("tender_files").select("*").eq("tender_id", t.id).order("created_at"),
     supabase.from("tender_reads").select("*").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
+    supabase.rpc("similar_awards", { p_tender: t.id, p_limit: 8 }),
   ]);
+  const past = summarise(similar || []);
   const read = reads?.[0];
   const fileLinks = await Promise.all((files || []).map(async (f) => ({ ...f, url: (await supabase.storage.from("tender-docs").createSignedUrl(f.storage_path, 3600)).data?.signedUrl })));
   const ENGINE = { precheck: "Automatic pre-check (free reader)", rules: "Free reader (no AI)", "gemini-free": "Gemini Flash (free tier)", "gemini-lite": "Gemini Flash-Lite (free tier)", "claude-haiku-5": "Claude Haiku 5.5", "claude-haiku": "Claude Haiku 4.5", "claude-sonnet": "Claude Sonnet" };
@@ -170,6 +173,16 @@ export default async function TenderDetail({ params }) {
               </tbody>
             </table>
           </div>
+          {past.count > 0 && (
+            <div className="panel">
+              <div className="panel-head" style={{ marginBottom: 0 }}><h3>Similar past results</h3><Link className="small" href={`/app/tenders/results?q=${encodeURIComponent((t.title || "").split(/\s+/).slice(0, 3).join(" "))}`}>Search all</Link></div>
+              <p className="small muted" style={{ margin: "4px 0 8px" }}>{adviceLine(past, lakh)}.</p>
+              {similar.map((a) => {
+                const d = discountPct(a.awarded_value, a.estimate);
+                return <div key={a.award_id} className="small row between" style={{ padding: "4px 0", borderTop: "1px solid var(--line-soft)", flexWrap: "nowrap", gap: 12 }}><span>{a.title}<span className="tiny faint"> · {a.authority} · won by {a.bidder_name || "—"} · {fmtDate(a.contract_date)}</span></span><span className="num" style={{ whiteSpace: "nowrap" }}>{a.awarded_value ? lakh(a.awarded_value) : "—"}{d !== null && <span className="tiny faint"> ({d >= 0 ? `${d}% below` : `${-d}% above`})</span>}</span></div>;
+              })}
+            </div>
+          )}
           {!!changes?.filter(realChange).length && (
             <div className="panel">
               <h3>Changes since published (corrigenda)</h3>

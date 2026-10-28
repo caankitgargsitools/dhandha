@@ -10,6 +10,7 @@ import { computeSheet } from "@/lib/costing";
 import { candidates, CHOICES } from "@/lib/formatLibrary";
 import { emptySheet, monthsFrom } from "@/lib/costing";
 import Assistant from "./Assistant";
+import { summarise, adviceLine } from "@/lib/pastResults";
 import TenderBrief from "../../TenderBrief";
 
 // AI steps (reading, filling, marking) can take a few minutes; lib/ai.js keeps the whole chain inside this
@@ -30,7 +31,7 @@ export default async function TenderAssistant({ params }) {
   const { data: m } = await supabase.from("tender_matches").select("*, tenders(*)").eq("id", id).eq("company_id", company.id).maybeSingle();
   if (!m) notFound();
   const t = m.tenders;
-  const [{ data: c }, { data: files }, { data: reads }, { data: facts }, { data: workRows }, { data: peopleRows }, { data: packs }, { data: jobs }, { data: docs }, { data: types }, { data: chat }, { data: wallet }] = await Promise.all([
+  const [{ data: c }, { data: files }, { data: reads }, { data: facts }, { data: workRows }, { data: peopleRows }, { data: packs }, { data: jobs }, { data: docs }, { data: types }, { data: chat }, { data: wallet }, { data: similar }] = await Promise.all([
     supabase.from("companies").select("*").eq("id", company.id).single(),
     supabase.from("tender_files").select("id, file_name, storage_path").eq("tender_id", t.id).order("file_name"),
     supabase.from("tender_reads").select("engine, fields, formats, risks, summary, created_at").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
@@ -43,7 +44,9 @@ export default async function TenderAssistant({ params }) {
     supabase.from("document_types").select("code, name"),
     supabase.from("tender_chat").select("who, body, error").eq("match_id", id).order("id", { ascending: false }).limit(300),
     supabase.from("wallets").select("balance").eq("tenant_id", m.tenant_id).maybeSingle(),
+    supabase.rpc("similar_awards", { p_tender: t.id, p_limit: 8 }),
   ]);
+  const pastLine = adviceLine(summarise(similar || []), lakh);
   const history = (chat || []).reverse().map((x) => ({ who: x.who, text: x.body, error: x.error }));
   // download links for the fetched documents (one signing call for all of them)
   const paths = (files || []).map((x) => x.storage_path).filter(Boolean);
@@ -159,7 +162,7 @@ export default async function TenderAssistant({ params }) {
   if (m.quoted_price) done.push(`Your price: ₹${Number(m.quoted_price).toLocaleString("en-IN")} + GST${m.price_note ? ` (${m.price_note})` : ""}.`);
   else if (canPrepare && read) {
     steps.push({ id: "price", kind: "price", fresh: !m.cost_sheet, ev: m.tech_eval || null, cost: m.cost_sheet ? computeSheet(m.cost_sheet).cost : null, quote: m.quoted_price || null, estimate, sheet: sheet(),
-      say: "Last, your price. Type it if you know it, or let's work out the cost together — items, manpower with PF/ESI/bonus, travel and stay, overheads and margin — and I'll suggest a quote." });
+      say: `Last, your price. Type it if you know it, or let's work out the cost together — items, manpower with PF/ESI/bonus, travel and stay, overheads and margin — and I'll suggest a quote.${pastLine ? ` For reference, past results: ${pastLine}.` : ""}` });
   }
 
   if (packs?.[0]) done.push(`A ${packs[0].kind === "final" ? "signed" : "draft"} bid pack was made ${fmtDate(packs[0].created_at)}.`);

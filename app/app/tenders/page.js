@@ -70,6 +70,7 @@ export default async function Tenders({ searchParams }) {
           <p>Every tender from GeM, CPPP and state portals that fits {company.legal_name}, scored out of 100 against your Vault.</p>
         </div>
         <div className="row">
+          <Link href="/app/tenders/results" className="btn ghost">Past results</Link>
           <Link href="/app/tenders/preferences" className="btn ghost">What to look for</Link>
           {pref?.ai_check && canWrite && <form action={aiCheckNow}><button className="ghost">Run AI check now</button></form>}
           <form action={rescore}><button className="gold">Re-score now</button></form>
