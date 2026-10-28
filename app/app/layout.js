@@ -19,6 +19,7 @@ export default async function AppLayout({ children }) {
       { href: "/app/leads/generate", label: "Generate leads", icon: "leads", match: ["/app/leads", "/app/settings/facebook"], exclude: ["/app/leads/playbook"] },
     ] }] },
     { title: "Win the business", items: [
+      { href: "/app/inbox", label: "WhatsApp inbox", icon: "mail" },
       { href: "/app/leads/playbook", label: "Lead Playbook", icon: "check" },
       { href: "/app/crm", label: "CRM pipeline", icon: "crm" },
       { href: "/app/outreach", label: "Outreach", icon: "mail" },

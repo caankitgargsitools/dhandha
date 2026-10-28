@@ -3,11 +3,14 @@ import { getContext, fmtDate } from "@/lib/session";
 import FormState from "../../FormState";
 import SubmitButton from "@/components/SubmitButton";
 import { emailReady } from "@/lib/outreach";
+import { headers } from "next/headers";
 import { saveOutreachSettings, disconnectWhatsApp } from "../actions";
+import InboxSetup from "./InboxSetup";
 
 export default async function OutreachSettings() {
   const { supabase, tenant, company, isAdmin, user } = await getContext();
-  const { data: s } = await supabase.from("outreach_settings").select("*").eq("tenant_id", tenant.id).maybeSingle();
+  const [{ data: s }, h] = await Promise.all([supabase.from("outreach_settings").select("*").eq("tenant_id", tenant.id).maybeSingle(), headers()]);
+  const origin = `${h.get("x-forwarded-proto") || "https"}://${h.get("host")}`;
   return (
     <div className="stack">
       <Link href="/app/outreach" className="small">Outreach</Link>
@@ -32,6 +35,7 @@ export default async function OutreachSettings() {
           </div>
         </div>
       </FormState>
+      {isAdmin && <InboxSetup origin={origin} initial={s?.wa_hook_token ? { hook_token: s.wa_hook_token, verify_token: s.wa_verify_token, has_secret: !!s.wa_app_secret, auto_reply: s.wa_auto_reply, auto_when: s.wa_auto_when, assign: s.wa_assign } : null} />}
       {isAdmin && s?.wa_connected_at && <form action={disconnectWhatsApp}><SubmitButton className="danger" confirm="Disconnect WhatsApp? Sequences stop sending WhatsApp messages.">Disconnect WhatsApp</SubmitButton></form>}
     </div>
   );

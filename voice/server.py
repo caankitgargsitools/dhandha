@@ -135,6 +135,8 @@ async def call(request):
     LIVE["n"] += 1
     loop = asyncio.get_running_loop()
     history, outcome, summary = [], None, None
+    t0 = loop.time()
+    who_ended = {"v": "client"}  # the client hangs up unless Dhandha AI ends the call
     vad = webrtcvad.Vad(2)
     state = {"speaking": False, "cancel": False}
     log("call start", token[:8])
@@ -163,9 +165,11 @@ async def call(request):
         nonlocal outcome, summary
         await ws.send_json({"type": "thinking"})
         t = await turn(http, token, history, heard)
+        at = round(loop.time() - t0, 1)
         if heard:
-            history.append({"role": "client", "text": heard})
-        history.append({"role": "ai", "text": t.get("reply", "")})
+            history.append({"role": "client", "text": heard, "at": at})
+        # what the call-learning page reads: when it was said, whether the client cut in, whether the call ended here
+        history.append({"role": "ai", "text": t.get("reply", ""), "at": at})
         outcome = t.get("outcome") or outcome
         summary = t.get("summary") or summary
         await say(t.get("reply", ""), t.get("lang", "en"))
@@ -184,6 +188,7 @@ async def call(request):
             await ws.send_json({"type": "heard", "text": heard})
         if await respond(heard):
             ended["v"] = True
+            who_ended["v"] = "ai"
             await asyncio.sleep(0.5)
             if not ws.closed:
                 await ws.send_json({"type": "end"})
@@ -221,6 +226,8 @@ async def call(request):
                     # barge-in: ~0.36 s of real speech while Dhandha AI is talking stops it
                     if state["speaking"] and voiced >= 12 and not state["cancel"]:
                         state["cancel"] = True
+                        if history and history[-1]["role"] == "ai":
+                            history[-1]["interrupted"] = True
                         await ws.send_json({"type": "stop"})
                 elif speech:
                     silence += 1
@@ -239,7 +246,8 @@ async def call(request):
     finally:
         LIVE["n"] -= 1
         try:
-            await rpc(http, "voice_session_end", {"p_token": token, "p_transcript": history, "p_outcome": outcome, "p_summary": summary})
+            await rpc(http, "voice_session_finish", {"p_token": token, "p_transcript": history, "p_outcome": outcome, "p_summary": summary,
+                                                  "p_ended_by": who_ended["v"]})
         except Exception as e:  # noqa: BLE001
             log("end report failed", e)
         if not ws.closed:

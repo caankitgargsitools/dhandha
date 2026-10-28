@@ -16,7 +16,7 @@ export async function POST(request) {
   if (error || !s) return new Response("forbidden", { status: 403 });
   const ai = await runJson({
     supabase, tenantId: s.tenant_id, task: "voice_call", private: true, maxTokens: 400, budgetMs: 20000,
-    prompt: voicePrompt({ config: s.config, lead: s.lead, history: body.history || [], heard: String(body.heard || "").slice(0, 1000) }),
+    prompt: voicePrompt({ config: s.config, lead: s.lead, history: body.history || [], heard: String(body.heard || "").slice(0, 1000), lessons: s.lessons || [] }),
     validate: (d) => (!normaliseTurn(d) ? "no reply" : null),
   });
   if (ai.error) return Response.json({ reply: "Sorry, the line is not clear. I will call you back shortly.", lang: "en", end: true, outcome: null, summary: `AI unavailable: ${ai.error}` });
