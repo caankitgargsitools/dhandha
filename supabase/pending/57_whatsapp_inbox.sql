@@ -1,4 +1,4 @@
--- 57. Two-way WhatsApp inbox (C1, 28 Oct 2026). Safe to run more than once.
+-- 57. Two-way WhatsApp inbox (C1, 28 Oct 2026). Applied 28 Oct (in parts, without drop statements).
 -- Each workspace's own WhatsApp Cloud API app sends its webhook to /api/whatsapp/webhook/<token>; the signature is
 -- checked here against that workspace's app secret (Vault). Replies are matched to leads, assigned, can get an
 -- auto-reply, stop the lead's playbook, and can be answered from Dhandha (free text inside WhatsApp's 24-hour window,
@@ -15,9 +15,7 @@ alter table public.outreach_settings
   add column if not exists wa_auto_reply text,
   add column if not exists wa_auto_when text not null default 'off',
   add column if not exists wa_assign text not null default 'owner';
-alter table public.outreach_settings drop constraint if exists outreach_settings_wa_auto_when_check;
 alter table public.outreach_settings add constraint outreach_settings_wa_auto_when_check check (wa_auto_when in ('off','first','outside_hours','always'));
-alter table public.outreach_settings drop constraint if exists outreach_settings_wa_assign_check;
 alter table public.outreach_settings add constraint outreach_settings_wa_assign_check check (wa_assign in ('owner','round_robin','unassigned'));
 
 create table if not exists public.wa_threads (
@@ -60,11 +58,9 @@ create index if not exists wa_messages_queue on public.wa_messages (status) wher
 
 alter table public.wa_threads enable row level security;
 alter table public.wa_messages enable row level security;
-drop policy if exists wa_threads_read on public.wa_threads;
 create policy wa_threads_read on public.wa_threads for select to authenticated
   using (public.is_tenant_member(tenant_id) and (public.sees_all_leads(tenant_id) or assigned_to = auth.uid()
          or exists (select 1 from public.leads l where l.id = lead_id and l.owner_id = auth.uid())));
-drop policy if exists wa_messages_read on public.wa_messages;
 create policy wa_messages_read on public.wa_messages for select to authenticated
   using (exists (select 1 from public.wa_threads t where t.id = thread_id));
 

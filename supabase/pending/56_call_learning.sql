@@ -1,4 +1,4 @@
--- 56. Call learning (28 Oct 2026). Safe to run more than once.
+-- 56. Call learning (28 Oct 2026). Applied 28 Oct.
 -- If Claude cannot apply it: Supabase dashboard → SQL Editor → New query → paste this whole file → Run.
 alter table public.voice_sessions add column if not exists ended_by text;
 
@@ -55,23 +55,15 @@ begin
     'lead', case when l.id is null then null else jsonb_build_object('name', l.name, 'contact', l.contact_person, 'city', l.city) end);
 end $function$;
 
-drop function if exists public.voice_session_end(text, uuid, jsonb, text, text);
-create or replace function public.voice_session_end(p_key text, p_token uuid, p_transcript jsonb, p_outcome text, p_summary text, p_ended_by text default null)
+-- the call's end with who hung up (the voice server calls this; the older voice_session_end stays for old servers)
+create or replace function public.voice_session_finish(p_key text, p_token uuid, p_transcript jsonb, p_outcome text, p_summary text, p_ended_by text)
 returns void language plpgsql security definer set search_path to '' as $function$
-declare s public.voice_sessions;
 begin
-  perform private.check_ingest_key(p_key);
-  update public.voice_sessions set status = 'ended', ended_at = now(), transcript = coalesce(p_transcript, '[]'), outcome = left(p_outcome, 40),
-    summary = left(p_summary, 2000), ended_by = case when p_ended_by in ('ai','client') then p_ended_by end
-  where token = p_token and status <> 'ended' returning * into s;
-  if s.lead_id is not null then
-    insert into public.crm_activities (tenant_id, company_id, lead_id, kind, outcome, body, created_by)
-    values (s.tenant_id, s.company_id, s.lead_id, 'call', case when p_outcome in ('interested','not_interested','connected') then p_outcome else 'connected' end,
-            'Dhandha AI call: ' || coalesce(left(p_summary, 1500), 'no summary'), s.user_id);
-  end if;
+  perform public.voice_session_end(p_key, p_token, p_transcript, p_outcome, p_summary);
+  update public.voice_sessions set ended_by = case when p_ended_by in ('ai','client') then p_ended_by end where token = p_token;
 end $function$;
-revoke all on function public.voice_session_end(text, uuid, jsonb, text, text, text) from public, authenticated;
-grant execute on function public.voice_session_end(text, uuid, jsonb, text, text, text) to anon;
+revoke all on function public.voice_session_finish(text, uuid, jsonb, text, text, text) from public, authenticated;
+grant execute on function public.voice_session_finish(text, uuid, jsonb, text, text, text) to anon;
 
 create or replace function public.voice_lesson_save(p_id uuid, p_company uuid, p_sequence uuid, p_scope text, p_kind text,
   p_situation text, p_bad text, p_better text, p_session uuid default null, p_turn int default null)

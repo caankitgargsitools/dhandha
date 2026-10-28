@@ -246,7 +246,7 @@ async def call(request):
     finally:
         LIVE["n"] -= 1
         try:
-            await rpc(http, "voice_session_end", {"p_token": token, "p_transcript": history, "p_outcome": outcome, "p_summary": summary,
+            await rpc(http, "voice_session_finish", {"p_token": token, "p_transcript": history, "p_outcome": outcome, "p_summary": summary,
                                                   "p_ended_by": who_ended["v"]})
         except Exception as e:  # noqa: BLE001
             log("end report failed", e)
