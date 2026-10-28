@@ -35,7 +35,7 @@ Priority: H = high, M = medium, L = low · Effort: S = small, M = medium, L = la
 | C22 | **Chrome extension**: save a contact from LinkedIn or a website while browsing (the user clicks; no scraping) | Apollo, Lusha | Prospecting while browsing | M | L | Waiting for approval |
 | C23 | **WhatsApp catalogue and payment links** in chat | Interakt, AiSensy | Close small orders in chat | M | L | Waiting for approval |
 | C24 | **Targets, forecasts and leaderboards** for the sales team | HubSpot, Freshsales, Zoho, LeadSquared | Manager visibility | S–M | M | Approved and built 28 Oct (CRM → Targets & leaderboard) |
-| C25 | **Predictive lead and deal scoring** learned from won/lost history (central ML) | Freshsales Freddy, Zoho Zia, HubSpot | Fits our central-ML plan | M | M | Waiting for approval |
+| C25 | **Predictive lead and deal scoring** learned from won/lost history (central ML) | Freshsales Freddy, Zoho Zia, HubSpot | Fits our central-ML plan | M | M | Approved and built 28 Oct (lead page "Chance to close", Leads list; learns nightly) |
 | C26 | **Consortium / JV partners and sub-contracting** marketplace | TenderTiger (₹500 a lead) | Small firms miss turnover criteria alone | M | M | = PENDING 31 |
 | C27 | **GeM services desk**: registration, catalogue / brand approval, vendor assessment, done-for-you bids | TenderTiger, consultants (from ₹4,999) | High-margin services | S + people | M | = PENDING 32 |
 | C28 | **Pay per tender and a free tier** (e.g. ₹299 a tender, 3 free AI reads) | BidAssist, Tenders Agent | Easy entry for small bidders | S | H | Part of PENDING 52 (pricing) |

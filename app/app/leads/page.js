@@ -2,6 +2,7 @@ import Link from "next/link";
 import EnrichButton from "@/components/EnrichButton";
 import { getContext, fmtDate, calDays } from "@/lib/session";
 import { ScoreRing, StageBars } from "@/components/Charts";
+import { winChance } from "@/lib/winChance";
 import Icon from "@/components/Icon";
 import FormState from "../FormState";
 import OwnerSelect from "@/components/OwnerSelect";
@@ -46,13 +47,14 @@ export default async function Leads({ searchParams }) {
     ? view(tab, base("*")).order("next_follow_up_at", { ascending: true })
     : view(tab, base("*")).order("score", { ascending: false }).order("created_at", { ascending: false });
   const srcKeys = Object.keys(SOURCES);
-  const [{ data: pageRows }, { data: members }, { data: ideal }, total, tabCounts, srcCounts] = await Promise.all([
+  const [{ data: pageRows }, { data: members }, { data: ideal }, total, tabCounts, srcCounts, { data: winRows }] = await Promise.all([
     listQuery.range((page - 1) * PAGE, page * PAGE - 1),
     supabase.from("tenant_members").select("user_id, role, profiles(full_name, email)").eq("tenant_id", tenant.id).neq("role", "disabled"),
     supabase.from("lead_preferences").select("*").eq("company_id", company.id).maybeSingle(),
     count(head()),
     Promise.all(TABS.map(([k]) => count(view(k, head())))),
     Promise.all(srcKeys.map((k) => count(head().eq("source", k)))),
+    supabase.from("win_stats").select("company_id, feature, value, won, lost").or(`company_id.eq.${company.id},company_id.is.null`),
   ]);
   const counts = Object.fromEntries(TABS.map(([k], i) => [k, tabCounts[i]]));
   const list = pageRows || [];
@@ -113,7 +115,7 @@ export default async function Leads({ searchParams }) {
                   return (
                     <tr key={l.id}>
                       <td><ScoreRing score={l.score || 0} size={40} /></td>
-                      <td><Link href={`/app/leads/${l.id}`}><strong>{l.name}</strong></Link><div className="tiny faint">{[l.industry, l.city].filter(Boolean).join(" · ")}</div><div className="tiny faint">{SOURCES[l.source]}</div></td>
+                      <td><Link href={`/app/leads/${l.id}`}><strong>{l.name}</strong></Link><div className="tiny faint">{[l.industry, l.city].filter(Boolean).join(" · ")}</div><div className="tiny faint">{SOURCES[l.source]}{(() => { const c = winChance(l, winRows || []); return c.p !== null ? <> · <span title={`Chance to close, learned from ${c.closed} won / lost deals`}>{c.p}% to close</span></> : null; })()}</div></td>
                       <td className="small">{l.contact_person}
                         <div className="row tiny" style={{ gap: 10, marginTop: 2 }}>
                           {tel && <a href={tel} className="row" style={{ gap: 4 }}><Icon name="phone" size={12} />{l.phone}</a>}

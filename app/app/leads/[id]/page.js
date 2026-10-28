@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { winChance } from "@/lib/winChance";
 import { getContext, fmtDate, lakh, calDays } from "@/lib/session";
 import { ScoreRing } from "@/components/Charts";
 import Icon from "@/components/Icon";
@@ -22,7 +23,7 @@ export default async function LeadDetail({ params }) {
   const { supabase, tenant, company, user, role } = await getContext();
   const { data: l } = await supabase.from("leads").select("*").eq("id", id).eq("company_id", company.id).maybeSingle();
   if (!l) notFound();
-  const [{ data: acts }, { data: deals }, { data: members }, { data: ideal }, { data: wins }, { data: seqs }, { data: msgs }, { data: mtypes }, { data: meets }] = await Promise.all([
+  const [{ data: acts }, { data: deals }, { data: members }, { data: ideal }, { data: wins }, { data: seqs }, { data: msgs }, { data: mtypes }, { data: meets }, { data: winRows }] = await Promise.all([
     supabase.from("crm_activities").select("*").eq("lead_id", l.id).order("created_at", { ascending: false }).limit(100),
     supabase.from("deals").select("id, title, stage, value_inr").eq("lead_id", l.id).order("created_at", { ascending: false }),
     supabase.from("tenant_members").select("user_id, role, profiles(full_name, email)").eq("tenant_id", tenant.id).neq("role", "disabled"),
@@ -35,7 +36,9 @@ export default async function LeadDetail({ params }) {
     supabase.from("outreach_messages").select("id, channel, subject, wa_template, status, error, created_at").eq("lead_id", l.id).order("created_at", { ascending: false }).limit(10),
     supabase.from("meeting_types").select("id, name, mode, duration_min, buffer_min").eq("company_id", company.id).eq("active", true).order("name"),
     supabase.from("meetings").select("id, title, mode, starts_at, status, sales_reps(name)").eq("lead_id", l.id).order("starts_at", { ascending: false }).limit(5),
+    supabase.from("win_stats").select("company_id, feature, value, won, lost").or(`company_id.eq.${company.id},company_id.is.null`),
   ]);
+  const chance = winChance(l, winRows || []);
   const findContact = `https://www.google.com/search?q=${encodeURIComponent(`${l.name} ${l.city || l.state || ""} contact number`)}`;
   const name = (uid) => { const m = (members || []).find((x) => x.user_id === uid); return m ? (uid === user.id ? "You" : m.profiles?.full_name || m.profiles?.email) : "Former member"; };
   const sellers = (members || []).filter((m) => ["admin", "manager", "telecaller", "field"].includes(m.role));
@@ -184,6 +187,18 @@ export default async function LeadDetail({ params }) {
               ))}
             </div>
           )}
+
+          <div className="panel">
+            <h3>Chance to close</h3>
+            {chance.p === null
+              ? <p className="small muted" style={{ margin: 0 }}>Still learning — Dhandha shows a number once {chance.need} deals are won or lost ({chance.closed} so far).</p>
+              : <>
+                  <div style={{ fontSize: 28, fontWeight: 700 }}>{chance.p}%</div>
+                  {chance.up.length > 0 && <div className="small">↑ {chance.up.map((r) => r.text).join(", ")}</div>}
+                  {chance.down.length > 0 && <div className="small">↓ {chance.down.map((r) => r.text).join(", ")}</div>}
+                  <p className="tiny faint" style={{ margin: "6px 0 0" }}>Learned from {chance.closed} won / lost deals of {chance.basis}; updated nightly. A guide, not a promise.</p>
+                </>}
+          </div>
 
           {l.score_reasons?.length > 0 && (
             <div className="panel">
