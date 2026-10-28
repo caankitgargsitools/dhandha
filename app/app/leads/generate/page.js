@@ -5,13 +5,14 @@ import Icon from "@/components/Icon";
 // Generate leads: every source of new leads as a card. New sources (Apollo and the like) are added here.
 export default async function GenerateLeads() {
   const { supabase, company, tenant } = await getContext();
-  const [{ data: leads }, { data: pages }, { data: conn }, { data: auto }, { data: gads }, { data: gbp }] = await Promise.all([
+  const [{ data: leads }, { data: pages }, { data: conn }, { data: auto }, { data: gads }, { data: gbp }, { data: widget }] = await Promise.all([
     supabase.from("leads").select("source, status, next_follow_up_at").eq("company_id", company.id).limit(5000),
     supabase.from("meta_pages").select("page_id").eq("tenant_id", tenant.id).is("revoked_at", null),
     supabase.from("lead_connectors").select("apollo_connected_at").eq("tenant_id", tenant.id).maybeSingle(),
     supabase.from("lead_autopilot").select("active, daily_budget").eq("company_id", company.id).maybeSingle(),
     supabase.from("google_ads_hooks").select("leads, last_lead_at").eq("company_id", company.id).maybeSingle(),
     supabase.from("review_settings").select("place_id, rating, reviews").eq("company_id", company.id).maybeSingle(),
+    supabase.from("web_widgets").select("enabled, leads, last_lead_at").eq("company_id", company.id).maybeSingle(),
   ]);
   const apollo = !!conn?.apollo_connected_at;
   const ls = leads || [];
@@ -21,6 +22,7 @@ export default async function GenerateLeads() {
     { href: "/app/leads/autopilot", icon: "sparkle", title: "Lead autopilot", text: "Set a daily budget and sources — new leads are found, scored, messaged and moved through the CRM every morning.", status: auto?.active ? `On · ₹${Number(auto.daily_budget)} a day` : "Off", ok: !!auto?.active },
     { href: "/app/leads/results", icon: "crm", title: "Results by source", text: "Leads, cost and business closed from each source — see which one pays.", status: "See the numbers", ok: true },
     { href: "/app/leads", icon: "leads", title: "Your leads", text: "Every lead from every source, scored on fit, with follow-ups and call / WhatsApp buttons.", status: `${ls.length} leads${due ? ` · ${due} follow-ups due` : ""}`, ok: !due },
+    { href: "/app/leads/website", icon: "mail", title: "Website chat & enquiry form", text: "Paste one line on your website (or share your enquiry link) — every visitor who asks lands here with a phone alert.", status: widget?.enabled ? (widget.leads ? `On · ${widget.leads} enquiries` : "On · waiting for the first enquiry") : "Not set up", ok: !!widget?.leads },
     { href: "/app/leads/google-ads", icon: "sparkle", title: "Google Ads lead forms", text: "People searching for your service in your area fill your ad's form — it lands here in seconds.", status: gads ? (gads.last_lead_at ? `Connected · ${gads.leads} leads` : "Waiting for the first lead") : "Not connected", ok: !!gads?.last_lead_at },
     { href: "/app/leads/google-profile", icon: "map", title: "Google Business Profile", text: "Check your listing, fix what is missing, and ask every won customer for a Google review automatically.", status: gbp?.place_id ? `★ ${gbp.rating ?? "–"} · ${gbp.reviews ?? 0} reviews` : "Not linked", ok: !!gbp?.place_id },
     { href: "/app/leads/winners", icon: "tender", title: "Tender winners", text: "Firms that just won government contracts — they need suppliers, staff and services now.", status: `${by("tender_winner")} added`, ok: by("tender_winner") > 0 },
