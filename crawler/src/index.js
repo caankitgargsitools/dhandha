@@ -6,6 +6,7 @@ import { crawlGepnic } from "./adapters/gepnic.js";
 import { crawlGem } from "./adapters/gem.js";
 import { crawlNprocure, NPROCURE } from "./adapters/nprocure.js";
 import { crawlBihar, BIHAR } from "./adapters/biharEproc.js";
+import { crawlNtpc, crawlSail, NTPC, SAIL } from "./adapters/psu.js";
 import { crawlGepnicResults } from "./adapters/gepnicResults.js";
 import { crawlGemResults } from "./adapters/gemResults.js";
 import { sendTenders, sendAwards } from "./ingest.js";
@@ -44,6 +45,8 @@ function plan() {
   // state portals with their own systems (not GePNIC)
   if (pick(NPROCURE.portal)) steps.push({ name: `${NPROCURE.portal} · tenders`, run: (p) => crawlNprocure(p.browser, { maxPages: Number(env.NPROCURE_PAGES || 400), log, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders(NPROCURE.portal, rows, env)) : "no tenders found — check the site or adapter" })) });
   if (pick(BIHAR.portal)) steps.push({ name: `${BIHAR.portal} · tenders`, run: (p) => crawlBihar(p.browser, { log, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders(BIHAR.portal, rows, env)) : "no tenders — the site may have refused the connection" })) });
+  if (pick(NTPC.portal)) steps.push({ name: `${NTPC.portal} · tenders`, run: (p) => crawlNtpc(p.browser, { log, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders(NTPC.portal, rows, env)) : "no tenders read" })) });
+  if (pick(SAIL.portal)) steps.push({ name: `${SAIL.portal} · tenders`, run: (p) => crawlSail(p.browser, { log, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders(SAIL.portal, rows, env)) : "no tenders read" })) });
   // tenders everywhere first; winners pages wait for a person to type a captcha, so they go last
   if (!pick("GeM")) return [...steps, ...winners];
   steps.push({ name: "GeM · tenders", run: (p) => crawlGem(p.browser, { maxPages, log, base: GEM.base, progress: p.update }).then(async (rows) => ({ items: rows.length, note: rows.length ? summary(await sendTenders("GeM", rows, env)) : "no bids found — check the adapter" })) });
