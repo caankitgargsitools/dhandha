@@ -1,7 +1,7 @@
 import { getContext } from "@/lib/session";
 import FormState from "../../FormState";
-import DeleteButton from "../../DeleteButton";
-import { saveFact } from "../../actions";
+import EditableRow from "../../EditableRow";
+import { saveFact, updateFact } from "../../actions";
 
 const SUGGESTED = [
   ["fin.turnover", "Turnover", "INR", "FY 2024-25"],
@@ -53,14 +53,21 @@ export default async function Facts() {
             <thead><tr><th>Fact</th><th>Period</th><th>Value</th><th>Source</th><th>Updated</th><th></th></tr></thead>
             <tbody>
               {facts.map((f) => (
-                <tr key={f.id}>
+                <EditableRow key={f.id} id={f.id} action={updateFact} colSpan={6} canEdit={role !== "viewer"} canDelete={isAdmin} deleteTable="company_facts" form={
+                  <div className="form-grid">
+                    <div><label htmlFor={`key-${f.id}`}>Fact</label><input id={`key-${f.id}`} name="key" list="fact-keys" required defaultValue={f.key} /></div>
+                    <div><label htmlFor={`period-${f.id}`}>Period (if any)</label><input id={`period-${f.id}`} name="period" defaultValue={f.period || ""} /></div>
+                    <div><label htmlFor={`value-${f.id}`}>Value</label><input id={`value-${f.id}`} name="value" required defaultValue={f.value ?? ""} /></div>
+                    <div><label htmlFor={`unit-${f.id}`}>Unit</label><input id={`unit-${f.id}`} name="unit" defaultValue={f.unit || ""} /></div>
+                    <div><label htmlFor={`valid_until-${f.id}`}>Re-check after</label><input id={`valid_until-${f.id}`} name="valid_until" type="date" defaultValue={f.valid_until ? String(f.valid_until).slice(0, 10) : ""} /></div>
+                  </div>
+                }>
                   <td>{/^(presence|gst|cert|reg|age|cond)\./.test(f.key) && f.unit ? <>{f.unit}<div className="tiny faint"><code>{f.key}</code></div></> : <code>{f.key}</code>}</td>
                   <td>{f.period || "—"}</td>
                   <td>{/^(presence|gst|cert|reg|age|cond)\./.test(f.key) ? <span className={`chip ${f.value === "yes" ? "ok" : f.value === "no" ? "bad" : "mute"}`}>{f.value === "yes" ? "Yes" : f.value === "no" ? "No" : f.value}</span> : f.unit === "INR" && !isNaN(Number(f.value)) ? `₹${Number(f.value).toLocaleString("en-IN")}` : `${f.value}${f.unit && f.unit !== "INR" ? " " + f.unit : ""}`}</td>
                   <td className="small">{f.source}</td>
                   <td className="small muted">{new Date(f.updated_at).toLocaleDateString("en-IN")}</td>
-                  <td>{isAdmin && <DeleteButton table="company_facts" id={f.id} />}</td>
-                </tr>
+                </EditableRow>
               ))}
             </tbody>
           </table></div>
