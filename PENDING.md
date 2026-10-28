@@ -6,6 +6,8 @@ Last checked: 28 Oct 2026.
 
 ## The queue — one by one, in this order
 
+Steps 28–52 (added 28 Oct): what competitors have that we don't, and the tools that make Dhandha a complete "get more business" suite. The owner picks the order.
+
 Who: **You** = only the owner can do it · **Claude** = I build it · **Both** = you decide or set up an account, then I build.
 Old item numbers (#) are kept in brackets so earlier messages still make sense.
 
@@ -39,11 +41,36 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 20c | **Lead Playbook for new leads** — built 28 Oct (Win the business → Lead Playbook). Next for you: open it, press "Start from the ready-made playbook", adjust the steps (WhatsApp template names, scripts), switch it on. Who owns autopilot leads (round-robin to telecallers etc.) is still to decide, with AI calling | You | A playbook is on and new leads show "In progress" | Open |
 | 21 | **AI calling** — choose the provider: Bolna (recommended), Exotel + Vapi, or Twilio + Retell; a DLT-registered calling number (#19). The Lead Playbook already has AI-call steps (script, English/Hindi/Hinglish, female/male voice, replies in the client's language); until a provider is connected they become call tasks for your team | Both | You name the provider; I connect it so playbook calls are made by the AI | Playbook ready 28 Oct — waiting for the provider choice |
 | 22 | **Social posts and AI video (Phase 4)** — choose the style: template videos / talking avatar / both (#15) | Both | You choose; I build | Waiting for your choice |
-| 23 | **IndiaMART / JustDial buyer enquiries** as an automatic lead source (M) | Both | You get a seller account; I connect its lead API | When you have the account |
+| 23 | **IndiaMART / JustDial buyer enquiries** — moved to step 40 | Both | — | See step 40 |
 | 24 | **Desktop helper for DSC-assisted submission** (F) | Claude | Bid files submitted with your DSC from your computer | Planned |
 | 25 | **Play Store version of the phone app** (I) | Claude | Listed on the Play Store | When you want it |
 | 26 | **Older session "Ponytail GitHub installation"** is waiting for your reply (#16) | You | Reply there, or tell me to close it | Open |
 | 27 | **Before launch** — remove demo data (`demo_seed`), move pg_net out of the public schema (J) | Claude | No demo rows; Supabase lint clean | At launch |
+| 28 | **Price-to-win & rival tracking** — from award results: who won similar tenders, at what L1 price, win rates, which buyers favour whom; "bid ₹X to win" in the cost planner (TenderTiger TigerIQ, ₹500/rival) | Claude | Built and working | To do — one by one, in the order you choose |
+| 29 | **Dhandha on WhatsApp** — search tenders by chat (Hindi/English), morning matches, approve bid steps, lead alerts (TenderTiger: ₹250/tender, ₹2,000/mo) | Both | Built and working | To do — one by one, in the order you choose |
+| 30 | **Empanelment notices** — bank branch audits, C&AG / RBI panels, PSU vendor lists as a source (TenderTiger empanelment leads) | Claude | Built and working | To do — one by one, in the order you choose |
+| 31 | **Partner finder: consortium / JV and sub-contracting** — suggest partners from Dhandha users when eligibility is short; winners post sub-work (TenderTiger: ₹500/lead, ₹5,000/mo) | Claude | Built and working | To do — one by one, in the order you choose |
+| 32 | **GeM done-for-you services** — GeM registration, catalogue upload, brand approval, vendor assessment as paid services | Both | Built and working | To do — one by one, in the order you choose |
+| 33 | **Bid manager on demand** — marketplace of CA / consultant users who prepare bids for a fee; Dhandha takes a share (TenderTiger bid consultancy) | Both | Built and working | To do — one by one, in the order you choose |
+| 34 | **Past tender results & BOQ library** — searchable results (L1, rates) and BOQs of closed tenders | Claude | Built and working | To do — one by one, in the order you choose |
+| 35 | **Auction leads** — e-auction / reverse-auction notices as a source | Claude | Built and working | To do — one by one, in the order you choose |
+| 36 | **Google Sheets sync and AI-assistant plug-in (MCP)** — live sheet of tenders/leads; connect Dhandha to ChatGPT / Claude / Gemini | Claude | Built and working | To do — one by one, in the order you choose |
+| 37 | **Buyer side** — publish a tender/RFQ on Dhandha; private tenders; e-auction for buyers | Claude | Built and working | To do — one by one, in the order you choose |
+| 38 | **Global tenders** (World Bank, ADB, other countries) | Claude | Built and working | To do — one by one, in the order you choose |
+| 39 | **Simple website / landing page builder** with lead form, SEO basics | Claude | Built and working | To do — one by one, in the order you choose |
+| 40 | **IndiaMART / JustDial / TradeIndia enquiries** flowing into Leads automatically (was step 23) | Both | Built and working | To do — one by one, in the order you choose |
+| 41 | **WhatsApp chatbot for incoming enquiries** + **missed-call number** → Leads | Both | Built and working | To do — one by one, in the order you choose |
+| 42 | **Google Business Profile: AI replies to reviews and posts updates** | Claude | Built and working | To do — one by one, in the order you choose |
+| 43 | **Lead enrichment** — find missing emails / phones for leads | Claude | Built and working | To do — one by one, in the order you choose |
+| 44 | **WhatsApp broadcasts** to opted-in lists | Claude | Built and working | To do — one by one, in the order you choose |
+| 45 | **Exhibitions / trade-fair leads** | Claude | Built and working | To do — one by one, in the order you choose |
+| 46 | **Quotation & proposal builder** on the letterhead with e-sign and a **payment link** (Razorpay); e-invoice when won | Claude | Built and working | To do — one by one, in the order you choose |
+| 47 | **Referral programme, renewal reminders, win-back / upsell campaigns** | Claude | Built and working | To do — one by one, in the order you choose |
+| 48 | **Festival greetings & social posts with logo**, auto-posted to Google Profile / social (part of Phase 4, step 22) | Both | Built and working | To do — one by one, in the order you choose |
+| 49 | **EMD / bank guarantee and working-capital finance** via bank / NBFC tie-ups (referral fee) | Both | Built and working | To do — one by one, in the order you choose |
+| 50 | **Government schemes & subsidies finder** | Claude | Built and working | To do — one by one, in the order you choose |
+| 51 | **Morning brief on WhatsApp** — today's tenders, follow-ups, hot leads, money due | Claude | Built and working | To do — one by one, in the order you choose |
+| 52 | **Pricing of Dhandha** — set plans and credits against competitors (notes in CLAUDE.md "Competitors"); suggestion: free tier + ~₹999/mo or ₹9,999/yr all-in + credits | Both | Built and working | To do — one by one, in the order you choose |
 
 ## Done (recent)
 
