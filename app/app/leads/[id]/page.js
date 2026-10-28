@@ -11,6 +11,7 @@ import { updateLead, createDealFromLead } from "../actions";
 import { sendOne, enrollOne } from "../../outreach/actions";
 import BookMeeting from "@/components/BookMeeting";
 import ReferralLink from "@/components/ReferralLink";
+import EnrichButton from "@/components/EnrichButton";
 import { emailReady } from "@/lib/outreach";
 import { leadAddress, local, hhmm } from "@/lib/scheduling";
 
@@ -146,6 +147,7 @@ export default async function LeadDetail({ params }) {
             ))}
             {canWrite && <Link href={`/app/crm/quotes/new?lead=${l.id}`} className="btn ghost sm">New quotation</Link>}
             {canWrite && <ReferralLink leadId={l.id} phone={l.phone} name={l.contact_person || l.name} />}
+            {canWrite && (!l.email || !l.phone) && <EnrichButton ids={[l.id]} />}
             {canWrite && <BookMeeting leadId={l.id} types={mtypes || []} address={leadAddress(l)} phone={l.phone} contact={l.contact_person} business={company.name} />}
           </div>
           <div className="panel">

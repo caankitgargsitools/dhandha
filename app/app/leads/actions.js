@@ -295,3 +295,41 @@ export async function buyRecords(prev, formData) {
   if (!data.bought) return { error: "Nothing new to buy — you already have these records." };
   return { message: `Bought ${data.bought} record${data.bought === 1 ? "" : "s"} for ${Number(data.credits).toLocaleString("en-IN")} credits: ${data.new_leads} new lead${data.new_leads === 1 ? "" : "s"}${data.already_leads ? `, ${data.already_leads} were already in your leads` : ""}.` };
 }
+
+// "Find email / phone": the workspace's own Apollo key looks up each lead's contact; only empty fields are filled,
+// and the timeline says what was found. One lead from its page, or up to 25 at a time from the Leads page.
+export async function enrichLeads(ids) {
+  const { supabase, tenant, company, role } = await getContext();
+  if (["viewer", "disabled", "field"].includes(role)) return { error: "Not allowed for your role." };
+  const { apolloMatch } = await import("@/lib/connectors");
+  const { data: key } = await supabase.rpc("apollo_key", { p_tenant: tenant.id });
+  if (!key) return { error: "Connect your Apollo account first (Generate leads → Apollo)." };
+  let list = Array.isArray(ids) && ids.length ? ids.slice(0, 25) : null;
+  if (!list) {
+    const { data } = await supabase.from("leads").select("id").eq("company_id", company.id).is("email", null).not("contact_person", "is", null)
+      .not("status", "in", "(converted,junk)").order("score", { ascending: false }).limit(25);
+    list = (data || []).map((l) => l.id);
+  }
+  if (!list.length) return { error: "No leads with a contact name and no email to look up." };
+  const { data: leads } = await supabase.from("leads").select("id, name, contact_person, website, linkedin_url, email, phone, tenant_id").in("id", list).eq("company_id", company.id);
+  let found = 0, tried = 0, lastError = null;
+  for (const l of leads || []) {
+    if (l.email && l.phone) continue;
+    tried++;
+    const r = await apolloMatch({ key, lead: l });
+    if (r.error) { lastError = r.error; if (/key|rate limit/i.test(r.error)) break; continue; }
+    const patch = {};
+    if (!l.email && r.email) patch.email = r.email.toLowerCase();
+    if (!l.phone && r.phone) patch.phone = r.phone;
+    if (!l.linkedin_url && r.linkedin_url) patch.linkedin_url = r.linkedin_url;
+    if (!Object.keys(patch).length) continue;
+    const { error } = await supabase.from("leads").update(patch).eq("id", l.id).eq("company_id", company.id);
+    if (error) { lastError = error.message; continue; }
+    found++;
+    await supabase.from("crm_activities").insert({ tenant_id: l.tenant_id, company_id: company.id, lead_id: l.id, kind: "note",
+      body: `Found on Apollo: ${[patch.email && `email ${patch.email}`, patch.phone && `phone ${patch.phone}`, patch.linkedin_url && "LinkedIn profile", r.title && `(${r.title})`].filter(Boolean).join(", ")}` });
+  }
+  revalidatePath("/app/leads");
+  for (const id of list) revalidatePath(`/app/leads/${id}`);
+  return { found, tried, error: found ? null : lastError || (tried ? "Apollo had nothing new for these leads." : "These leads already have an email and a phone.") };
+}

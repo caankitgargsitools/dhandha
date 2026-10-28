@@ -25,3 +25,15 @@ test("an Apollo person becomes a lead at their company", () => {
   assert.equal(l.website, "https://acmeinfra.in");
   assert.match(l.notes, /Finance Head/);
 });
+
+test("Apollo enrichment: what we ask and what we keep", async () => {
+  const { apolloMatchParams, mapApolloMatch } = await import("../lib/connectors.js");
+  const p = apolloMatchParams({ name: "Rana Textiles Pvt Ltd", contact_person: "Rajesh Kumar Rana", website: "https://www.ranatex.in/about" });
+  assert.equal(p.first_name, "Rajesh"); assert.equal(p.last_name, "Kumar Rana"); assert.equal(p.domain, "ranatex.in");
+  assert.equal(apolloMatchParams({ name: "Only Company" }), null);
+  assert.ok(apolloMatchParams({ linkedin_url: "https://linkedin.com/in/x" }));
+  assert.deepEqual(mapApolloMatch({ person: { email: "raj@ranatex.in", phone_numbers: [{ sanitized_number: "+919811122334" }], title: "Director" } }),
+    { email: "raj@ranatex.in", phone: "+919811122334", linkedin_url: null, title: "Director" });
+  assert.equal(mapApolloMatch({ person: { email: "email_not_unlocked@domain.com" } }).email, null);
+  assert.deepEqual(mapApolloMatch({}), {});
+});

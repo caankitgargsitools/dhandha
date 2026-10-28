@@ -65,7 +65,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 40 | **IndiaMART / JustDial / TradeIndia enquiries** flowing into Leads automatically (was step 23) | Both | Built and working | To do — one by one, in the order you choose |
 | 41 | **WhatsApp chatbot for incoming enquiries** + **missed-call number** → Leads | Both | Built and working | To do — one by one, in the order you choose |
 | 42 | **Google Business Profile: AI replies to reviews and posts updates** | Claude | Built and working | To do — one by one, in the order you choose |
-| 43 | **Lead enrichment** — find missing emails / phones for leads | Claude | Built and working | To do — one by one, in the order you choose |
+| 43 | **Lead enrichment** — find missing emails / phones for leads | Claude | Built and working | Done 28 Oct with Apollo (your own key): "Find email / phone" on a lead, "Find missing emails (25)" on Leads; more providers (waterfall) later |
 | 44 | **WhatsApp broadcasts** to opted-in lists | Claude | Built and working | Done 28 Oct — Outreach → WhatsApp broadcasts (filter, who will get it + credits, send; STOP opts out) |
 | 45 | **Exhibitions / trade-fair leads** | Claude | Built and working | To do — one by one, in the order you choose |
 | 46 | **Quotation & proposal builder** on the letterhead with e-sign and a **payment link** (Razorpay); e-invoice when won | Claude | Built and working | Quotations done 28 Oct (CRM → Quotations: GST, PDF on letterhead, client accepts online → deal Won); payment link after Razorpay switch-on (step 14); e-invoice later |
