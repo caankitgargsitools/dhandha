@@ -1,5 +1,6 @@
 import { anonClient } from "@/lib/supabase/anon";
 import { sendEmail, sendWhatsApp, emailReady } from "@/lib/outreach";
+import { onlineSlots, local, addDays } from "@/lib/scheduling";
 
 export const maxDuration = 60;
 
@@ -28,5 +29,34 @@ export async function POST(request) {
     const { error: e2 } = await supabase.rpc("outreach_report", { p_key: key, p_results: results });
     if (e2) console.error("outreach report", e2.message);
   }
-  return Response.json({ sent: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok).length });
+  const links = await bookingLinks(supabase, key);
+  return Response.json({ sent: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok).length, links });
+}
+
+// Lead Playbook "booking link" steps: work out the company's free times for the next 14 days (every salesperson,
+// like a link made by hand) and hand them back; the database saves the link and queues the WhatsApp / email with it.
+async function bookingLinks(supabase, key) {
+  const { data: jobs, error } = await supabase.rpc("playbook_booking_claim", { p_key: key, p_limit: 10 });
+  if (error) { console.error("booking claim", error.message); return 0; }
+  let made = 0;
+  for (const j of jobs || []) {
+    let offered = null, err = null;
+    try {
+      const type = j.type;
+      if (!type?.id) err = "no meeting type is set up (Sales team → Meeting types)";
+      else if (type.mode !== "online") err = "booking links from a playbook offer online meetings; this meeting type is a field visit";
+      else {
+        const reps = (j.reps || []).map((r) => ({ ...r, day_start: String(r.day_start).slice(0, 5), day_end: String(r.day_end).slice(0, 5) }));
+        if (!reps.some((r) => (r.modes || []).includes("online"))) err = "no salesperson takes online calls";
+        else {
+          const today = local(new Date()).day, slots = [];
+          for (let i = 0; i < 14; i++) slots.push(...onlineSlots({ day: addDays(today, i), reps, meetings: j.meetings || [], duration: type.duration_min, buffer: type.buffer_min, all: true }));
+          offered = slots.map((x) => ({ start: x.start.toISOString(), end: x.end.toISOString(), rep_id: x.rep_id, travel_in: null, leave_at: null }));
+        }
+      }
+    } catch (e) { err = e.message; }
+    const { error: e2 } = await supabase.rpc("playbook_booking_done", { p_key: key, p_id: j.id, p_offered: offered, p_error: err });
+    if (e2) console.error("booking done", e2.message); else if (!err) made++;
+  }
+  return made;
 }

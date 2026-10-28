@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { getContext, fmtDate } from "@/lib/session";
 import Icon from "@/components/Icon";
-import FormState from "../FormState";
 import { emailReady } from "@/lib/outreach";
-import { createSequence } from "./actions";
+import { summary } from "@/lib/playbook";
 
 const MSG = { queued: ["info", "Queued"], sending: ["warn", "Sending"], sent: ["ok", "Sent"], failed: ["bad", "Failed"], skipped: ["mute", "Skipped"] };
 
@@ -42,13 +41,13 @@ export default async function Outreach() {
       <div className="grid-2" style={{ alignItems: "start" }}>
         <div className="panel flush table-wrap">
           <table>
-            <thead><tr><th>Sequence</th><th>Steps</th><th>Active</th><th>Replied</th><th>Done</th></tr></thead>
+            <thead><tr><th>Playbook</th><th>Steps</th><th>Active</th><th>Replied</th><th>Done</th></tr></thead>
             <tbody>
-              {!(seqs || []).length && <tr><td colSpan={5} className="muted" style={{ padding: 22 }}>No sequences yet.</td></tr>}
+              {!(seqs || []).length && <tr><td colSpan={5} className="muted" style={{ padding: 22 }}>No playbooks yet.</td></tr>}
               {(seqs || []).map((s) => (
                 <tr key={s.id}>
-                  <td><Link href={`/app/outreach/${s.id}`}><strong>{s.name}</strong></Link>{!s.active && <span className="chip mute" style={{ marginLeft: 8 }}>Off</span>}
-                    <div className="tiny faint">{s.sequence_steps.map((x) => (x.channel === "email" ? "Email" : "WhatsApp")).join(" → ")}</div></td>
+                  <td><Link href={`/app/leads/playbook/${s.id}`}><strong>{s.name}</strong></Link>{!s.active && <span className="chip mute" style={{ marginLeft: 8 }}>Off</span>}
+                    <div className="tiny faint">{summary(s.sequence_steps)}</div></td>
                   <td>{s.sequence_steps.length}</td><td>{count(s.id, "active")}</td><td>{count(s.id, "replied")}</td><td>{count(s.id, "completed")}</td>
                 </tr>
               ))}
@@ -57,10 +56,9 @@ export default async function Outreach() {
         </div>
         {isLead && (
           <div className="panel">
-            <h3>New sequence</h3>
-            <FormState action={createSequence} submit="Create">
-              <div><label htmlFor="name">Name</label><input id="name" name="name" required maxLength={120} placeholder="e.g. New companies — audit offer" /></div>
-            </FormState>
+            <h3>Playbooks</h3>
+            <p className="muted small">Sequences are now built as Lead Playbooks: AI call, WhatsApp, email, booking link and tasks in any order, inside your office hours, starting by themselves on new leads.</p>
+            <Link href="/app/leads/playbook" className="btn">Open Lead Playbook</Link>
             <p className="tiny faint" style={{ marginBottom: 0 }}>Messages can use {"{name}"} (first name), {"{business}"}, {"{city}"} and {"{our_company}"}. Every email carries your company name and an unsubscribe link; do-not-disturb and unsubscribed leads are never messaged.</p>
           </div>
         )}

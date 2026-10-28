@@ -177,6 +177,61 @@ export async function addPerson(prev, formData) {
   return { message: "Added." };
 }
 
+// Edit one Vault row in place: only the selected company's row with this id, never a viewer's.
+async function updateVaultRow(table, path, formData, fields) {
+  const { supabase, tenant, company, role } = await getContext();
+  if (viewOnly(role)) return VIEW_ONLY;
+  const id = s(formData.get("id"));
+  if (!id) return { error: "Which row? Open the page again and retry." };
+  const { error, count } = await supabase.from(table).update(fields, { count: "exact" })
+    .eq("id", id).eq("company_id", company.id).eq("tenant_id", tenant.id);
+  if (error) return { error: /duplicate key/i.test(error.message) ? "That already exists — edit the existing row instead." : error.message };
+  if (!count) return { error: "Nothing was changed: it is gone, or your role cannot change it." };
+  revalidatePath(path);
+  return { message: "Saved." };
+}
+
+export async function updateFact(prev, formData) {
+  const key = s(formData.get("key"));
+  const value = s(formData.get("value"));
+  if (!key || !value) return { error: "Both the fact and its value are needed." };
+  return updateVaultRow("company_facts", "/app/vault/facts", formData, {
+    key: key.toLowerCase().replace(/\s+/g, "_"),
+    period: s(formData.get("period")) || "",
+    value,
+    unit: s(formData.get("unit")),
+    valid_until: s(formData.get("valid_until")),
+    source: "user",
+  });
+}
+
+export async function updateExperience(prev, formData) {
+  const client = s(formData.get("client"));
+  const work_name = s(formData.get("work_name"));
+  if (!client || !work_name) return { error: "Client and work name are required." };
+  return updateVaultRow("experience_items", "/app/vault/experience", formData, {
+    client, work_name,
+    category: s(formData.get("category")),
+    value_inr: n(formData.get("value_inr")),
+    start_date: s(formData.get("start_date")),
+    end_date: s(formData.get("end_date")),
+    status: formData.get("status") === "ongoing" ? "ongoing" : "completed",
+  });
+}
+
+export async function updatePerson(prev, formData) {
+  const name = s(formData.get("name"));
+  if (!name) return { error: "Name is required." };
+  return updateVaultRow("people", "/app/vault/people", formData, {
+    name,
+    designation: s(formData.get("designation")),
+    qualification: s(formData.get("qualification")),
+    years_experience: n(formData.get("years_experience")),
+    membership_no: s(formData.get("membership_no")),
+    pan: s(formData.get("pan"))?.toUpperCase() || null,
+  });
+}
+
 export async function recordBrandAsset({ kind, path, meta }) {
   const { supabase, tenant, company, isAdmin, has2fa } = await getContext();
   if (!isAdmin) return { error: "Only an admin can change brand assets." };

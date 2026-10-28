@@ -78,6 +78,7 @@ export async function enrollByFilter(prev, formData) {
   const { data: n, error: e2 } = await supabase.rpc("enroll_leads", { p_sequence: seq, p_leads: leads.map((l) => l.id) });
   if (e2) return { error: msg(e2) };
   revalidatePath(`/app/outreach/${seq}`);
+  revalidatePath(`/app/leads/playbook/${seq}`);
   return { message: `${n} leads enrolled.${leads.length > n ? ` ${leads.length - n} were already in it.` : ""}` };
 }
 
@@ -99,6 +100,7 @@ export async function setEnrollment(formData) {
   if (status === "active") patch.next_at = new Date().toISOString();
   await supabase.from("enrollments").update(patch).eq("id", String(formData.get("id")));
   revalidatePath(`/app/outreach/${formData.get("sequence_id")}`);
+  revalidatePath(`/app/leads/playbook/${formData.get("sequence_id")}`);
 }
 
 export async function sendOne(prev, formData) {

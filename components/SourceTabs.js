@@ -15,6 +15,7 @@ export const LEAD_PAGES = [
   ["/app/leads/google-ads", "Google Ads"],
   ["/app/leads/google-profile", "Google Profile"],
   ["/app/leads/autopilot", "Autopilot"],
+  ["/app/leads/playbook", "Lead Playbook"],
   ["/app/leads/results", "Results"],
 ];
 

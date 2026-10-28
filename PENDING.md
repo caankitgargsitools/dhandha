@@ -36,7 +36,8 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 20 | **GeM tenders and winners** — runs on the Indian server (E) | Claude | GeM tenders and awards arrive | Tenders done 27 Oct — 1,802 GeM bids, 50 CA matches; GeM winners still 0 (next) |
 | 20a | **State portals (A)** — Gujarat ✅ (3,579 tenders); Karnataka needs its captcha → add to the morning session; AP / Telangana lists sit behind scripts (probing); Bihar resets our server's connection (retry at other hours) | Claude | Tenders from these states arrive | Gujarat done 27 Oct; rest in progress |
 | 20b | **Large PSU portals (B)** then **IREPS (C)** | Claude | NTPC, ONGC, IOCL, BHEL, SAIL, Coal India…, then railway tenders arrive | After A |
-| 21 | **AI calling** — choose the provider: Bolna (recommended), Exotel + Vapi, or Twilio + Retell; a DLT-registered calling number (#19) | Both | You name the provider; I build calls that move deals to "Called" | Parked on your instruction |
+| 20c | **Lead Playbook for new leads** — built 28 Oct (Win the business → Lead Playbook). Next for you: open it, press "Start from the ready-made playbook", adjust the steps (WhatsApp template names, scripts), switch it on. Who owns autopilot leads (round-robin to telecallers etc.) is still to decide, with AI calling | You | A playbook is on and new leads show "In progress" | Open |
+| 21 | **AI calling** — choose the provider: Bolna (recommended), Exotel + Vapi, or Twilio + Retell; a DLT-registered calling number (#19). The Lead Playbook already has AI-call steps (script, English/Hindi/Hinglish, female/male voice, replies in the client's language); until a provider is connected they become call tasks for your team | Both | You name the provider; I connect it so playbook calls are made by the AI | Playbook ready 28 Oct — waiting for the provider choice |
 | 22 | **Social posts and AI video (Phase 4)** — choose the style: template videos / talking avatar / both (#15) | Both | You choose; I build | Waiting for your choice |
 | 23 | **IndiaMART / JustDial buyer enquiries** as an automatic lead source (M) | Both | You get a seller account; I connect its lead API | When you have the account |
 | 24 | **Desktop helper for DSC-assisted submission** (F) | Claude | Bid files submitted with your DSC from your computer | Planned |
@@ -45,6 +46,8 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 27 | **Before launch** — remove demo data (`demo_seed`), move pg_net out of the public schema (J) | Claude | No demo rows; Supabase lint clean | At launch |
 
 ## Done (recent)
+
+- 28 Oct (evening): **Lead Playbook** built (Win the business → Lead Playbook): design what happens to every new lead — AI call, WhatsApp, email, booking link, tasks — in any order, any number of steps, with waits, only in your office hours; starts by itself on new leads (all or chosen sources) or for chosen leads. Tested end to end. Vault: Facts, Experience and Key people can now be edited.
 
 - 28 Oct (audit): full self-audit of the portal (tenders, leads/CRM/sales, Vault/admin/billing/layout, crawler/workers) — about 110 findings; all high and medium ones fixed and merged, plus most low ones. Highlights: mandatory-condition warnings no longer block bid files for state preferences or unanswered questions; the database now enforces 2FA for admin powers; GitHub's duplicate crawler and document worker switched off (they split captcha sessions and caused database time-outs); document-expiry phone alerts now actually sent; autopilot survives a Google Maps time-out; no more duplicate deals; India time on all dates; Mark Submitted / Won / Lost on tenders; admin crawler page counts exact; Oracle text replaced with AWS.
 
