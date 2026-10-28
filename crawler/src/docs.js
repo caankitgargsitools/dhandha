@@ -356,12 +356,14 @@ async function runProbe(browser, pr) {
   try {
     const res = await page.goto(pr.url, { waitUntil: "domcontentloaded", timeout: 60000 });
     await page.waitForTimeout(4000);
-    // optional steps: [{click:"Visible text"}, {css:"selector"}, {fill:{css, value}}, {wait:ms}] — read-only browsing, nothing submitted
+    // optional steps: [{click:"Visible text"}, {css:"selector"}, {fill:{css, value}}, {js:"expression"}, {wait:ms}] — read-only browsing, nothing submitted
     for (const a of pr.actions || []) {
       try {
         if (a.click) await page.getByText(a.click, { exact: false }).first().click({ timeout: 10000 });
         else if (a.css) await page.locator(a.css).first().click({ timeout: 10000 });
         else if (a.fill) await page.locator(a.fill.css).first().fill(String(a.fill.value), { timeout: 10000 });
+        // read-only look inside the page (e.g. the HTML around a link) — the developer's own expression, result kept
+        else if (a.js) network.push({ step: "js", result: String(await page.evaluate(a.js)).slice(0, 8000) });
         await page.waitForTimeout(a.wait || 3000);
       } catch (e) { network.push({ step: a, error: e.message.split("\n")[0] }); }
     }
