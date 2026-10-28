@@ -1,11 +1,10 @@
 # Fetches MCA's monthly list of newly incorporated companies and LLPs into Dhandha (New companies leads).
-# Runs daily; a file already loaded is skipped, so the new month's file is picked up the day MCA publishes it.
+# Manual only: MCA refuses cloud machines (GitHub and AWS Mumbai both got 403), so the working route is the owner's
+# own computer (tools/mca-upload.sh) or uploading the file at Admin → New companies. A file already loaded is skipped.
 # If MCA's site shows a bot check, nothing is attempted and the admin is alerted to upload the file by hand.
 name: mca monthly
 
 on:
-  schedule:
-    - cron: "25 5 * * *"   # 10:55 IST
   workflow_dispatch:
 
 concurrency:

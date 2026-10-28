@@ -1,4 +1,4 @@
-# Builds the tender crawler image for x86 and ARM (Oracle Always Free Ampere) and publishes it to
+# Builds the tender crawler image for x86 and ARM (the AWS Mumbai t4g.small is arm64) and publishes it to
 # GitHub Container Registry. Servers pull ghcr.io/caankitgargsitools/dhandha-crawler:latest and
 # Watchtower on the server picks up new versions by itself.
 name: crawler image

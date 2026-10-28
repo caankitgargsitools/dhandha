@@ -22,6 +22,8 @@ const budgetMs = Number(env.CRAWL_BUDGET_MIN || 0) * 60000; // 0 = no limit
 // not in crawl runs where nobody is watching. CRAWL_RESULTS=1 brings the old crawl-time step back.
 const results = env.CRAWL_RESULTS === "1";
 const log = (...a) => console.log(new Date().toISOString(), ...a);
+// a stray promise rejection (a page wait left behind by a failed step) is logged instead of ending the process
+process.on("unhandledRejection", (e) => log("unhandled rejection:", e?.message || e));
 // captcha pages wait for a person to type the answer in Admin → Crawler (CAPTCHA_WAIT_MIN, 0 = skip them)
 // once a captcha goes unanswered nobody is watching, so the rest of this run skips captcha pages instead of waiting
 let nobodyHome = false;
