@@ -30,7 +30,7 @@ Priority: H = high, M = medium, L = low · Effort: S = small, M = medium, L = la
 | C17 | **Regional languages** for calls (Tamil, Telugu, Marathi, Bengali, Gujarati) | Bolna (Sarvam) | Tier-2/3 buyers | M | M | Waiting for approval |
 | C18 | **Field check-in / check-out with GPS**, visit proof, attendance, distance | LeadSquared Field Force | We plan routes but cannot prove visits | M | M | Approved and built 28 Oct (My day → 📍 Check in / out; Sales team → Visits (GPS)) |
 | C19 | **Lead routing rules**: round-robin, territory, product, capacity | LeadSquared, Zoho, Freshsales | Fair, fast assignment | S | M | Approved and built 28 Oct (Leads → Lead routing) |
-| C20 | **Website chat widget and web forms**, click-to-WhatsApp ads | Interakt, WATI, HubSpot, Pipedrive | Captures website and ad traffic | S–M | M | Waiting for approval (with PENDING 39) |
+| C20 | **Website chat widget and web forms**, click-to-WhatsApp ads | Interakt, WATI, HubSpot, Pipedrive | Captures website and ad traffic | S–M | M | Approved and built 28 Oct (Generate leads → Website chat & enquiry form) |
 | C21 | **Which companies visit your website** | Apollo, Pipedrive | Warm B2B leads | M | L | Waiting for approval |
 | C22 | **Chrome extension**: save a contact from LinkedIn or a website while browsing (the user clicks; no scraping) | Apollo, Lusha | Prospecting while browsing | M | L | Waiting for approval |
 | C23 | **WhatsApp catalogue and payment links** in chat | Interakt, AiSensy | Close small orders in chat | M | L | Waiting for approval |
