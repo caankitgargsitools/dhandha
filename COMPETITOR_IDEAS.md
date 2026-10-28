@@ -11,7 +11,7 @@ Priority: H = high, M = medium, L = low · Effort: S = small, M = medium, L = la
 
 | # | Idea | Who has it | Why it matters | Effort | Priority | Status |
 |---|------|-----------|----------------|--------|----------|--------|
-| C1 | **Two-way WhatsApp team inbox**: replies come into Dhandha; assign to a person; auto-replies; a reply stops the playbook | Interakt, WATI, AiSensy, TeleCRM | Indian clients answer on WhatsApp; today their replies are lost to us | M | H | Waiting for approval |
+| C1 | **Two-way WhatsApp team inbox**: replies come into Dhandha; assign to a person; auto-replies; a reply stops the playbook | Interakt, WATI, AiSensy, TeleCRM | Indian clients answer on WhatsApp; today their replies are lost to us | M | H | Approved 28 Oct → PENDING 21c |
 | C2 | **IndiaMART / JustDial / TradeIndia leads into Leads** (IndiaMART Lead Manager push API) | TeleCRM, Zoho, Odoo | Suppliers already pay ₹50k–1.5L a year for these leads | S | H | = PENDING 40 |
 | C3 | **Rival intelligence**: a rival's bids, wins, losses, buyers and tenders we missed | TenderTiger TigerIQ (₹500 a rival) | Upsell built on our award data | M | H | = PENDING 28 |
 | C4 | **Past L1 prices per item / BOQ line** in the cost planner | TenderTiger, BidAssist | Sharper prices | M | H | = PENDING 34 |
