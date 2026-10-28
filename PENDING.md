@@ -66,7 +66,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 41 | **WhatsApp chatbot for incoming enquiries** + **missed-call number** → Leads | Both | Built and working | To do — one by one, in the order you choose |
 | 42 | **Google Business Profile: AI replies to reviews and posts updates** | Claude | Built and working | To do — one by one, in the order you choose |
 | 43 | **Lead enrichment** — find missing emails / phones for leads | Claude | Built and working | To do — one by one, in the order you choose |
-| 44 | **WhatsApp broadcasts** to opted-in lists | Claude | Built and working | To do — one by one, in the order you choose |
+| 44 | **WhatsApp broadcasts** to opted-in lists | Claude | Built and working | Done 28 Oct — Outreach → WhatsApp broadcasts (filter, who will get it + credits, send; STOP opts out) |
 | 45 | **Exhibitions / trade-fair leads** | Claude | Built and working | To do — one by one, in the order you choose |
 | 46 | **Quotation & proposal builder** on the letterhead with e-sign and a **payment link** (Razorpay); e-invoice when won | Claude | Built and working | To do — one by one, in the order you choose |
 | 47 | **Referral programme, renewal reminders, win-back / upsell campaigns** | Claude | Built and working | Renewal reminders done 28 Oct — "Renews on" on a won deal → task + phone alert 30 and 7 days before; referral and win-back still to do |
