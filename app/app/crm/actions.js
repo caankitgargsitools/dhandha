@@ -79,6 +79,8 @@ export async function updateDeal(prev, formData) {
     title: str(formData, "title"), value_inr: money(formData.get("value_inr")),
     next_action: str(formData, "next_action", 120) || null, next_action_at: istDate(str(formData, "next_at", 10)),
     notes: str(formData, "notes", 4000) || null,
+    // a reminder task and phone alert come 30 and 7 days before (private.renewal_reminders)
+    renews_on: /^\d{4}-\d{2}-\d{2}$/.test(str(formData, "renews_on", 10)) ? str(formData, "renews_on", 10) : null,
   };
   if (patch.title.length < 3) return { error: "Say what the deal is for." };
   if (STAGE_KEYS.includes(stage)) patch.stage = stage;
