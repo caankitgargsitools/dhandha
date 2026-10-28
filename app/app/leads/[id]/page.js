@@ -143,6 +143,7 @@ export default async function LeadDetail({ params }) {
                 <span className={`chip ${m.status === "booked" ? "info" : m.status === "done" ? "ok" : "mute"}`}>{m.status.replace("_", "-")}</span>
               </div>
             ))}
+            {canWrite && <Link href={`/app/crm/quotes/new?lead=${l.id}`} className="btn ghost sm">New quotation</Link>}
             {canWrite && <BookMeeting leadId={l.id} types={mtypes || []} address={leadAddress(l)} phone={l.phone} contact={l.contact_person} business={company.name} />}
           </div>
           <div className="panel">
