@@ -81,3 +81,4 @@ Social lead sources:
 58. Corrigendum alerts (execute_sql, 28 Oct) — `ingest_tenders` logs only real changes (+ opening_at, title); `tender_change_notices`; `private.on_tender_change` + trigger `t_tender_change_notice`; `private.change_text`; `private.send_change_notices` + cron `tender_change_alerts` (*/10)
 59. WhatsApp broadcasts (execute_sql, 28 Oct) — `broadcasts`; `outreach_messages.broadcast_id`; `private.broadcast_leads`, `broadcast_preview`, `broadcast_send`; `wa_webhook`: STOP turns WhatsApp off for the lead
 60. PSU portals (execute_sql, 28 Oct) — `private.session_portals` and `private.queue_prefetch` also leave out NTPC Tenders and SAIL Tenders
+61. Quotations (execute_sql, 28 Oct) — `quotes` (members read); `private.next_quote_number`; `quote_save`, `quote_send` (authenticated); `quote_view`, `quote_respond` (anon, by token)
