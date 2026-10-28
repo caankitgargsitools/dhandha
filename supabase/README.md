@@ -82,3 +82,4 @@ Social lead sources:
 59. WhatsApp broadcasts (execute_sql, 28 Oct) — `broadcasts`; `outreach_messages.broadcast_id`; `private.broadcast_leads`, `broadcast_preview`, `broadcast_send`; `wa_webhook`: STOP turns WhatsApp off for the lead
 60. PSU portals (execute_sql, 28 Oct) — `private.session_portals` and `private.queue_prefetch` also leave out NTPC Tenders and SAIL Tenders
 61. Quotations (execute_sql, 28 Oct) — `quotes` (members read); `private.next_quote_number`; `quote_save`, `quote_send` (authenticated); `quote_view`, `quote_respond` (anon, by token)
+62. Referrals & win-back (execute_sql, 28 Oct) — `leads.referred_by`; `referral_links`; `private.ensure_referral_link`, `referral_link`, `referral_view` / `referral_submit` (anon); `private.won_to_referral` + trigger `t_won_referral`; `winback_settings`, `winback_log`, `winback_save`, `private.winback_run` + cron `winback_daily` (03:51 UTC)
