@@ -107,7 +107,7 @@ export default function VoiceTest({ sequenceId, step, onClose }) {
   };
 
   return (
-    <div className="panel" style={{ marginTop: 10, background: "var(--surface-2, var(--bg))" }}>
+    <div className="panel" style={{ marginTop: 10, background: "var(--sheet)" }}>
       <div className="row" style={{ justifyContent: "space-between" }}>
         <strong className="small">📞 Test call · {STATE[state]}</strong>
         {state !== "ended" ? <button type="button" className="sm" onClick={hangUp} style={{ background: "var(--bad)" }}>Hang up</button>

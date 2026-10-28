@@ -9,9 +9,10 @@ export const metadata = { title: "Dhandha Admin" };
 
 export default async function AdminLayout({ children }) {
   const { user, supabase } = await getAdminContext();
-  const [{ data: open }, { count: newTax }] = await Promise.all([
+  const [{ data: open }, { count: newTax }, { count: newLessons }] = await Promise.all([
     supabase.from("tickets").select("id").in("status", ["open", "in_progress"]),
     supabase.from("taxonomy_custom").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    supabase.from("voice_lessons").select("id", { count: "exact", head: true }).is("tenant_id", null).eq("status", "proposed"),
   ]);
   const sections = [
     { items: [{ href: "/admin", label: "Overview", icon: "home" }] },
@@ -26,6 +27,7 @@ export default async function AdminLayout({ children }) {
       { href: "/admin/data", label: "Data marketplace", icon: "people" },
       { href: "/admin/taxonomy", label: "Industries & services", icon: "briefcase", tag: newTax ? String(newTax) : undefined },
       { href: "/admin/ai", label: "AI engines", icon: "sparkle" },
+      { href: "/admin/voice", label: "Dhandha AI lessons", icon: "sparkle", tag: newLessons ? String(newLessons) : undefined },
       { href: "/admin/pricing", label: "Pricing", icon: "rupee" },
       { href: "/admin/billing", label: "Billing", icon: "wallet" },
       { href: "/admin/outreach", label: "Outreach", icon: "mail" },

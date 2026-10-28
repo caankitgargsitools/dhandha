@@ -29,6 +29,7 @@ export default async function Playbooks() {
           <h1>Lead Playbook</h1>
           <p>Decide exactly what happens to every new lead, step by step: an AI call in the lead's language, WhatsApp, email, a booking link, a task for your team — in any order, with waits in between, only during your office hours. A playbook stops by itself when someone logs a call or meeting, or the lead books a time.</p>
         </div>
+        {isLead && <Link href="/app/leads/playbook/learning" className="btn ghost">Call learning</Link>}
       </div>
 
       {waiting > 0 && (
