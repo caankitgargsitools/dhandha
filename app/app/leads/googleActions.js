@@ -3,6 +3,8 @@ import { revalidatePath } from "next/cache";
 import { getContext } from "@/lib/session";
 import { placesSearch } from "@/lib/connectors";
 import { placeDetails } from "@/lib/gbp";
+import { runJson, aiTiers } from "@/lib/ai";
+import { reviewList, replyPrompt, postPrompt, cleanReply, cleanPost } from "@/lib/reviewReply";
 
 // Google Ads: a new webhook key (the old one stops working). Shown once.
 export async function newGoogleAdsKey() {
@@ -56,4 +58,40 @@ export async function saveReviewSettings(prev, formData) {
   if (error) return { error: error.message };
   revalidatePath("/app/leads/google-profile");
   return { message: "Saved." };
+}
+
+// Reply to a Google review / write a profile post with AI. Reviews and posts are public text, so the free AI tier
+// may write them (private:false); 1 credit only when a paid tier answered.
+async function aiDraft(ctx, task, prompt, validate) {
+  const { supabase, tenant } = ctx;
+  const ai = await runJson({ supabase, tenantId: tenant.id, task, private: false, fast: true, maxTokens: 500, budgetMs: 45000, prompt, validate: (d) => (validate(d) ? null : "empty") });
+  if (ai.error) return { error: `The AI did not answer: ${ai.error}` };
+  const paid = !aiTiers().find((t) => t.id === ai.engine)?.free;
+  if (paid) {
+    const { error } = await supabase.rpc("spend_credits", { p_tenant: tenant.id, p_action: "gbp_ai", p_qty: 1, p_ref: task });
+    if (error) return { error: /insufficient|credits/i.test(error.message) ? "Not enough credits — top up in Credits & plan." : error.message };
+  }
+  return { data: validate(ai.data), paid };
+}
+
+export async function draftReviewReply(index, tone) {
+  const ctx = await getContext();
+  const { supabase, company, role } = ctx;
+  if (!["admin", "manager"].includes(role)) return { error: "Only admins and managers reply to reviews." };
+  const { data: s } = await supabase.from("review_settings").select("place_name, details").eq("company_id", company.id).maybeSingle();
+  const review = reviewList(s?.details)[Number(index)];
+  if (!review) return { error: "Refresh the profile and try again." };
+  const r = await aiDraft(ctx, "gbp_reply", replyPrompt({ review, business: s.place_name || company.legal_name, tone }), cleanReply);
+  return r.error ? r : { reply: r.data, paid: r.paid };
+}
+
+export async function draftProfilePost(topic, kind) {
+  const ctx = await getContext();
+  const { supabase, company, role } = ctx;
+  if (!["admin", "manager"].includes(role)) return { error: "Only admins and managers write posts." };
+  const t = String(topic || "").trim();
+  if (t.length < 5) return { error: "Say in a few words what the post is about." };
+  const { data: s } = await supabase.from("review_settings").select("place_name, details").eq("company_id", company.id).maybeSingle();
+  const r = await aiDraft(ctx, "gbp_post", postPrompt({ business: s?.place_name || company.legal_name, category: s?.details?.primaryTypeDisplayName?.text, topic: t, kind }), cleanPost);
+  return r.error ? r : { ...r.data, paid: r.paid };
 }

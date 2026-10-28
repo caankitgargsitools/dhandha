@@ -64,7 +64,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 39 | **Simple website / landing page builder** with lead form, SEO basics | Claude | Built and working | To do — one by one, in the order you choose |
 | 40 | **IndiaMART / JustDial / TradeIndia enquiries** flowing into Leads automatically (was step 23) | Both | Built and working | To do — one by one, in the order you choose |
 | 41 | **WhatsApp chatbot for incoming enquiries** + **missed-call number** → Leads | Both | Built and working | To do — one by one, in the order you choose |
-| 42 | **Google Business Profile: AI replies to reviews and posts updates** | Claude | Built and working | To do — one by one, in the order you choose |
+| 42 | **Google Business Profile: AI replies to reviews and posts updates** | Claude | Built and working | Built 28 Oct: Google profile page → "Reply to reviews" (free template or AI) and "This week's Google post" (AI); copy and post in Google's app — posting straight to Google needs Google's Business Profile API approval (later) |
 | 43 | **Lead enrichment** — find missing emails / phones for leads | Claude | Built and working | Done 28 Oct with Apollo (your own key): "Find email / phone" on a lead, "Find missing emails (25)" on Leads; more providers (waterfall) later |
 | 44 | **WhatsApp broadcasts** to opted-in lists | Claude | Built and working | Done 28 Oct — Outreach → WhatsApp broadcasts (filter, who will get it + credits, send; STOP opts out) |
 | 45 | **Exhibitions / trade-fair leads** | Claude | Built and working | To do — one by one, in the order you choose |
