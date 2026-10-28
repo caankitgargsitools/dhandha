@@ -39,7 +39,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 20a | **State portals (A)** — Gujarat ✅ (3,579 tenders); Karnataka needs its captcha → add to the morning session; AP / Telangana lists sit behind scripts (probing); Bihar resets our server's connection (retry at other hours) | Claude | Tenders from these states arrive | Gujarat done 27 Oct; rest in progress |
 | 20b | **Large PSU portals (B)** then **IREPS (C)** | Claude | NTPC, ONGC, IOCL, BHEL, SAIL, Coal India…, then railway tenders arrive | After A |
 | 20c | **Lead Playbook for new leads** — built 28 Oct (Win the business → Lead Playbook). Next for you: open it, press "Start from the ready-made playbook", adjust the steps (WhatsApp template names, scripts), switch it on. Who owns autopilot leads (round-robin to telecallers etc.) is still to decide, with AI calling | You | A playbook is on and new leads show "In progress" | Open |
-| 21 | **AI calling** — choose the provider: Bolna (recommended), Exotel + Vapi, or Twilio + Retell; a DLT-registered calling number (#19). The Lead Playbook already has AI-call steps (script, English/Hindi/Hinglish, female/male voice, replies in the client's language); until a provider is connected they become call tasks for your team | Both | You name the provider; I connect it so playbook calls are made by the AI | Playbook ready 28 Oct — waiting for the provider choice |
+| 21 | **AI calling** — our own **Dhandha AI** caller (free, self-hosted voices on the Mumbai server) is built for test calls from the browser: Lead Playbook → an AI-call step → "▶ Test this call". **Before calling the public:** a TRAI/DLT-registered telecom number (SIP trunk, e.g. Exotel/Plivo/Tata) to connect the caller to real phones; **before bulk calling:** a GPU server (the small server answers in a few seconds) | Both | You try a test call and tell me how it sounds; later you pick the telecom number | Test calls ready 28 Oct (once the server image updates) |
 | 22 | **Social posts and AI video (Phase 4)** — choose the style: template videos / talking avatar / both (#15) | Both | You choose; I build | Waiting for your choice |
 | 23 | **IndiaMART / JustDial buyer enquiries** — moved to step 40 | Both | — | See step 40 |
 | 24 | **Desktop helper for DSC-assisted submission** (F) | Claude | Bid files submitted with your DSC from your computer | Planned |
@@ -73,6 +73,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 52 | **Pricing of Dhandha** — set plans and credits against competitors (notes in CLAUDE.md "Competitors"); suggestion: free tier + ~₹999/mo or ₹9,999/yr all-in + credits | Both | Built and working | To do — one by one, in the order you choose |
 
 ## Done (recent)
+- 28 Oct (night): **Dhandha AI voice caller** — our own, free: speech-to-text (Whisper), voices (Piper, Hindi/English, female/male), turn-taking with interruptions, the playbook script and replies in the client's language; it opens with "Namaste, I am Dhandha AI…". Test from the browser on any AI-call step.
 
 - 28 Oct (night): small items cleared — morning brief on the phone, empanelment / rate-contract / EOI filter, live Google Sheets & Excel links, renewal reminders, value/EMD first for matched tenders, BOQ import, Bihar and 12 more portals (Indian Oil, Coal India, BHEL, NE states, Chandigarh, Puducherry, Ladakh).
 

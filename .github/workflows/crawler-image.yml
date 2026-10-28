@@ -6,7 +6,7 @@ name: crawler image
 on:
   push:
     branches: [main]
-    paths: ["crawler/**", "lib/xlsx.js", "lib/mca.js", ".github/workflows/crawler-image.yml"]
+    paths: ["crawler/**", "voice/**", "lib/xlsx.js", "lib/mca.js", ".github/workflows/crawler-image.yml"]
   workflow_dispatch:
 
 permissions:
