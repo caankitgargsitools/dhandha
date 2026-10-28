@@ -29,7 +29,7 @@ Priority: H = high, M = medium, L = low · Effort: S = small, M = medium, L = la
 | C16 | **AI receptionist for incoming calls**: answers your number, qualifies, books a meeting | Bolna, Retell, Exotel, Ozonetel | Missed calls are lost leads | M | M | Waiting for approval (needs telecom) |
 | C17 | **Regional languages** for calls (Tamil, Telugu, Marathi, Bengali, Gujarati) | Bolna (Sarvam) | Tier-2/3 buyers | M | M | Waiting for approval |
 | C18 | **Field check-in / check-out with GPS**, visit proof, attendance, distance | LeadSquared Field Force | We plan routes but cannot prove visits | M | M | Waiting for approval |
-| C19 | **Lead routing rules**: round-robin, territory, product, capacity | LeadSquared, Zoho, Freshsales | Fair, fast assignment | S | M | Waiting for approval (also open in PENDING 20c) |
+| C19 | **Lead routing rules**: round-robin, territory, product, capacity | LeadSquared, Zoho, Freshsales | Fair, fast assignment | S | M | Approved and built 28 Oct (Leads → Lead routing) |
 | C20 | **Website chat widget and web forms**, click-to-WhatsApp ads | Interakt, WATI, HubSpot, Pipedrive | Captures website and ad traffic | S–M | M | Waiting for approval (with PENDING 39) |
 | C21 | **Which companies visit your website** | Apollo, Pipedrive | Warm B2B leads | M | L | Waiting for approval |
 | C22 | **Chrome extension**: save a contact from LinkedIn or a website while browsing (the user clicks; no scraping) | Apollo, Lusha | Prospecting while browsing | M | L | Waiting for approval |
