@@ -25,10 +25,13 @@ export async function POST(request) {
     } catch (e) { error = String(e?.message || e).slice(0, 200); break; }
   }
   let ingested = null;
-  for (let i = 0; i < rows.length; i += 500) {
-    const { data, error: e } = await supabase.rpc("ingest_tenders", { p_key: key, p_source: WB_PORTAL, p_rows: rows.slice(i, i + 500) });
+  // small batches: each new tender is matched to every company inside the same call (statement time limit)
+  const sum = { inserted: 0, changed: 0, matched: 0 };
+  for (let i = 0; i < rows.length; i += 40) {
+    const { data, error: e } = await supabase.rpc("ingest_tenders", { p_key: key, p_source: WB_PORTAL, p_rows: rows.slice(i, i + 40) });
     if (e) { error = /invalid ingest key/.test(e.message) ? "forbidden" : e.message; break; }
-    ingested = data;
+    for (const k of Object.keys(sum)) sum[k] += Number(data?.[k] || 0);
+    ingested = sum;
   }
   if (error === "forbidden") return new Response("forbidden", { status: 403 });
   await supabase.rpc("health_report", { p_key: key, p_results: [{ name: "global_tenders", ok: !error && rows.length > 0, detail: { fetched, open: rows.length, ingested, error, sample } }] });

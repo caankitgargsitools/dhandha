@@ -5,7 +5,7 @@ about them one at a time. Approved items move to `PENDING.md`. Where an item is 
 step number is shown.
 
 Sources: competitors' public pages and search results, 28 Oct 2026 (prices are from search results and resellers, and
-need re-checking before we set our own prices). Pricing notes are in CLAUDE.md "Competitors".
+need re-checking before we set our own prices). Pricing notes are in CLAUDE.md "Competitors". C35–C48 added 29 Oct from search summaries (competitor sites are blocked from this sandbox).
 
 Priority: H = high, M = medium, L = low · Effort: S = small, M = medium, L = large.
 
@@ -45,6 +45,20 @@ Priority: H = high, M = medium, L = low · Effort: S = small, M = medium, L = la
 | C32 | **Native phone app** with offline mode and call-log access | Kylas, LeadSquared, TeleCRM | Needed for C7 | L | M | Waiting for approval (PENDING 25 is the Play Store listing) |
 | C33 | **Client portal**: the client sees proposals, uploads documents, tracks status | Zoho, LeadSquared | CA practices collect client documents | M | L | Waiting for approval |
 | C34 | **Recorder for human calls and Google Meet** with transcript and summary into the CRM | Apollo, HubSpot | CRM notes write themselves | M | L | Waiting for approval |
+| C35 | **EMD / bank guarantee / tender-fee register**: how each was paid, BG expiry, refund due after award; alerts for expiring BGs and late refunds | Tender247 BMS, BidControl247, Ace Tenders (₹20,000/yr) | Lakhs stuck in deposits; refunds forgotten | S–M | H | Waiting for approval |
+| C36 | **Bid approval workflow and task board per tender**: technical / finance / management sign-off, tasks counted back from the closing date | Tender247 BMS, BidControl247 | Teams of 3–10 bid together | M | H | Waiting for approval |
+| C37 | **Bid outcome register and loss analysis**: qualified / disqualified (reason), our rank, our price vs L1; win rate by department, state, work | Tender247, BidAssist | Shows why bids are lost; feeds price-to-win | S | H | Waiting for approval |
+| C38 | **Pre-bid query / relaxation letter writer**: AI finds restrictive clauses and drafts the queries; pre-bid meeting reminder | TenderTiger (paid service), Tender247 AI Bid Builder | Relaxed criteria let small firms qualify | S | H | Waiting for approval |
+| C39 | **Bid calendar link (ICS) for Google / Outlook**: closing, pre-bid, opening and BG-expiry dates | Tender247 BMS, BidControl247 | Missed pre-bid meetings and openings | S | M | Waiting for approval |
+| C40 | **BOQ supply leads**: suppliers alerted when tender BOQs contain their items; bidders find suppliers to quote | Tender247 | Opens Dhandha to traders and manufacturers | M | M | Waiting for approval |
+| C41 | **Sales invoices, receivables and payment reminders**: quote → GST invoice → payment link → reminders, ledger, recurring retainers | Refrens, Vyapar, myBillBook | Closes quote-to-cash; CAs bill retainers monthly | M | H | Waiting for approval |
+| C42 | **Email enquiries into Leads**: forward enquiry emails to a Dhandha address; AI pulls out name, phone, need | LeadSquared (Email Parser AI) | Many enquiries still arrive by email | S–M | M | Waiting for approval |
+| C43 | **Several pipelines with custom fields** (Tenders, Retainers, Product sales) | Zoho Bigin, Kylas, LeadSquared | One fixed stage list today | M | M | Waiting for approval |
+| C44 | **Product / service catalogue with a price list** used in quotes and deal values | Bigin, Kylas, Refrens, IndiaMART Lead Manager | Faster, consistent quotes | S | M | Waiting for approval |
+| C45 | **Saved replies and attachment library** (brochure, company profile, price list) on the lead page, WhatsApp inbox and email | IndiaMART Lead Manager, Interakt, AiSensy | A reply within 5 minutes wins enquiries | S | M | Waiting for approval |
+| C46 | **Click-to-WhatsApp ads tracking and retargeting** | AiSensy (from ₹1,500/mo) | Cost per lead for Meta ads | M | M | Waiting for approval |
+| C47 | **Business number with IVR and call bridging** (virtual number, IVR, recorded bridged calls, masking — no Android app) | Exotel, Kylas, LeadSquared | Quicker route to call recording than C7 | M | H | Waiting for approval |
+| C48 | **Customer's own telecom number for Dhandha AI calls** (Exotel / Plivo / Vobiz SIP) | Bolna | Removes the DLT-number blocker for public AI calls | M | H | Waiting for approval |
 
 ## Standout ideas (to beat all of them, not just match)
 
