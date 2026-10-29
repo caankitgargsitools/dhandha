@@ -19,6 +19,7 @@ import { summarise, adviceLine, discountPct, priceToWin, normFirm } from "@/lib/
 import { KINDS as DKINDS, STATUS as DSTATUS } from "@/lib/deposits";
 import DepositForm from "../deposits/DepositForm";
 import ResultForm from "../outcomes/ResultForm";
+import PrebidPanel from "../PrebidPanel";
 import { STAGES as OSTAGES } from "@/lib/outcomes";
 
 const STAGE = Object.fromEntries(STAGES);
@@ -28,8 +29,9 @@ export const maxDuration = 300;
 
 const PROFILE_NEEDED = [["legal_name", "Legal name"], ["pan", "PAN"], ["gstin", "GSTIN"], ["registered_address", "Registered address"], ["signatory_name", "Signatory name"], ["signatory_designation", "Signatory designation"], ["bank_account", "Bank account"], ["bank_ifsc", "IFSC"]];
 
-export default async function TenderDetail({ params }) {
+export default async function TenderDetail({ params, searchParams }) {
   const { id } = await params;
+  const sp = await searchParams;
   const { supabase, company, role, isAdmin, has2fa } = await getContext();
   const { data: m } = await supabase.from("tender_matches").select("*, tenders(*)").eq("id", id).eq("company_id", company.id).maybeSingle();
   if (!m) notFound();
@@ -192,6 +194,12 @@ export default async function TenderDetail({ params }) {
                 return <div key={a.award_id} className="small row between" style={{ padding: "4px 0", borderTop: "1px solid var(--line-soft)", flexWrap: "nowrap", gap: 12 }}><span>{a.title}<span className="tiny faint"> · {a.authority} · won by {a.bidder_name || "—"} · {fmtDate(a.contract_date)}</span>{rivalSet.has(normFirm(a.bidder_name)) && <span className="chip warn" style={{ marginLeft: 6 }}>your rival</span>}</span><span className="num" style={{ whiteSpace: "nowrap" }}>{a.awarded_value ? lakh(a.awarded_value) : "—"}{d !== null && <span className="tiny faint"> ({d >= 0 ? `${d}% below` : `${-d}% above`})</span>}</span></div>;
               })}
             </div>
+          )}
+          {["new", "shortlisted", "preparing"].includes(m.status) && (
+            <details className="panel" id="prebid" open={sp?.prebid === "1" || !!(m.prebid_queries || []).length}>
+              <summary><strong>Pre-bid queries</strong>{(m.prebid_queries || []).length ? <span className="small muted"> — {m.prebid_queries.length} drafted</span> : <span className="small muted"> — ask the department to clarify or relax conditions</span>}</summary>
+              <div style={{ marginTop: 8 }}><PrebidPanel matchId={m.id} initial={m.prebid_queries || []} prebidOn={t.prebid_on ? fmtDate(t.prebid_on) : null} firm={c.legal_name} tender={`${t.title} (${t.tender_ref})`} canEdit={canMake} /></div>
+            </details>
           )}
           {!!changes?.filter(realChange).length && (
             <div className="panel">
