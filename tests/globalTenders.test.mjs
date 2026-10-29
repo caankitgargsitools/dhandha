@@ -30,3 +30,9 @@ test("closed, awarded and contract notices are left out", () => {
   assert.equal(wbList({ procnotices: { a: { id: 1 }, b: { id: 2 } } }).length, 2);
   assert.equal(wbList({}).length, 0);
 });
+
+test("only English notices", () => {
+  const base = { id: "Z", notice_type: "Invitation for Bids", bid_description: "Supply", submission_deadline_date: "2026-12-01" };
+  assert.equal(mapWbNotice({ ...base, notice_lang_name: "Spanish; Castilian" }, now), null);
+  assert.ok(mapWbNotice({ ...base, notice_lang_name: "English" }, now));
+});
