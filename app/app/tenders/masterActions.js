@@ -130,6 +130,21 @@ export async function fillCustom({ matchId }) {
   if (!todo.length) return { ok: true, message: "Nothing to fill." };
   const { data: w } = await supabase.from("wallets").select("balance").eq("tenant_id", tenant.id).maybeSingle();
   if (Number(w?.balance || 0) < 49) return { error: "Not enough credits — this needs 49." };
+  // one fill at a time: a second click or a retried request waits for the first instead of paying twice
+  const lock = { p_company: company.id, p_action: "format_fill", p_ref: matchId };
+  const { data: got } = await supabase.rpc("action_lock", { ...lock, p_seconds: 300 });
+  if (!got) return { ok: true, message: "Already filling these formats — they appear in a moment. No extra credits used." };
+  try {
+    return await fillCustomLocked({ supabase, tenant, company, matchId, m, plan, todo });
+  } finally {
+    await supabase.rpc("action_unlock", lock);
+  }
+}
+
+async function fillCustomLocked({ supabase, tenant, company, matchId, m, plan, todo }) {
+  // the plan may have been filled while this request waited
+  const { data: fresh } = await supabase.from("tender_matches").select("filled_formats").eq("id", matchId).single();
+  if (!(fresh?.filled_formats || []).some((p) => p.kind === "custom" && !p.filled_text)) return { ok: true, message: "Already filled." };
   const [{ data: c }, { data: facts }, { data: works }, { data: people }] = await Promise.all([
     supabase.from("companies").select("*").eq("id", company.id).single(),
     supabase.from("company_facts").select("key, period, value, unit").eq("company_id", company.id),

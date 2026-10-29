@@ -42,6 +42,18 @@ export async function readTender(prev, formData) {
   const price = mode === "ai" ? 99 : 10;
   const { data: w } = await supabase.from("wallets").select("balance").eq("tenant_id", tenant.id).maybeSingle();
   if (Number(w?.balance || 0) < price) return { error: `Not enough credits — this needs ${price}.` };
+  // one reading at a time: a second click or a retried request waits for the first instead of paying twice
+  const lock = { p_company: company.id, p_action: "tender_read", p_ref: m.tender_id };
+  const { data: got } = await supabase.rpc("action_lock", { ...lock, p_seconds: 300 });
+  if (!got) return { message: "Already reading this tender — the result appears in a moment. No extra credits used." };
+  try {
+    return await readTenderLocked({ supabase, tenant, company, user, m, matchId, mode, files, price });
+  } finally {
+    await supabase.rpc("action_unlock", lock);
+  }
+}
+
+async function readTenderLocked({ supabase, tenant, user, m, matchId, mode, files, price }) {
 
   // 1. free: extract text and apply rules
   const pages = [], blobs = [];

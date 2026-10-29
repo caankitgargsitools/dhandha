@@ -7,3 +7,6 @@ create table if not exists private.rescore_requests (company_id uuid primary key
 -- public.rescore_company(company): member check; queue; private.rescore_open_matches
 -- private.rescore_queue_run(): ≤5 queued companies a minute → private.rescore_core
 -- select cron.schedule('rescore_queue', '* * * * *', 'select private.rescore_queue_run()');
+
+-- 64b. action_lock / action_unlock (apply_migration action_locks, 29 Oct): one AI reading / AI format fill at a time
+-- per company and tender, so a second click or a retried request no longer pays twice. private.action_locks(key, until).
