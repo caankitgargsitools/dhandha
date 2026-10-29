@@ -12,7 +12,7 @@ test("timed and all-day events", () => {
   ], { name: "GSC bids", now });
   assert.match(ics, /^BEGIN:VCALENDAR\r\n/);
   assert.match(ics, /DTSTART:20261030T043000Z\r\nDTEND:20261030T050000Z/);
-  assert.match(ics, /SUMMARY:Bid closes: Road\\, drain\; works/);
+  assert.ok(ics.includes("SUMMARY:Bid closes: Road\\, drain\\; works"));
   assert.match(ics, /DTSTART;VALUE=DATE:20261130\r\nDTEND;VALUE=DATE:20261201/);
   assert.equal((ics.match(/BEGIN:VEVENT/g) || []).length, 2);
   assert.match(ics, /X-WR-CALNAME:GSC bids/);
@@ -22,4 +22,10 @@ test("long lines are folded at 75 octets", () => {
   const f = fold("SUMMARY:" + "₹".repeat(40));
   assert.ok(f.split("\r\n").every((l) => Buffer.byteLength(l) <= 75));
   assert.equal(f.replace(/\r\n /g, ""), "SUMMARY:" + "₹".repeat(40));
+});
+
+test("semicolons, commas and bare carriage returns are escaped", async () => {
+  const { toIcs } = await import("../lib/ics.js");
+  const ics = toIcs([{ uid: "x", title: "A; B, C\rD", date: "2026-11-01", all_day: true }], { now });
+  assert.ok(ics.includes("SUMMARY:A\\; B\\, C\\nD"));
 });

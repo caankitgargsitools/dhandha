@@ -28,6 +28,7 @@ export default function NewKey({ endpoint }) {
         <div className="notice info stack-sm" style={{ display: "block" }}>
           <strong className="small">Copy now — the key is shown only once.</strong>
           <Row label="Address with key (Claude, ChatGPT, Gemini — anything that asks for a URL)" value={`${endpoint}?key=${res.key}`} />
+          <p className="tiny faint" style={{ margin: 0 }}>A key inside a link can end up in logs. Prefer the header (Claude Code, Cursor), keep link keys read-only, and disconnect and make a new one if a link is shared by mistake.</p>
           <Row label="Key alone (for an Authorization: Bearer header)" value={res.key} />
           <Row label="Claude Code" value={`claude mcp add --transport http dhandha ${endpoint} --header "Authorization: Bearer ${res.key}"`} />
         </div>

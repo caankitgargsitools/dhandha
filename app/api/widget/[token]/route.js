@@ -15,12 +15,15 @@ export async function POST(request, { params }) {
   const db = anonClient();
   const { data: cfg } = await db.rpc("web_widget_view", { p_token: token });
   if (!cfg) return json({ error: "This form is switched off." }, 404);
-  const self = origin && origin === new URL(request.url).origin; // the hosted form on Dhandha itself
+  const self = origin && origin === new URL(request.url).origin; // the hosted form on Dhandha itself (the domain list is a convenience, not security)
   if (!self && !domainAllowed(cfg.domains, origin)) return json({ error: "This website is not allowed to use this form." }, 403);
-  const ip = (request.headers.get("x-forwarded-for") || "").split(",")[0].trim();
-  const ipHash = ip ? createHash("sha256").update(`${token}:${ip}`).digest("hex").slice(0, 32) : null;
+  // the visitor's network, as Vercel saw it (not from the request body), hashed; enquiries are accepted only from this
+  // server (WEB_FORM_KEY), so the per-network limit cannot be skipped by calling the database directly
+  const ip = (request.headers.get("x-real-ip") || request.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "unknown";
+  const ipHash = createHash("sha256").update(`${token}:${ip}`).digest("hex").slice(0, 32);
+  if (!process.env.WEB_FORM_KEY) return json({ error: "Enquiries are paused — please try again later." }, 503);
   const pick = (k, n) => String(body?.[k] ?? "").slice(0, n);
-  const { error } = await db.rpc("web_widget_lead", { p_token: token, p: { name: pick("name", 120), company: pick("company", 120), phone: pick("phone", 20), email: pick("email", 200), message: pick("message", 1500), page: pick("page", 300), website_url_hp: pick("website_url_hp", 50) }, p_ip_hash: ipHash });
+  const { error } = await db.rpc("web_widget_lead_form", { p_form_key: process.env.WEB_FORM_KEY, p_token: token, p: { name: pick("name", 120), company: pick("company", 120), phone: pick("phone", 20), email: pick("email", 200), message: pick("message", 1500), page: pick("page", 300), website_url_hp: pick("website_url_hp", 50) }, p_ip_hash: ipHash });
   if (error) return json({ error: error.message.replace(/^.*?: /, "") }, 400);
   return json({ ok: true });
 }
