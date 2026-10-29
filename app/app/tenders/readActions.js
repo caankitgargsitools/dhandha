@@ -29,9 +29,31 @@ export async function readTender(prev, formData) {
   const { data: files } = await supabase.from("tender_files").select("*").eq("tender_id", m.tender_id).order("created_at");
   if (!files?.some((f) => /\.pdf$/i.test(f.file_name))) return { error: files?.length ? "Only spreadsheets or other files so far — the tender's PDF (NIT) is needed to read it." : "Upload the tender documents (PDF) first." };
 
+  // the same reading a few minutes ago (a retry after a dropped connection, a second click): keep it, charge nothing
+  const { data: recent } = await supabase.from("tender_reads").select("id, engine, created_by").eq("tender_id", m.tender_id)
+    .gte("created_at", new Date(Date.now() - 30 * 60000).toISOString()).order("created_at", { ascending: false }).limit(5);
+  const { data: team } = await supabase.from("tenant_members").select("user_id").eq("tenant_id", tenant.id);
+  const ours = new Set((team || []).map((t) => t.user_id));
+  if ((recent || []).some((r) => ours.has(r.created_by) && (mode === "basic" || !["rules", "precheck"].includes(r.engine)))) {
+    revalidatePath(`/app/tenders/${matchId}`);
+    return { message: "This tender was read a few minutes ago — using that reading. No credits used." };
+  }
+
   const price = mode === "ai" ? 99 : 10;
   const { data: w } = await supabase.from("wallets").select("balance").eq("tenant_id", tenant.id).maybeSingle();
   if (Number(w?.balance || 0) < price) return { error: `Not enough credits — this needs ${price}.` };
+  // one reading at a time: a second click or a retried request waits for the first instead of paying twice
+  const lock = { p_company: company.id, p_action: "tender_read", p_ref: m.tender_id };
+  const { data: got } = await supabase.rpc("action_lock", { ...lock, p_seconds: 300 });
+  if (!got) return { message: "Already reading this tender — the result appears in a moment. No extra credits used." };
+  try {
+    return await readTenderLocked({ supabase, tenant, company, user, m, matchId, mode, files, price });
+  } finally {
+    await supabase.rpc("action_unlock", lock);
+  }
+}
+
+async function readTenderLocked({ supabase, tenant, user, m, matchId, mode, files, price }) {
 
   // 1. free: extract text and apply rules
   const pages = [], blobs = [];
