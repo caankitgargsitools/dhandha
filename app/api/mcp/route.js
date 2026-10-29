@@ -13,6 +13,9 @@ export async function POST(request) {
   try { body = await request.json(); } catch { return json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error" } }, 400); }
   const db = anonClient();
   const call = async (tool, args) => {
+    // counted before it runs (its own transaction), so failed calls count against the limit too
+    const { error: te } = await db.rpc("mcp_tick", { p_key: key, p_tool: tool });
+    if (te) throw new Error(te.message);
     const { data, error } = await db.rpc("mcp_call", { p_key: key, p_tool: tool, p_args: args });
     if (error) throw new Error(error.message);
     return data;

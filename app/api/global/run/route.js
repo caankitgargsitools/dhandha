@@ -10,6 +10,9 @@ export async function POST(request) {
   const key = request.headers.get("x-worker-key") || "";
   if (!key) return new Response("forbidden", { status: 403 });
   const supabase = anonClient();
+  // check the key before spending time on World Bank calls
+  const { error: keyErr } = await supabase.rpc("health_report", { p_key: key, p_results: [] });
+  if (keyErr) return new Response("forbidden", { status: 403 });
   const rows = [], seen = new Set();
   let fetched = 0, sample = null, error = null;
   for (let page = 0; page < 4; page++) {
