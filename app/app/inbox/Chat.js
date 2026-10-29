@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { sendReply, markRead } from "./actions";
+import { sendReply, markRead, replyUsed } from "./actions";
+import { fillReply, filterReplies } from "@/lib/savedReplies";
 import { windowLeft } from "@/lib/outreach";
 
 const TICK = { queued: "🕓", sending: "🕓", sent: "✓", delivered: "✓✓", read: "✓✓ read", failed: "⚠ not sent" };
@@ -9,13 +10,17 @@ const time = (d) => new Date(d).toLocaleString("en-IN", { day: "numeric", month:
 
 // One conversation: messages (refreshed every few seconds), and the reply box — free text while WhatsApp's 24-hour
 // window is open, otherwise an approved template.
-export default function Chat({ thread, messages, canSend }) {
+export default function Chat({ thread, messages, canSend, replies = [], ctx = {} }) {
   const router = useRouter();
   const box = useRef(null);
   const [text, setText] = useState("");
   const [tpl, setTpl] = useState({ name: "", lang: "en" });
   const [err, setErr] = useState(null);
   const [pending, start] = useTransition();
+  const [picking, setPicking] = useState(false);
+  const [q, setQ] = useState("");
+  const shown = filterReplies(replies, q).slice(0, 8);
+  const pick = (r) => { const t = fillReply(r.body, ctx); setText((x) => (x.trim() ? `${x.trim()}\n${t}` : t)); setPicking(false); setQ(""); replyUsed(r.id); };
   const left = windowLeft(thread.last_in_at);
 
   useEffect(() => { if (thread.unread) markRead(thread.id); }, [thread.id, thread.unread]);
@@ -45,7 +50,19 @@ export default function Chat({ thread, messages, canSend }) {
         <div className="stack-sm">
           <textarea rows={3} value={text} onChange={(e) => setText(e.target.value)} maxLength={4000} placeholder="Type your reply…"
             onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && text.trim()) send(false); }} />
+          {picking && (
+            <div className="panel stack-sm" style={{ margin: 0, padding: 10 }}>
+              <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search saved replies or type /shortcut" onKeyDown={(e) => { if (e.key === "Enter" && shown[0]) { e.preventDefault(); pick(shown[0]); } if (e.key === "Escape") setPicking(false); }} />
+              {!shown.length && <p className="tiny faint" style={{ margin: 0 }}>{replies.length ? "Nothing matches." : "No saved replies yet."} <a href="/app/inbox/replies">Manage saved replies</a></p>}
+              {shown.map((r) => (
+                <button key={r.id} type="button" className="ghost sm" style={{ textAlign: "left", justifyContent: "flex-start", whiteSpace: "normal" }} onClick={() => pick(r)}>
+                  <strong>{r.title}</strong>{r.shortcut ? <span className="tiny faint"> /{r.shortcut}</span> : null}<span className="tiny faint" style={{ display: "block" }}>{fillReply(r.body, ctx).slice(0, 110)}</span>
+                </button>
+              ))}
+            </div>
+          )}
           <div className="row" style={{ gap: 10 }}>
+            <button type="button" className="ghost" onClick={() => setPicking((v) => !v)} aria-expanded={picking}>Saved replies</button>
             <button type="button" onClick={() => send(false)} disabled={pending || !text.trim()} aria-busy={pending}>Send on WhatsApp</button>
             <span className="tiny faint">Free replies allowed for {Math.floor(left / 3600e3)} h {Math.floor((left % 3600e3) / 60e3)} min more (WhatsApp's 24-hour rule). Ctrl+Enter sends.</span>
           </div>

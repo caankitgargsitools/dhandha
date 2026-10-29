@@ -108,3 +108,4 @@ Social lead sources:
 85. `pending/62_email_leads.sql` (apply_migration, 29 Oct) — email enquiries → leads: `email_hooks`, `email_lead_seen`, `email_hook_new`, `email_hook_save`, `email_hook_domains`, `email_lead`; trigger `b_sequence_step_defaults` (wa_lang defaults to 'en')
 86. `pending/63_session_reopen.sql` (apply_migration, 29 Oct) — `private.session_stale`; "Start today's session" and the 09:31 reminder include sessions live since an earlier day, so tender winners are read every day
 87. `pending/64_rescore_fast.sql` (apply_migration, 29 Oct) — `rescore_company` now re-scores open matches at once and queues the full scan (`private.rescore_requests`, cron `rescore_queue`); before, it ran past the 8-second limit and did nothing
+88. `pending/65_saved_replies.sql` (apply_migration, 29 Oct) — saved replies: `saved_replies`, `saved_reply_save`, `saved_reply_used`
