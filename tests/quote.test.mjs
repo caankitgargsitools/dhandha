@@ -26,3 +26,10 @@ test("lines and states are cleaned", () => {
   assert.equal(sameState({ state: "Uttar Pradesh" }, { state: "uttar pradesh" }), true);
   assert.equal(sameState({ state: "Delhi" }, {}), true);
 });
+
+test("price-list item becomes a line", async () => {
+  const { lineFromItem } = await import("../lib/quote.js");
+  assert.deepEqual(lineFromItem({ name: "Statutory audit", description: "Small company", hsn: "998221", unit: "job", rate: "75000", gst: 18 }),
+    { desc: "Statutory audit — Small company", hsn: "998221", qty: 1, unit: "job", rate: 75000, gst: 18 });
+  assert.equal(lineFromItem({ name: "X", gst: 7 }).gst, 18);
+});

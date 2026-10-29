@@ -11,11 +11,12 @@ export default async function QuotePage({ params, searchParams }) {
   const sp = await searchParams;
   const { supabase, company, role } = await getContext();
   const isNew = id === "new";
-  const [{ data: q }, { data: c }, { data: lead }, h] = await Promise.all([
+  const [{ data: q }, { data: c }, { data: lead }, h, { data: catalog }] = await Promise.all([
     isNew ? { data: null } : supabase.from("quotes").select("*").eq("id", id).eq("company_id", company.id).maybeSingle(),
     supabase.from("companies").select("gstin, state, legal_name").eq("id", company.id).single(),
     sp?.lead ? supabase.from("leads").select("id, name, contact_person, address, city, state, gstin, email, phone").eq("id", sp.lead).eq("company_id", company.id).maybeSingle() : { data: null },
     headers(),
+    supabase.from("catalog_items").select("id, name, description, hsn, unit, rate, gst").eq("company_id", company.id).eq("active", true).order("name"),
   ]);
   if (!isNew && !q) notFound();
   const origin = `${h.get("x-forwarded-proto") || "https"}://${h.get("host")}`;
@@ -29,7 +30,7 @@ export default async function QuotePage({ params, searchParams }) {
     <div className="stack">
       <div><Link href="/app/crm/quotes" className="small">← Quotations</Link><h1>{q ? `Quotation ${q.number}` : "New quotation"}</h1></div>
       {q?.status === "accepted" && <div className="notice small">Accepted by the client. <a href={`/app/crm/invoices/new?quote=${q.id}`}>Make the invoice from it</a>.</div>}
-      <Editor id={q?.id || null} initial={initial} seller={c} origin={origin} canEdit={!["viewer", "field"].includes(role)} />
+      <Editor id={q?.id || null} initial={initial} seller={c} origin={origin} catalog={catalog || []} canEdit={!["viewer", "field"].includes(role)} />
     </div>
   );
 }
