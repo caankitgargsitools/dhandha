@@ -79,7 +79,7 @@ export default async function Tenders({ searchParams }) {
         </div>
       </div>
       <nav aria-label="Bid tools" className="row small" style={{ gap: 6, marginTop: -6 }}>
-        {[["/app/tenders/results", "Past results"], ["/app/tenders/rivals", "Rivals"], ["/app/tenders/partners", "Partners"], ["/app/tenders/deposits", "EMD & BGs"], ["/app/tenders/outcomes", "Our results"]].map(([h, l]) => <Link key={h} href={h} className="btn sm ghost">{l}</Link>)}
+        {[["/app/tenders/results", "Past results"], ["/app/tenders/rivals", "Rivals"], ["/app/tenders/partners", "Partners"], ["/app/tenders/deposits", "EMD & BGs"], ["/app/tenders/outcomes", "Our results"], ["/app/tenders/calendar", "Calendar"]].map(([h, l]) => <Link key={h} href={h} className="btn sm ghost">{l}</Link>)}
       </nav>
       {noPrefs && <div className="notice bad"><Icon name="briefcase" /><span><strong>Tell Dhandha what you do</strong> — pick your industry, sub-industry and services so only relevant tenders reach you. <Link href="/app/tenders/preferences">Choose services</Link></span></div>}
       {canWrite && learned.length > 0 && (
