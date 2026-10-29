@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { getContext, fmtDate } from "@/lib/session";
 import { lineStats, callFunnel } from "@/lib/callLearning";
-import { callInsights, objectionStats, MOOD } from "@/lib/callInsights";
+import { callInsights, objectionStats, lessonSuggestions, MOOD } from "@/lib/callInsights";
+import SuggestLesson from "./SuggestLesson";
 import { CallFunnel, LineTable } from "@/components/CallLines";
 import SubmitButton from "@/components/SubmitButton";
 import Transcript from "./Transcript";
@@ -29,6 +30,7 @@ export default async function Learning({ searchParams }) {
   const call = sp?.call ? list.find((c) => c.token === sp.call) : null;
   const ins = call ? callInsights(call) : null;
   const objStats = objectionStats(list);
+  const suggestions = lessonSuggestions(objStats, (lessons || []).filter((l) => l.company_id === company.id));
   const focus = sp?.turn != null ? Number(sp.turn) : null;
   const ours = (lessons || []).filter((l) => l.company_id === company.id);
   const shared = (lessons || []).filter((l) => l.tenant_id == null && l.status === "active");
@@ -84,6 +86,13 @@ export default async function Learning({ searchParams }) {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          {suggestions.length > 0 && (
+            <div className="panel stack-sm">
+              <h3 style={{ margin: 0 }}>Suggested lessons</h3>
+              <p className="small muted" style={{ margin: 0 }}>These objections keep losing calls. Here is an answer that usually works — change it to your words and add it.</p>
+              {suggestions.map((s) => <div key={s.kind} className="stack-sm" style={{ borderTop: "1px solid var(--line-soft)", paddingTop: 8 }}><strong className="small">When {s.situation} <span className="faint">({s.calls - s.saved} of {s.calls} calls lost)</span></strong><SuggestLesson s={s} /></div>)}
             </div>
           )}
           <LineTable title="Lines that lose people" hint="The client hung up right after it, cut in, or the call ended 'not interested'." rows={stats.worst} link={link} />
