@@ -17,6 +17,7 @@ import { setTenderStatus } from "../actions";
 import { STAGES } from "@/lib/tenderFilters";
 import { summarise, adviceLine, discountPct, priceToWin, normFirm } from "@/lib/pastResults";
 import { KINDS as DKINDS, STATUS as DSTATUS } from "@/lib/deposits";
+import { bidChance } from "@/lib/bidChance";
 import DepositForm from "../deposits/DepositForm";
 import ResultForm from "../outcomes/ResultForm";
 import PrebidPanel from "../PrebidPanel";
@@ -47,7 +48,7 @@ export default async function TenderDetail({ params, searchParams }) {
     supabase.from("tender_changes").select("*").eq("tender_id", t.id).order("seen_at", { ascending: false }),
     supabase.from("wallets").select("balance").eq("tenant_id", m.tenant_id).maybeSingle(),
   ]);
-  const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }, { data: deposits }, { data: board }, { data: team }] = await Promise.all([
+  const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }, { data: deposits }, { data: board }, { data: team }, { data: outcomes }] = await Promise.all([
     supabase.from("tender_files").select("*").eq("tender_id", t.id).order("created_at"),
     supabase.from("tender_reads").select("*").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
     supabase.rpc("similar_awards", { p_tender: t.id, p_limit: 8 }),
@@ -55,7 +56,9 @@ export default async function TenderDetail({ params, searchParams }) {
     supabase.from("bid_deposits").select("id, kind, amount, mode, reference, status, valid_until, refund_expected_on").eq("match_id", m.id).order("created_at"),
     supabase.rpc("bid_board", { p_match: m.id }),
     supabase.from("tenant_members").select("user_id, role, profiles(full_name, email)").eq("tenant_id", m.tenant_id).in("role", ["admin", "manager", "bid_preparer"]),
+    supabase.rpc("bid_outcomes", { p_company: company.id }),
   ]);
+  const record = bidChance((outcomes || []).filter((o) => o.match_id !== m.id), t);
   const members = (team || []).map((x) => ({ user_id: x.user_id, name: x.profiles?.full_name || x.profiles?.email || "Member" }));
   const past = summarise(similar || []);
   const ptw = priceToWin(similar || [], t.value_inr);
@@ -188,6 +191,13 @@ export default async function TenderDetail({ params, searchParams }) {
               </tbody>
             </table>
           </div>
+          {record.records.length > 0 && (
+            <div className="panel small">
+              <div className="panel-head" style={{ marginBottom: 4 }}><h3>Your record on tenders like this</h3>{record.p !== null && <span className="chip info">about {record.p}% chance</span>}</div>
+              {record.records.map((r) => <div key={r.key}>{r.label === "this size" ? `Contracts ${r.value}` : r.label === "this kind of work" ? "This kind of work" : r.value}: won {r.won} of {r.bids} bid{r.bids === 1 ? "" : "s"}</div>)}
+              <p className="tiny faint" style={{ margin: "6px 0 0" }}>{record.p !== null ? `Learned from your ${record.decided} decided bids (record results under "Result after opening").` : `A chance appears after 8 decided bids (you have ${record.decided}). Record results under "Result after opening".`}</p>
+            </div>
+          )}
           {past.count > 0 && (
             <div className="panel">
               <div className="panel-head" style={{ marginBottom: 0 }}><h3>Similar past results</h3><Link className="small" href={`/app/tenders/results?q=${encodeURIComponent((t.title || "").split(/\s+/).slice(0, 3).join(" "))}`}>Search all</Link></div>

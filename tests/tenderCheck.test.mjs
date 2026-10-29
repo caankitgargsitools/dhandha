@@ -40,3 +40,12 @@ test("the firm's own decisions go into the prompt", async () => {
   assert.match(p, /- Energy audit of buildings/);
   assert.ok(p.indexOf("past decisions") < p.indexOf("Tenders:"));
 });
+
+test("other firms' decisions are a weaker, separate hint", async () => {
+  const { exampleLines } = await import("../lib/tenderCheck.js");
+  const t = exampleLines({ others_yes: ["Stock audit of bank branches"], others_no: ["Energy audit"] });
+  assert.match(t, /Other firms offering the same services decided/);
+  assert.match(t, /\+ Stock audit of bank branches/);
+  assert.doesNotMatch(t, /The firm's own past decisions/);
+  assert.ok(exampleLines({ yes: ["A"], others_no: ["B"] }).indexOf("own past") < exampleLines({ yes: ["A"], others_no: ["B"] }).indexOf("Other firms"));
+});
