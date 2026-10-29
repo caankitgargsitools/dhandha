@@ -16,6 +16,8 @@ import { aiTiers } from "@/lib/ai";
 import { setTenderStatus } from "../actions";
 import { STAGES } from "@/lib/tenderFilters";
 import { summarise, adviceLine, discountPct, priceToWin, normFirm } from "@/lib/pastResults";
+import { KINDS as DKINDS, STATUS as DSTATUS } from "@/lib/deposits";
+import DepositForm from "../deposits/DepositForm";
 
 const STAGE = Object.fromEntries(STAGES);
 
@@ -40,11 +42,12 @@ export default async function TenderDetail({ params }) {
     supabase.from("tender_changes").select("*").eq("tender_id", t.id).order("seen_at", { ascending: false }),
     supabase.from("wallets").select("balance").eq("tenant_id", m.tenant_id).maybeSingle(),
   ]);
-  const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }] = await Promise.all([
+  const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }, { data: deposits }] = await Promise.all([
     supabase.from("tender_files").select("*").eq("tender_id", t.id).order("created_at"),
     supabase.from("tender_reads").select("*").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
     supabase.rpc("similar_awards", { p_tender: t.id, p_limit: 8 }),
     supabase.from("rivals").select("name_norm").eq("company_id", company.id).is("archived_at", null),
+    supabase.from("bid_deposits").select("id, kind, amount, mode, reference, status, valid_until, refund_expected_on").eq("match_id", m.id).order("created_at"),
   ]);
   const past = summarise(similar || []);
   const ptw = priceToWin(similar || [], t.value_inr);
@@ -219,6 +222,12 @@ export default async function TenderDetail({ params }) {
                   note={!isAdmin ? "Only an admin (the signatory) can sign." : !has2fa ? "Turn on two-factor login in Security to sign." : !kinds.has("signature") ? "Upload the signature in Letterhead & signature to sign." : `Places the signature${kinds.has("seal") ? " and seal" : ""} on every page that needs it and logs the use. 299 credits (you have ${Math.floor(Number(wallet?.balance || 0))}).`} />
               </>
             )}
+          </div>
+          <div className="panel stack-sm">
+            <div className="panel-head" style={{ marginBottom: 0 }}><h3>EMD &amp; deposits</h3><Link className="small" href="/app/tenders/deposits">All deposits</Link></div>
+            {(deposits || []).map((d) => <div key={d.id} className="row between small"><span>{DKINDS[d.kind]} · {lakh(d.amount)}{d.reference ? <span className="tiny faint"> · {d.reference}</span> : null}</span><span className={`chip ${DSTATUS[d.status][0]}`}>{DSTATUS[d.status][1]}</span></div>)}
+            {!(deposits || []).length && <p className="small muted" style={{ margin: 0 }}>{t.emd_inr ? `EMD for this tender: ${lakh(t.emd_inr)}${msme && t.mse_emd_exempt ? " (you may be exempt as an MSE)" : ""}. ` : ""}Record it when you pay, so the refund is tracked.</p>}
+            {canMake && <details><summary className="small">Add a deposit</summary><div style={{ marginTop: 8 }}><DepositForm matchId={m.id} emd={t.emd_inr} /></div></details>}
           </div>
           <div className="panel flush">
             <div className="panel-head" style={{ padding: "18px 22px 6px" }}><h3>Generated packs</h3></div>
