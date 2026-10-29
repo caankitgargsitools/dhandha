@@ -31,3 +31,12 @@ test("a list given as one JSON object per line is still read", () => {
   assert.deepEqual(mapAnswer(d, [{ id: "a" }, { id: "b" }]).map((x) => x.fit), ["yes", "no"]);
   assert.deepEqual(parseJson('```json\n{"results":[]}\n```'), { results: [] });
 });
+
+test("the firm's own decisions go into the prompt", async () => {
+  const { buildPrompt, exampleLines } = await import("../lib/tenderCheck.js");
+  assert.equal(exampleLines({}), "");
+  const p = buildPrompt("- Audit", [{ title: "Concurrent audit" }], { yes: ["Internal audit of PSU"], no: ["Energy  audit of buildings"] });
+  assert.match(p, /\+ Internal audit of PSU/);
+  assert.match(p, /- Energy audit of buildings/);
+  assert.ok(p.indexOf("past decisions") < p.indexOf("Tenders:"));
+});
