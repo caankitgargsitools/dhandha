@@ -14,7 +14,7 @@ const ago = (d) => {
 
 export default async function Inbox({ searchParams }) {
   const sp = await searchParams;
-  const { supabase, tenant, user, role } = await getContext();
+  const { supabase, tenant, user, role, company } = await getContext();
   const all = ["admin", "manager"].includes(role);
   const f = TABS.some(([k]) => k === sp?.f) ? sp.f : all ? "all" : "mine";
   let q = supabase.from("wa_threads").select("id, phone, name, assigned_to, status, unread, last_in_at, last_at, last_text, lead_id, leads(name, contact_person)")
@@ -27,6 +27,7 @@ export default async function Inbox({ searchParams }) {
     supabase.from("tenant_members").select("user_id, role, profiles(full_name, email)").eq("tenant_id", tenant.id).neq("role", "disabled"),
     supabase.from("outreach_settings").select("wa_connected_at, wa_hook_token, wa_app_secret").eq("tenant_id", tenant.id).maybeSingle(),
   ]);
+  const { data: replies } = sp?.t ? await supabase.from("saved_replies").select("id, title, shortcut, body, uses, archived").eq("tenant_id", tenant.id).eq("archived", false) : { data: [] };
   const open = sp?.t ? (threads || []).find((t) => t.id === sp.t) || (await supabase.from("wa_threads").select("*, leads(name, contact_person)").eq("id", sp.t).maybeSingle()).data : null;
   const { data: messages } = open ? await supabase.from("wa_messages").select("id, direction, body, status, error, auto, created_at").eq("thread_id", open.id).order("id").limit(300) : { data: [] };
   const who = (id) => { const m = (members || []).find((x) => x.user_id === id); return id === user.id ? "Me" : m?.profiles?.full_name || m?.profiles?.email || "—"; };
@@ -45,6 +46,7 @@ export default async function Inbox({ searchParams }) {
       {!ready && <div className="notice">To receive replies here, connect your WhatsApp Business number and its webhook: <Link href="/app/outreach/settings#inbox">Outreach → Sender settings → Receive replies</Link>.</div>}
 
       <div className="row" style={{ gap: 6 }}>
+        <Link href="/app/inbox/replies" className="btn ghost sm">Saved replies</Link>
         {TABS.filter(([k]) => all || k !== "unassigned").map(([k, l]) => <Link key={k} href={`/app/inbox?f=${k}`} className={f === k ? "btn sm" : "btn ghost sm"}>{l}</Link>)}
       </div>
 
@@ -83,7 +85,8 @@ export default async function Inbox({ searchParams }) {
                   <SubmitButton name="action" value={open.status === "open" ? "close" : "open"} className="ghost sm">{open.status === "open" ? "Close" : "Reopen"}</SubmitButton>
                 </form>
               </div>
-              <Chat thread={open} messages={messages || []} canSend={!["viewer", "disabled"].includes(role)} />
+              <Chat thread={open} messages={messages || []} canSend={!["viewer", "disabled"].includes(role)} replies={replies || []}
+                ctx={{ contact: open.leads?.contact_person || open.name, name: open.leads?.name, company: open.leads?.name, myName: user.user_metadata?.full_name, myCompany: company?.trade_name || company?.legal_name }} />
             </div>
           )}
         </div>
