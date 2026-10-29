@@ -37,3 +37,12 @@ test("objection stats across calls", () => {
   assert.equal(s[0].saved, 1);
   assert.deepEqual(s[0].example, { token: "a", turn: 0, text: "too expensive" });
 });
+
+test("lesson suggestions for objections that lose calls", async () => {
+  const { lessonSuggestions } = await import("../lib/callInsights.js");
+  const stats = [{ kind: "price", label: "Too costly", calls: 4, saved: 1 }, { kind: "busy", label: "Busy / call later", calls: 3, saved: 2 }, { kind: "trust", label: "Who are you? / spam", calls: 1, saved: 0 }];
+  const s = lessonSuggestions(stats, []);
+  assert.deepEqual(s.map((x) => x.kind), ["price"]);
+  assert.match(s[0].situation, /too costly/);
+  assert.deepEqual(lessonSuggestions(stats, [{ situation: "When the client says: too costly", status: "active" }]), []);
+});
