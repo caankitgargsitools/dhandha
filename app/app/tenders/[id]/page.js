@@ -82,6 +82,7 @@ export default async function TenderDetail({ params }) {
             <div className="row tiny faint" style={{ gap: 10, marginTop: 6 }}>
               <span>{t.portal}</span><span>Tender ID {t.tender_ref}</span>{t.url && <a href={t.url} target="_blank" rel="noreferrer">Open portal</a>}
               {mandatoryUnmet(m.reasons).length > 0 && <span className="chip warn">⚠ Mandatory condition not met — you decide in the assistant</span>}
+              {(!m.eligible || m.pending > 0) && <Link className="chip info" href={`/app/tenders/partners?match=${m.id}`}>Short on eligibility? Find a partner</Link>}
             </div>
           </div>
         </div>

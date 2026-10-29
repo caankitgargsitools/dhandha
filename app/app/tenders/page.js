@@ -72,6 +72,7 @@ export default async function Tenders({ searchParams }) {
         <div className="row">
           <Link href="/app/tenders/results" className="btn ghost">Past results</Link>
           <Link href="/app/tenders/rivals" className="btn ghost">Rivals</Link>
+          <Link href="/app/tenders/partners" className="btn ghost">Partners</Link>
           <Link href="/app/tenders/preferences" className="btn ghost">What to look for</Link>
           {pref?.ai_check && canWrite && <form action={aiCheckNow}><button className="ghost">Run AI check now</button></form>}
           <form action={rescore}><button className="gold">Re-score now</button></form>
