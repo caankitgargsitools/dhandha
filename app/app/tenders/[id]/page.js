@@ -18,6 +18,8 @@ import { STAGES } from "@/lib/tenderFilters";
 import { summarise, adviceLine, discountPct, priceToWin, normFirm } from "@/lib/pastResults";
 import { KINDS as DKINDS, STATUS as DSTATUS } from "@/lib/deposits";
 import DepositForm from "../deposits/DepositForm";
+import ResultForm from "../outcomes/ResultForm";
+import { STAGES as OSTAGES } from "@/lib/outcomes";
 
 const STAGE = Object.fromEntries(STAGES);
 
@@ -223,6 +225,12 @@ export default async function TenderDetail({ params }) {
               </>
             )}
           </div>
+          {["preparing", "submitted", "won", "lost"].includes(m.status) && canMake && (
+            <details className="panel" open={m.status === "submitted" && !m.result_stage}>
+              <summary><strong>Result after opening</strong>{m.result_stage ? <span className="small muted"> — {OSTAGES[m.result_stage]}{m.our_rank ? `, L${m.our_rank}` : ""}</span> : null}</summary>
+              <div style={{ marginTop: 8 }}><ResultForm m={m} /></div>
+            </details>
+          )}
           <div className="panel stack-sm">
             <div className="panel-head" style={{ marginBottom: 0 }}><h3>EMD &amp; deposits</h3><Link className="small" href="/app/tenders/deposits">All deposits</Link></div>
             {(deposits || []).map((d) => <div key={d.id} className="row between small"><span>{DKINDS[d.kind]} · {lakh(d.amount)}{d.reference ? <span className="tiny faint"> · {d.reference}</span> : null}</span><span className={`chip ${DSTATUS[d.status][0]}`}>{DSTATUS[d.status][1]}</span></div>)}

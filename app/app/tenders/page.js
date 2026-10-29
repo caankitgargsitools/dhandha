@@ -73,15 +73,14 @@ export default async function Tenders({ searchParams }) {
           <p>Every tender from GeM, CPPP and state portals that fits {company.legal_name}, scored out of 100 against your Vault.</p>
         </div>
         <div className="row">
-          <Link href="/app/tenders/results" className="btn ghost">Past results</Link>
-          <Link href="/app/tenders/rivals" className="btn ghost">Rivals</Link>
-          <Link href="/app/tenders/partners" className="btn ghost">Partners</Link>
-          <Link href="/app/tenders/deposits" className="btn ghost">EMD &amp; BGs</Link>
           <Link href="/app/tenders/preferences" className="btn ghost">What to look for</Link>
           {pref?.ai_check && canWrite && <form action={aiCheckNow}><button className="ghost">Run AI check now</button></form>}
           <form action={rescore}><button className="gold">Re-score now</button></form>
         </div>
       </div>
+      <nav aria-label="Bid tools" className="row small" style={{ gap: 6, marginTop: -6 }}>
+        {[["/app/tenders/results", "Past results"], ["/app/tenders/rivals", "Rivals"], ["/app/tenders/partners", "Partners"], ["/app/tenders/deposits", "EMD & BGs"], ["/app/tenders/outcomes", "Our results"]].map(([h, l]) => <Link key={h} href={h} className="btn sm ghost">{l}</Link>)}
+      </nav>
       {noPrefs && <div className="notice bad"><Icon name="briefcase" /><span><strong>Tell Dhandha what you do</strong> — pick your industry, sub-industry and services so only relevant tenders reach you. <Link href="/app/tenders/preferences">Choose services</Link></span></div>}
       {canWrite && learned.length > 0 && (
         <div className="notice small" style={{ display: "block" }}>
