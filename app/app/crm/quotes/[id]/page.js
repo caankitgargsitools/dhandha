@@ -28,6 +28,7 @@ export default async function QuotePage({ params, searchParams }) {
   return (
     <div className="stack">
       <div><Link href="/app/crm/quotes" className="small">← Quotations</Link><h1>{q ? `Quotation ${q.number}` : "New quotation"}</h1></div>
+      {q?.status === "accepted" && <div className="notice small">Accepted by the client. <a href={`/app/crm/invoices/new?quote=${q.id}`}>Make the invoice from it</a>.</div>}
       <Editor id={q?.id || null} initial={initial} seller={c} origin={origin} canEdit={!["viewer", "field"].includes(role)} />
     </div>
   );
