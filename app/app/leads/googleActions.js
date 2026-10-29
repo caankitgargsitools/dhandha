@@ -95,3 +95,23 @@ export async function draftProfilePost(topic, kind) {
   const r = await aiDraft(ctx, "gbp_post", postPrompt({ business: s?.place_name || company.legal_name, category: s?.details?.primaryTypeDisplayName?.text, topic: t, kind }), cleanPost);
   return r.error ? r : { ...r.data, paid: r.paid };
 }
+
+// Email enquiries: a new mailbox key (the old one stops working). Shown once, inside the ready Gmail script.
+export async function newEmailKey() {
+  const { supabase, company, isAdmin } = await getContext();
+  if (!isAdmin) return { error: "Only the workspace admin can do this." };
+  const { data, error } = await supabase.rpc("email_hook_new", { p_company: company.id });
+  if (error) return { error: error.message };
+  revalidatePath("/app/leads/email");
+  return { ok: true, token: data.token, key: data.key };
+}
+
+export async function saveEmailHook(formData) {
+  const { supabase, company, isAdmin } = await getContext();
+  if (!isAdmin) return { error: "Only the workspace admin can do this." };
+  const domains = String(formData.get("own_domains") || "").split(/[\s,]+/).map((d) => d.trim().toLowerCase().replace(/^@/, "")).filter(Boolean).slice(0, 20);
+  const { error } = await supabase.rpc("email_hook_save", { p_company: company.id, p_own_domains: domains, p_enabled: formData.get("enabled") === "on" });
+  if (error) return { error: error.message };
+  revalidatePath("/app/leads/email");
+  return { ok: true };
+}

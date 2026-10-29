@@ -5,7 +5,7 @@ import Icon from "@/components/Icon";
 // Generate leads: every source of new leads as a card. New sources (Apollo and the like) are added here.
 export default async function GenerateLeads() {
   const { supabase, company, tenant } = await getContext();
-  const [{ data: leads }, { data: pages }, { data: conn }, { data: auto }, { data: gads }, { data: gbp }, { data: widget }, { data: site }] = await Promise.all([
+  const [{ data: leads }, { data: pages }, { data: conn }, { data: auto }, { data: gads }, { data: gbp }, { data: widget }, { data: site }, { data: mail }] = await Promise.all([
     supabase.from("leads").select("source, status, next_follow_up_at").eq("company_id", company.id).limit(5000),
     supabase.from("meta_pages").select("page_id").eq("tenant_id", tenant.id).is("revoked_at", null),
     supabase.from("lead_connectors").select("apollo_connected_at").eq("tenant_id", tenant.id).maybeSingle(),
@@ -14,6 +14,7 @@ export default async function GenerateLeads() {
     supabase.from("review_settings").select("place_id, rating, reviews").eq("company_id", company.id).maybeSingle(),
     supabase.from("web_widgets").select("enabled, leads, last_lead_at").eq("company_id", company.id).maybeSingle(),
     supabase.from("sites").select("published, slug, views").eq("company_id", company.id).maybeSingle(),
+    supabase.from("email_hooks").select("leads, last_at, enabled").eq("company_id", company.id).maybeSingle(),
   ]);
   const apollo = !!conn?.apollo_connected_at;
   const ls = leads || [];
@@ -25,6 +26,7 @@ export default async function GenerateLeads() {
     { href: "/app/leads", icon: "leads", title: "Your leads", text: "Every lead from every source, scored on fit, with follow-ups and call / WhatsApp buttons.", status: `${ls.length} leads${due ? ` · ${due} follow-ups due` : ""}`, ok: !due },
     { href: "/app/leads/site", icon: "building", title: "Your website", text: "A one-page website from your Vault — services, works, team — with your enquiry form built in. Free.", status: site?.published ? `Live · ${site.views} visits` : site ? "Not published" : "Not made yet", ok: !!site?.published },
     { href: "/app/leads/website", icon: "mail", title: "Website chat & enquiry form", text: "Paste one line on your website (or share your enquiry link) — every visitor who asks lands here with a phone alert.", status: widget?.enabled ? (widget.leads ? `On · ${widget.leads} enquiries` : "On · waiting for the first enquiry") : "Not set up", ok: !!widget?.leads },
+    { href: "/app/leads/email", icon: "mail", title: "Email enquiries", text: "Everyone who writes to your business Gmail becomes a lead with a phone alert — newsletters and no-reply mail skipped. Free.", status: mail ? (mail.last_at ? `On · ${mail.leads} leads` : "Waiting for the first email") : "Not set up", ok: !!mail?.last_at },
     { href: "/app/leads/google-ads", icon: "sparkle", title: "Google Ads lead forms", text: "People searching for your service in your area fill your ad's form — it lands here in seconds.", status: gads ? (gads.last_lead_at ? `Connected · ${gads.leads} leads` : "Waiting for the first lead") : "Not connected", ok: !!gads?.last_lead_at },
     { href: "/app/leads/google-profile", icon: "map", title: "Google Business Profile", text: "Check your listing, fix what is missing, and ask every won customer for a Google review automatically.", status: gbp?.place_id ? `★ ${gbp.rating ?? "–"} · ${gbp.reviews ?? 0} reviews` : "Not linked", ok: !!gbp?.place_id },
     { href: "/app/leads/winners", icon: "tender", title: "Tender winners", text: "Firms that just won government contracts — they need suppliers, staff and services now.", status: `${by("tender_winner")} added`, ok: by("tender_winner") > 0 },
