@@ -20,6 +20,7 @@ import { KINDS as DKINDS, STATUS as DSTATUS } from "@/lib/deposits";
 import DepositForm from "../deposits/DepositForm";
 import ResultForm from "../outcomes/ResultForm";
 import PrebidPanel from "../PrebidPanel";
+import BidBoard from "../BidBoard";
 import { STAGES as OSTAGES } from "@/lib/outcomes";
 
 const STAGE = Object.fromEntries(STAGES);
@@ -46,13 +47,16 @@ export default async function TenderDetail({ params, searchParams }) {
     supabase.from("tender_changes").select("*").eq("tender_id", t.id).order("seen_at", { ascending: false }),
     supabase.from("wallets").select("balance").eq("tenant_id", m.tenant_id).maybeSingle(),
   ]);
-  const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }, { data: deposits }] = await Promise.all([
+  const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }, { data: deposits }, { data: board }, { data: team }] = await Promise.all([
     supabase.from("tender_files").select("*").eq("tender_id", t.id).order("created_at"),
     supabase.from("tender_reads").select("*").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
     supabase.rpc("similar_awards", { p_tender: t.id, p_limit: 8 }),
     supabase.from("rivals").select("name_norm").eq("company_id", company.id).is("archived_at", null),
     supabase.from("bid_deposits").select("id, kind, amount, mode, reference, status, valid_until, refund_expected_on").eq("match_id", m.id).order("created_at"),
+    supabase.rpc("bid_board", { p_match: m.id }),
+    supabase.from("tenant_members").select("user_id, role, profiles(full_name, email)").eq("tenant_id", m.tenant_id).in("role", ["admin", "manager", "bid_preparer"]),
   ]);
+  const members = (team || []).map((x) => ({ user_id: x.user_id, name: x.profiles?.full_name || x.profiles?.email || "Member" }));
   const past = summarise(similar || []);
   const ptw = priceToWin(similar || [], t.value_inr);
   const rivalSet = new Set((rivalRows || []).map((r) => r.name_norm));
@@ -193,6 +197,12 @@ export default async function TenderDetail({ params, searchParams }) {
                 const d = discountPct(a.awarded_value, a.estimate);
                 return <div key={a.award_id} className="small row between" style={{ padding: "4px 0", borderTop: "1px solid var(--line-soft)", flexWrap: "nowrap", gap: 12 }}><span>{a.title}<span className="tiny faint"> · {a.authority} · won by {a.bidder_name || "—"} · {fmtDate(a.contract_date)}</span>{rivalSet.has(normFirm(a.bidder_name)) && <span className="chip warn" style={{ marginLeft: 6 }}>your rival</span>}</span><span className="num" style={{ whiteSpace: "nowrap" }}>{a.awarded_value ? lakh(a.awarded_value) : "—"}{d !== null && <span className="tiny faint"> ({d >= 0 ? `${d}% below` : `${-d}% above`})</span>}</span></div>;
               })}
+            </div>
+          )}
+          {["shortlisted", "preparing", "submitted"].includes(m.status) && (
+            <div className="panel" id="plan">
+              <div className="panel-head" style={{ marginBottom: 6 }}><h3>Bid plan</h3></div>
+              <BidBoard matchId={m.id} board={board} members={members} role={role} canEdit={canMake} />
             </div>
           )}
           {["new", "shortlisted", "preparing"].includes(m.status) && (
