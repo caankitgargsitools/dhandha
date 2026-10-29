@@ -10,3 +10,9 @@ create table if not exists private.rescore_requests (company_id uuid primary key
 
 -- 64b. action_lock / action_unlock (apply_migration action_locks, 29 Oct): one AI reading / AI format fill at a time
 -- per company and tender, so a second click or a retried request no longer pays twice. private.action_locks(key, until).
+
+-- 64c. Conditions met by Vault documents (apply_migration conditions_met_by_vault_documents, 29 Oct):
+-- private.cond_vault_doc(company, label, due) maps a condition's wording to document types (peer review → CERT-PEER,
+-- GST (not "in the state of …") → REG-GST, Udyam / MSME / NSIC, ISO 9001, EPF, ESI, labour licence, PAN, ICAI firm
+-- registration / constitution certificate → CERT-ICAI) and returns the valid document's name; score_tender counts an
+-- unanswered condition as met with "(in your Vault: …)" instead of asking.
