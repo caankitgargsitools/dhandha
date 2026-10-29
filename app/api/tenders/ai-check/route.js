@@ -21,11 +21,13 @@ export async function POST(request) {
     // built-in services plus the company's own ones ("x.<id>")
     const index = { ...SERVICE_INDEX, ...Object.fromEntries((c.own || []).map((o) => [o.id, { label: o.label, kw: o.kw?.length ? o.kw : [o.label] }])) };
     const profile = firmProfile(c.services || [], c.custom || [], index);
+    // the firm's own take / not-my-work decisions teach the AI (public titles only)
+    const { data: examples } = await supabase.rpc("ai_check_examples", { p_key: key, p_company: c.company_id });
     for (let i = 0; i < c.items.length && Date.now() < until - 30000; i += 20) {
       const items = c.items.slice(i, i + 20);
       const r = await runJson({
         supabase, tenantId: c.tenant_id, task: "tender_ai_check", private: false, maxTokens: 2500, fast: true, freeWaitMs: 60000,
-        prompt: buildPrompt(profile, items), validate: (d) => validateAnswer(d, items.length),
+        prompt: buildPrompt(profile, items, examples || {}), validate: (d) => validateAnswer(d, items.length),
         budgetMs: Math.min(120000, until - Date.now() - 10000),
       });
       runs.push({ engine: r.engine || null, attempts: (r.attempts || []).map((a) => String(a).slice(0, 160)) });

@@ -5,6 +5,7 @@ import { ScoreRing, Donut } from "@/components/Charts";
 import Icon from "@/components/Icon";
 import { setTenderStatus } from "./actions";
 import { rescore, muteTenderWord, aiCheckNow, setAiFit } from "./bidActions";
+import { muteSuggestions } from "@/lib/matchLearning";
 import QuestionCards from "./QuestionCards";
 import { openQuestions, mandatoryUnmet } from "@/lib/conditions";
 import { prerequisiteList } from "@/lib/prereq";
@@ -25,7 +26,9 @@ export default async function Tenders({ searchParams }) {
   const aiHidden = kept.filter((m) => m.ai_fit === "no" && ["new", "skipped"].includes(m.status));
   const showAiHidden = params?.ai === "hidden";
   const rows = showAiHidden ? aiHidden : kept.filter((m) => !aiHidden.includes(m));
-  const { data: pref } = await supabase.from("tender_preferences").select("services, custom_keywords, ai_check").eq("company_id", company.id).maybeSingle();
+  const { data: pref } = await supabase.from("tender_preferences").select("services, custom_keywords, ai_check, muted").eq("company_id", company.id).maybeSingle();
+  // learned from what this firm skips: words whose tenders it always drops
+  const learned = muteSuggestions(all || [], pref?.muted || []);
   const noPrefs = !pref || (!(pref.services || []).length && !(pref.custom_keywords || []).length);
   const live = (m) => daysLeft(m.tenders.due_at) >= 0;
   const f = parseFilters(params);
@@ -79,6 +82,14 @@ export default async function Tenders({ searchParams }) {
         </div>
       </div>
       {noPrefs && <div className="notice bad"><Icon name="briefcase" /><span><strong>Tell Dhandha what you do</strong> — pick your industry, sub-industry and services so only relevant tenders reach you. <Link href="/app/tenders/preferences">Choose services</Link></span></div>}
+      {canWrite && learned.length > 0 && (
+        <div className="notice small" style={{ display: "block" }}>
+          <strong>Dhandha learned from your choices:</strong> you never take up tenders matched on these words.
+          <div className="row" style={{ gap: 6, marginTop: 6 }}>
+            {learned.map((w) => <form key={w.word} action={muteTenderWord}><input type="hidden" name="word" value={w.word} /><button className="sm ghost" title={`${w.dropped} skipped, none taken`}>Stop showing &ldquo;{w.word}&rdquo; ({w.dropped} skipped)</button></form>)}
+          </div>
+        </div>
+      )}
       {questions.length > 0 && <QuestionCards questions={questions} canAnswer={canWrite} />}
 
       <div className="grid-3">
