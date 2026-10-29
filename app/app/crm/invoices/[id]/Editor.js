@@ -1,13 +1,13 @@
 "use client";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { computeQuote, GST_RATES } from "@/lib/quote";
+import { computeQuote, GST_RATES, lineFromItem } from "@/lib/quote";
 import { saveInvoice, issueInvoice } from "../actions";
 
 const inr = (n) => `₹${Number(n || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
 // A GST tax invoice: edit while draft; "Issue" gives it the next number (INV/2026-27/0001) and fixes the lines.
-export default function Editor({ id, initial, seller, origin, canEdit }) {
+export default function Editor({ id, initial, seller, origin, canEdit, catalog = [] }) {
   const router = useRouter();
   const [q, setQ] = useState({ ...initial, lines: initial.totals?.items?.length ? initial.totals.items : initial.lines });
   const [note, setNote] = useState(null);
@@ -65,7 +65,14 @@ export default function Editor({ id, initial, seller, origin, canEdit }) {
               ))}
             </tbody>
           </table>
-          <div style={{ padding: 12 }}><button type="button" className="ghost sm" onClick={() => set("lines", [...q.lines, { desc: "", hsn: "", qty: 1, unit: "", rate: 0, gst: 18 }])}>+ Add a line</button></div>
+          <div className="row" style={{ padding: 12, gap: 8 }}>
+          <button type="button" className="ghost sm" onClick={() => set("lines", [...q.lines, { desc: "", hsn: "", qty: 1, unit: "", rate: 0, gst: 18 }])}>+ Add a line</button>
+          {catalog.length > 0 && (
+            <select value="" onChange={(e) => { const it = catalog.find((c) => c.id === e.target.value); if (it) set("lines", [...q.lines.filter((l) => l.desc || Number(l.rate)), lineFromItem(it)]); }} style={{ width: "auto" }} aria-label="Add from price list">
+              <option value="">+ From price list…</option>{catalog.map((c) => <option key={c.id} value={c.id}>{c.name} · ₹{Number(c.rate).toLocaleString("en-IN")}</option>)}
+            </select>
+          )}
+        </div>
         </div>
 
         <div className="grid-2" style={{ alignItems: "start" }}>

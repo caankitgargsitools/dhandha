@@ -17,7 +17,7 @@ export default async function InvoicePage({ params, searchParams }) {
   const sp = await searchParams;
   const { supabase, company, role } = await getContext();
   const isNew = id === "new";
-  const [{ data: inv }, { data: c }, { data: quote }, { data: lead }, { data: pays }, { data: st }, h] = await Promise.all([
+  const [{ data: inv }, { data: c }, { data: quote }, { data: lead }, { data: pays }, { data: st }, h, { data: catalog }] = await Promise.all([
     isNew ? { data: null } : supabase.from("sales_invoices").select("*").eq("id", id).eq("company_id", company.id).maybeSingle(),
     supabase.from("companies").select("gstin, state, legal_name").eq("id", company.id).single(),
     sp?.quote ? supabase.from("quotes").select("*").eq("id", sp.quote).eq("company_id", company.id).maybeSingle() : { data: null },
@@ -25,6 +25,7 @@ export default async function InvoicePage({ params, searchParams }) {
     isNew ? { data: [] } : supabase.from("invoice_payments").select("*").eq("invoice_id", id).order("paid_on"),
     supabase.from("invoice_settings").select("terms").eq("company_id", company.id).maybeSingle(),
     headers(),
+    supabase.from("catalog_items").select("id, name, description, hsn, unit, rate, gst").eq("company_id", company.id).eq("active", true).order("name"),
   ]);
   if (!isNew && !inv) notFound();
   const origin = process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : `${h.get("x-forwarded-proto") || "https"}://${h.get("host")}`;
@@ -58,7 +59,7 @@ export default async function InvoicePage({ params, searchParams }) {
           <p className="tiny faint" style={{ margin: 0 }}>The client sees the invoice and pays by UPI or bank transfer. Reminders come to you as tasks with a ready message: 3 days before the due date, on the day, and 7 / 15 / 30 days late.</p>
         </div>
       )}
-      <Editor id={inv?.id || null} initial={initial} seller={c} origin={origin} canEdit={canEdit && inv?.status !== "cancelled"} />
+      <Editor id={inv?.id || null} initial={initial} seller={c} origin={origin} catalog={catalog || []} canEdit={canEdit && inv?.status !== "cancelled"} />
       {inv && ["issued", "part_paid", "paid"].includes(inv.status) && (
         <div className="grid-2" style={{ alignItems: "start" }}>
           <div className="panel">

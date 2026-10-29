@@ -21,10 +21,11 @@ export default async function AppLayout({ children }) {
     { title: "Win the business", items: [
       { href: "/app/inbox", label: "WhatsApp inbox", icon: "mail" },
       { href: "/app/leads/playbook", label: "Lead Playbook", icon: "check" },
-      { href: "/app/crm", label: "CRM pipeline", icon: "crm", exclude: ["/app/crm/quotes", "/app/crm/targets", "/app/crm/invoices"] },
+      { href: "/app/crm", label: "CRM pipeline", icon: "crm", exclude: ["/app/crm/quotes", "/app/crm/targets", "/app/crm/invoices", "/app/crm/catalog"] },
       { href: "/app/crm/targets", label: "Targets & leaderboard", icon: "rupee" },
       { href: "/app/crm/quotes", label: "Quotations", icon: "doc" },
       { href: "/app/crm/invoices", label: "Invoices", icon: "rupee" },
+      { href: "/app/crm/catalog", label: "Price list", icon: "doc" },
       { href: "/app/outreach", label: "Outreach", icon: "mail" },
       { href: "/app/sales", label: "Sales team", icon: "calendar" },
     ] },
