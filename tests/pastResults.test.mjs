@@ -31,3 +31,22 @@ test("nothing found says nothing", () => {
   assert.equal(adviceLine(summarise([])), null);
   assert.equal(summarise([]).median, null);
 });
+
+test("price to win from similar results", async () => {
+  const { priceToWin } = await import("../lib/pastResults.js");
+  const rows = [10, 8, 12, 9, 15].map((d) => ({ estimate: 100, awarded_value: 100 - d }));
+  const p = priceToWin(rows, 5000000);
+  assert.equal(p.known, 5);
+  assert.equal(p.discount.mid, 10);
+  assert.equal(p.price.likely, 4500000);
+  assert.ok(p.price.safe < p.price.likely && p.price.likely < p.price.stretch);
+  assert.equal(priceToWin(rows.slice(0, 2), 5000000), null);
+  assert.equal(priceToWin(rows, null), null);
+});
+
+test("firm names normalised like SQL norm_firm", async () => {
+  const { normFirm } = await import("../lib/pastResults.js");
+  assert.equal(normFirm("M/s. Shiv Shakti Builders & Co."), "shivshaktibuilders");
+  assert.equal(normFirm("ABC Infra Private Limited"), "abcinfra");
+  assert.equal(normFirm("The Sharma and Sons LLP"), "sharmasons");
+});
