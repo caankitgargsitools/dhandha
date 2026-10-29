@@ -10,7 +10,7 @@ import { computeSheet } from "@/lib/costing";
 import { candidates, CHOICES } from "@/lib/formatLibrary";
 import { emptySheet, monthsFrom } from "@/lib/costing";
 import Assistant from "./Assistant";
-import { summarise, adviceLine } from "@/lib/pastResults";
+import { summarise, adviceLine, priceToWin } from "@/lib/pastResults";
 import TenderBrief from "../../TenderBrief";
 
 // AI steps (reading, filling, marking) can take a few minutes; lib/ai.js keeps the whole chain inside this
@@ -47,6 +47,7 @@ export default async function TenderAssistant({ params }) {
     supabase.rpc("similar_awards", { p_tender: t.id, p_limit: 8 }),
   ]);
   const pastLine = adviceLine(summarise(similar || []), lakh);
+  const ptwFor = (est) => { const p = priceToWin(similar || [], est); return p ? ` Price to win: about ${lakh(p.price.likely)} (${p.discount.mid}% below the estimate; safer ${lakh(p.price.safe)}).` : ""; };
   const history = (chat || []).reverse().map((x) => ({ who: x.who, text: x.body, error: x.error }));
   // download links for the fetched documents (one signing call for all of them)
   const paths = (files || []).map((x) => x.storage_path).filter(Boolean);
@@ -162,7 +163,7 @@ export default async function TenderAssistant({ params }) {
   if (m.quoted_price) done.push(`Your price: ₹${Number(m.quoted_price).toLocaleString("en-IN")} + GST${m.price_note ? ` (${m.price_note})` : ""}.`);
   else if (canPrepare && read) {
     steps.push({ id: "price", kind: "price", fresh: !m.cost_sheet, ev: m.tech_eval || null, cost: m.cost_sheet ? computeSheet(m.cost_sheet).cost : null, quote: m.quoted_price || null, estimate, sheet: sheet(),
-      say: `Last, your price. Type it if you know it, or let's work out the cost together — items, manpower with PF/ESI/bonus, travel and stay, overheads and margin — and I'll suggest a quote.${pastLine ? ` For reference, past results: ${pastLine}.` : ""}` });
+      say: `Last, your price. Type it if you know it, or let's work out the cost together — items, manpower with PF/ESI/bonus, travel and stay, overheads and margin — and I'll suggest a quote.${pastLine ? ` For reference, past results: ${pastLine}.` : ""}${ptwFor(estimate)}` });
   }
 
   if (packs?.[0]) done.push(`A ${packs[0].kind === "final" ? "signed" : "draft"} bid pack was made ${fmtDate(packs[0].created_at)}.`);
