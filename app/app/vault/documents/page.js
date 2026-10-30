@@ -3,6 +3,8 @@ import FormState from "../../FormState";
 import DeleteButton from "../../DeleteButton";
 import { addDocument } from "../../actions";
 import DriveUpload from "@/components/DriveUpload";
+import VaultUpload from "@/components/VaultUpload";
+import ReadResult from "./ReadResult";
 import Link from "next/link";
 
 function expiryChip(d, tracks) {
@@ -14,6 +16,9 @@ function expiryChip(d, tracks) {
   if (left <= 60) return <span className="chip warn">{left} days left</span>;
   return <span className="chip ok">Valid to {when}</span>;
 }
+
+// adding a document reads it (AI for statements and scans can take a minute)
+export const maxDuration = 300;
 
 export default async function Documents() {
   const { supabase, tenant, company, isAdmin, role } = await getContext();
@@ -32,22 +37,17 @@ export default async function Documents() {
       <div>
         <h1>Documents</h1>
         <p className="muted" style={{ margin: 0 }}>
-          Files stay in your Google Drive. Dhandha keeps the link, the key numbers and the expiry date.
-          You&apos;ll get a phone alert 30 and 7 days before a document expires.
+          Upload a document once and Dhandha reads it: GSTIN, PAN, CIN and Udyam from certificates; turnover, net worth
+          and capital from balance sheets; directors, partners and shareholders from MoA, deeds and returns — straight into
+          your Vault. Nothing you typed is overwritten. You&apos;ll get a phone alert 30 and 7 days before a document expires.
         </p>
       </div>
-      {driveOn ? (
-        <p className="notice info small">Files you upload here go straight into your Google Drive ({drive.google_email}), in a folder for {company.legal_name}. Dhandha can only see files it put there.</p>
-      ) : (
-        <p className="notice small">
-          {isAdmin ? <><Link href="/app/settings/drive">Connect Google Drive</Link> to upload files straight into your own Drive.</> : "Your admin can connect Google Drive so files upload straight into it."} Until then, paste each file&apos;s Drive link below.
-        </p>
-      )}
+      {driveOn && <p className="notice info small">Files you upload here go straight into your Google Drive ({drive.google_email}), in a folder for {company.legal_name}. Dhandha can only see files it put there.</p>}
 
       {role !== "viewer" && (
         <div className="panel">
           <h3>Add a document</h3>
-          <FormState action={addDocument} submit="Add document">
+          <FormState action={addDocument} submit="Add document and read it">
             <div className="form-grid">
               <div>
                 <label htmlFor="type_code">Type</label>
@@ -67,9 +67,9 @@ export default async function Documents() {
               <div><label htmlFor="period">Year / period</label><input id="period" name="period" placeholder="FY 2024-25" /></div>
               <div><label htmlFor="issued_on">Issued on</label><input id="issued_on" name="issued_on" type="date" /></div>
               <div><label htmlFor="valid_until">Valid until</label><input id="valid_until" name="valid_until" type="date" /></div>
-              {driveOn && <div style={{ gridColumn: "1 / -1" }}><DriveUpload /></div>}
+              <div style={{ gridColumn: "1 / -1" }}>{driveOn ? <DriveUpload /> : <VaultUpload tenantId={tenant.id} companyId={company.id} />}</div>
               <div style={{ gridColumn: "1 / -1" }}>
-                <label htmlFor="drive_link">{driveOn ? "…or paste a Google Drive link" : "Google Drive link"}</label>
+                <label htmlFor="drive_link">…or paste a Google Drive link (kept as a link, not read)</label>
                 <input id="drive_link" name="drive_link" type="url" placeholder="https://drive.google.com/file/d/…" />
               </div>
             </div>
@@ -87,10 +87,10 @@ export default async function Documents() {
             <tbody>
               {docs.map((d) => (
                 <tr key={d.id}>
-                  <td><strong>{d.title || byType[d.type_code]?.name}</strong><div className="muted small">{d.type_code}</div></td>
+                  <td><strong>{d.title || byType[d.type_code]?.name}</strong><div className="muted small">{d.type_code}</div><ReadResult doc={d} canEdit={role !== "viewer"} /></td>
                   <td>{d.number || "—"}{d.period ? <div className="muted small">{d.period}</div> : null}</td>
                   <td>{expiryChip(d, byType[d.type_code]?.tracks_expiry)}</td>
-                  <td>{d.drive_url ? <a href={d.drive_url} target="_blank" rel="noreferrer">Open in Drive</a> : <span className="muted small">No link</span>}</td>
+                  <td>{d.drive_url ? <a href={d.drive_url} target="_blank" rel="noreferrer">Open in Drive</a> : d.storage_path ? <span className="small">{d.file_name || "Uploaded file"}</span> : <span className="muted small">No file</span>}</td>
                   <td>{isAdmin && <DeleteButton table="documents" id={d.id} />}</td>
                 </tr>
               ))}
