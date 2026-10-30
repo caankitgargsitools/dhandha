@@ -2,7 +2,7 @@
 
 Checked and sent to the owner every morning (09:23 IST) by the Dhandha development session. Items move to
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
-Last checked: 29 Oct 2026 (09:23 IST).
+Last checked: 30 Oct 2026 (09:23 IST).
 
 ## The queue — one by one, in this order
 
@@ -77,6 +77,8 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 52 | **Pricing of Dhandha** — set plans and credits against competitors (notes in CLAUDE.md "Competitors"); suggestion: free tier + ~₹999/mo or ₹9,999/yr all-in + credits | Both | Built and working | To do — one by one, in the order you choose |
 
 ## Done (recent)
+- 30 Oct (morning): yesterday's work went live this morning (Vercel build limit reset): email enquiries → leads (Generate leads → Email enquiries, Gmail script), saved replies in the WhatsApp inbox (C45), playbook save fix, no double charges for AI reading / format fill, fast re-score (answers now update scores in ~3 s), Vault documents answer conditions (GST, peer review, ICAI…) without asking. Tender presentation (29 slides of the live app): https://claude.ai/artifact/MvEnW53jFPj4VcreabFuKE. NTPC + SAIL tenders arriving (88). Tender winners 15 (7 new). Voice server repaired (your server update); first browser test call made.
+
 - 29 Oct (morning): playbook save error fixed (steps other than WhatsApp now save); email enquiries → leads (C42) being built — Gmail script and webhook ready, set-up page next. Vercel's free plan ran out of builds today (100 a day) — only `main` is built from now on, so this no longer happens. Tender winners still 8 in all: the morning-session results step has not added any yet — Claude is checking it.
 
 - 29 Oct (night, owner asked to keep building for 15 hours): **Bid desk** — Past results and Rivals with "price to win", Partners (consortium / JV / sub-work), EMD & bank-guarantee register with refund and expiry alerts, Our bid results (win rate, why we lose, gap to L1), Pre-bid queries (free draft + AI), Bid plan with technical / finance / management sign-offs, Bid calendar link (Google / Outlook / phone). **Sales** — Invoices with Pay-by-UPI page, payments, reminders and monthly retainers; Price list for quotes and invoices. **Leads** — Website builder (/s/your-name), website chat widget, Google review replies and weekly posts, ChatGPT / Claude plug-in, Targets & leaderboard, GPS field check-in, chance to close. **Tenders** — World Bank tenders daily (264 so far). **AI learning** — the AI tender check learns from your own and similar firms' decisions, "stop showing" word suggestions, your record on similar tenders, suggested lessons for the AI caller. Competitor ideas C35–C48 added; still waiting for your answer on C45 (saved replies), C43 (several pipelines), 37 (buyer RFQs).
