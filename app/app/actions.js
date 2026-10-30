@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
+import { readVaultDocument } from "@/lib/vaultRead";
 import { getContext, COMPANY_COOKIE } from "@/lib/session";
 
 const s = (v) => {
@@ -122,7 +123,10 @@ export async function addDocument(prev, formData) {
   if (drive_url && !/^https:\/\/(drive|docs)\.google\.com\//.test(drive_url)) return { error: "Drive link should start with https://drive.google.com/ or https://docs.google.com/" };
   const uploadedId = s(formData.get("drive_file_id"));
   const idMatch = uploadedId ? [null, uploadedId] : drive_url?.match(/\/d\/([a-zA-Z0-9_-]{10,})/) || drive_url?.match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
-  const { error } = await supabase.from("documents").insert({
+  // a file uploaded straight into Dhandha (VaultUpload) sits under this workspace's own folder
+  const storage_path = s(formData.get("storage_path"));
+  if (storage_path && !storage_path.startsWith(`${tenant.id}/${company.id}/`)) return { error: "That upload is not in this company's folder." };
+  const { data: row, error } = await supabase.from("documents").insert({
     tenant_id: tenant.id,
     company_id: company.id,
     type_code,
@@ -133,11 +137,46 @@ export async function addDocument(prev, formData) {
     valid_until: s(formData.get("valid_until")),
     drive_url,
     drive_file_id: idMatch ? idMatch[1] : null,
-  });
+    storage_path,
+    file_name: s(formData.get("file_name")),
+    mime: s(formData.get("mime")),
+  }).select("id").single();
   if (error) return { error: error.message };
-  revalidatePath("/app/vault/documents");
+  // read it at once: what the document says goes into the masters
+  const ctx = await getContext();
+  const r = row.id && (storage_path || idMatch) ? await readVaultDocument(ctx, row.id) : null;
+  revalidatePath("/app/vault", "layout");
   revalidatePath("/app");
-  return { message: "Document added." };
+  return { message: `Document added.${r?.message ? ` ${r.message}` : r?.error ? ` It could not be read: ${r.error}` : ""}` };
+}
+
+// Read a Vault document again (after a top-up, or a better copy).
+export async function readDocumentAgain(docId) {
+  const ctx = await getContext();
+  if (viewOnly(ctx.role)) return VIEW_ONLY;
+  const r = await readVaultDocument(ctx, String(docId));
+  revalidatePath("/app/vault", "layout");
+  return r;
+}
+
+// Take the document's value where it differs from the Vault (the person chose it).
+export async function useDocumentValue(docId, idx) {
+  const { supabase, tenant, company, role } = await getContext();
+  if (viewOnly(role)) return VIEW_ONLY;
+  const { data: doc } = await supabase.from("documents").select("id, extracted").eq("id", String(docId)).eq("company_id", company.id).maybeSingle();
+  const c = doc?.extracted?.conflicts?.[Number(idx)];
+  if (!c) return { error: "Nothing to change." };
+  const COMPANY = ["legal_name", "trade_name", "constitution", "pan", "gstin", "cin", "udyam_no", "msme_category", "incorporation_date", "registered_address", "city", "state", "pincode"];
+  let error;
+  if (c.kind === "company" && COMPANY.includes(c.field)) ({ error } = await supabase.from("companies").update({ [c.field]: c.doc }).eq("id", company.id));
+  else if (c.kind === "fact" && /^(fin|people)\./.test(c.field)) ({ error } = await supabase.from("company_facts").upsert({ tenant_id: tenant.id, company_id: company.id, key: c.field, period: c.period || "", value: String(c.doc), unit: c.field.startsWith("fin.") ? "INR" : "persons", source: "document" }, { onConflict: "company_id,key,period" }));
+  else return { error: "Nothing to change." };
+  if (error) return { error: error.message };
+  const conflicts = doc.extracted.conflicts.map((x, i) => (i === Number(idx) ? { ...x, settled: "document" } : x));
+  await supabase.from("documents").update({ extracted: { ...doc.extracted, conflicts } }).eq("id", doc.id);
+  await supabase.rpc("rescore_company", { p_company: company.id });
+  revalidatePath("/app/vault", "layout");
+  return { ok: true };
 }
 
 export async function addExperience(prev, formData) {

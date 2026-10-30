@@ -109,3 +109,4 @@ Social lead sources:
 86. `pending/63_session_reopen.sql` (apply_migration, 29 Oct) — `private.session_stale`; "Start today's session" and the 09:31 reminder include sessions live since an earlier day, so tender winners are read every day
 87. `pending/64_rescore_fast.sql` (apply_migration, 29 Oct) — `rescore_company` now re-scores open matches at once and queues the full scan (`private.rescore_requests`, cron `rescore_queue`); before, it ran past the 8-second limit and did nothing
 88. `pending/65_saved_replies.sql` (apply_migration, 29 Oct) — saved replies: `saved_replies`, `saved_reply_save`, `saved_reply_used`
+89. `pending/66_vault_reading.sql` (apply_migration, 30 Oct) — Vault document reading: bucket `vault-docs` + policies, `documents.storage_path / file_name / mime / read_status / read_at`, `people.din / share_pct / source`, price_book `vault_read` (5 credits)
