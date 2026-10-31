@@ -2,7 +2,7 @@
 
 Checked and sent to the owner every morning (09:23 IST) by the Dhandha development session. Items move to
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
-Last checked: 30 Oct 2026 (09:23 IST).
+Last checked: 31 Oct 2026 (09:23 IST).
 
 ## The queue — one by one, in this order
 
@@ -77,6 +77,8 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 52 | **Pricing of Dhandha** — set plans and credits against competitors (notes in CLAUDE.md "Competitors"); suggestion: free tier + ~₹999/mo or ₹9,999/yr all-in + credits | Both | Built and working | To do — one by one, in the order you choose |
 
 ## Done (recent)
+- 31 Oct (morning): Vault now reads every uploaded document (30 Oct, owner's request) — GST / PAN / Udyam / incorporation certificates free; balance sheets, MoA / AoA, deeds, ITRs, work orders and scans by paid AI (5 credits) — into the company record, facts, key people and experience, never overwriting (no document uploaded yet to try it). Tender winners 23 (8 new). 48 leads for ₹96; 7 new GSC matches; ~8,200 tenders crawled.
+
 - 30 Oct (morning): yesterday's work went live this morning (Vercel build limit reset): email enquiries → leads (Generate leads → Email enquiries, Gmail script), saved replies in the WhatsApp inbox (C45), playbook save fix, no double charges for AI reading / format fill, fast re-score (answers now update scores in ~3 s), Vault documents answer conditions (GST, peer review, ICAI…) without asking. Tender presentation (29 slides of the live app): https://claude.ai/artifact/MvEnW53jFPj4VcreabFuKE. NTPC + SAIL tenders arriving (88). Tender winners 15 (7 new). Voice server repaired (your server update); first browser test call made.
 
 - 29 Oct (morning): playbook save error fixed (steps other than WhatsApp now save); email enquiries → leads (C42) being built — Gmail script and webhook ready, set-up page next. Vercel's free plan ran out of builds today (100 a day) — only `main` is built from now on, so this no longer happens. Tender winners still 8 in all: the morning-session results step has not added any yet — Claude is checking it.
