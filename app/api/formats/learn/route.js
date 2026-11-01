@@ -18,11 +18,14 @@ export async function POST(request) {
     if (!reads?.length) break;
     const items = reads.flatMap((r) => harvestItems(r.formats || [], r.tender || {}));
     sum.reads += reads.length;
+    let failed = false;
     for (let i = 0; i < items.length; i += 60) {
       const { data, error: e } = await supabase.rpc("format_learn", { p_key: key, p_items: items.slice(i, i + 60) });
-      if (e) { console.error("format_learn", e.message); break; }
+      if (e) { console.error("format_learn", e.message); failed = true; break; }
       sum.new += Number(data?.new || 0); sum.repeat += Number(data?.repeat || 0);
     }
+    // not stored: hand the readings back so the next run learns them (a repeat only raises a count, never duplicates)
+    if (failed) { await supabase.rpc("format_learn_release", { p_key: key, p_reads: reads.map((r) => r.read) }); break; }
   }
   return Response.json(sum);
 }

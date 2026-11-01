@@ -49,10 +49,11 @@ export default async function FormatCatalogue({ searchParams }) {
             </div>
           </details>
           <div className="row" style={{ gap: 8 }}>
+            {/* first in the form, so Enter in the heading box only saves (it does not approve or hide) */}
+            <button name="status" value="" className="ghost">Save edits</button>
             {status !== "approved" && <button name="status" value="approved">Approve</button>}
             {status !== "hidden" && <button name="status" value="hidden" className="ghost">Hide</button>}
             {status === "hidden" && <button name="status" value="new" className="ghost">Bring back</button>}
-            <button name="status" value="" className="ghost">Save edits</button>
           </div>
         </form>
       ))}
