@@ -77,6 +77,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 52 | **Pricing of Dhandha** — set plans and credits against competitors (notes in CLAUDE.md "Competitors"); suggestion: free tier + ~₹999/mo or ₹9,999/yr all-in + credits | Both | Built and working | To do — one by one, in the order you choose |
 
 ## Claude is fixing
+- Security follow-ups (review 1 Nov): shared tender fields can be changed by any workspace holding a real match (move per-workspace readings off the shared tender row); tender-docs storage reads not scoped by workspace (low — public tender documents).
 - Server auto-update: the long-running Watchtower stopped updating silently (server stayed on the 27 Oct version). Fix = one paste on the server (1 Nov): hourly cron running Watchtower once + crawler memory limit 1200 MB. Verify after the owner runs it (new crawler image picked up within the hour).
 - Tender winners in the captcha session: the results page rejected every typed captcha (1 Nov), so it is switched off (`session_winners = off`); fix the results form (which button / field the answer goes to) with a probe, then switch it back on.
 

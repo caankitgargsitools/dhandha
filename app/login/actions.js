@@ -27,6 +27,8 @@ export async function signIn(prev, formData) {
     ({ error } = await supabase.auth.signInWithPassword({ email, password }));
   }
   if (error) return { error: error.message === "Email not confirmed" ? "Please confirm your email first — check your inbox (and spam)." : error.message };
+  // signed in from another workspace's invite link: record that link, so this workspace's invite can be claimed
+  await confirmByInvite(supabase, inviteOf(formData), email);
   redirect("/app");
 }
 
