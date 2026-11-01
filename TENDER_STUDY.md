@@ -59,9 +59,9 @@ with questions for the owner. Questions never block the work — they wait here 
 
 | # | Question | Options | Answer |
 |---|---|---|---|
-| Q1 | Bid capacity (F1): work it out automatically for works tenders? | Yes / No / Later | |
-| Q2 | Manpower wage sheet (F8): load the minimum wages of each state (Central plus all states; they change twice a year)? | Yes, all states / Only Central / Later | |
-| Q3 | Reverse auction (F4): add a "how low can we go" floor price in the price step for GeM bids? | Yes / Later | |
+| Q1 | Bid capacity (F1): work it out automatically for works tenders? | Yes / No / Later | **Pending list** (1 Nov) — ask again later |
+| Q2 | Manpower wage sheet (F8): load the minimum wages of each state (Central plus all states; they change twice a year)? | Yes, all states / Only Central / Later | **Pending list** (1 Nov) |
+| Q3 | Reverse auction (F4): add a "how low can we go" floor price in the price step for GeM bids? | Yes / Later | **Yes** (1 Nov) — built: `raFloor` + `RaFloor.js` |
 | Q4 | CA-firm points (F6): work out empanelment points for bank-audit tenders free from Key people? | Yes / Later | |
 | Q5 | Fetch and read **every attachment** of a GeM bid (ATC, scope of work, RFP) — free, a little more storage (F10)? | Yes / No | **Yes** (1 Nov) — built |
 | Q6 | Build the free **GeM bid-details parser** that drives eligibility, deposits and the price step (F11)? | Yes / No | **Yes** (1 Nov) — built |
