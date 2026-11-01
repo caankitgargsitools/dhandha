@@ -27,6 +27,7 @@ export default async function Vault() {
     { href: "/app/vault/facts", icon: "facts", title: "Facts", text: "Turnover, net worth and every answer given to a tender — asked once.", status: `${facts || 0} saved`, ok: (facts || 0) > 0 },
     { href: "/app/vault/experience", icon: "briefcase", title: "Experience", text: "Completed and ongoing works, for similar-work criteria.", status: `${works || 0} works`, ok: (works || 0) > 0 },
     { href: "/app/vault/people", icon: "people", title: "Key people", text: "Engineers, partners and staff named in bids.", status: `${people || 0} people`, ok: (people || 0) > 0 },
+    { href: "/app/vault/brands", icon: "tender", title: "Brands & supplies", text: "For resellers: brands you may sell and what you supplied each year (GeM checks both).", status: "Optional", ok: true },
     { href: "/app/brand", icon: "pen", title: "Letterhead & signature", text: "Printed on every bid; the signature only with the admin's code.", status: ["letterhead", "signature", "seal"].filter((k) => kinds.has(k)).join(", ") || "Not uploaded", ok: kinds.has("letterhead") && kinds.has("signature") },
   ];
   return (

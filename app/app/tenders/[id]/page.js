@@ -4,6 +4,7 @@ import { prerequisiteList } from "@/lib/prereq";
 import GetReady from "@/components/GetReady";
 import FinTests from "@/components/FinTests";
 import { checkFinTests } from "@/lib/finTests";
+import { oemCheck, oemsFrom, suppliesFrom } from "@/lib/oem";
 import { mandatoryUnmet } from "@/lib/conditions";
 import { notFound } from "next/navigation";
 import { getContext, daysLeft, lakh, fmtDate } from "@/lib/session";
@@ -50,7 +51,7 @@ export default async function TenderDetail({ params, searchParams }) {
     supabase.from("tender_changes").select("*").eq("tender_id", t.id).order("seen_at", { ascending: false }),
     supabase.from("wallets").select("balance").eq("tenant_id", m.tenant_id).maybeSingle(),
   ]);
-  const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }, { data: deposits }, { data: board }, { data: team }, { data: outcomes }] = await Promise.all([
+  const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }, { data: deposits }, { data: board }, { data: team }, { data: outcomes }, { data: oemFacts }] = await Promise.all([
     supabase.from("tender_files").select("*").eq("tender_id", t.id).order("created_at"),
     supabase.from("tender_reads").select("*").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
     supabase.rpc("similar_awards", { p_tender: t.id, p_limit: 8 }),
@@ -59,6 +60,7 @@ export default async function TenderDetail({ params, searchParams }) {
     supabase.rpc("bid_board", { p_match: m.id }),
     supabase.from("tenant_members").select("user_id, role, profiles(full_name, email)").eq("tenant_id", m.tenant_id).in("role", ["admin", "manager", "bid_preparer"]),
     supabase.rpc("bid_outcomes", { p_company: company.id }),
+    supabase.from("company_facts").select("key, period, value, valid_until").eq("company_id", company.id).or("key.like.oem.%,key.like.supply.%"),
   ]);
   const record = bidChance((outcomes || []).filter((o) => o.match_id !== m.id), t);
   const members = (team || []).map((x) => ({ user_id: x.user_id, name: x.profiles?.full_name || x.profiles?.email || "Member" }));
@@ -126,6 +128,7 @@ export default async function TenderDetail({ params, searchParams }) {
       </div>
 
       <FinTests rows={checkFinTests(read?.fields?.fin_tests, facts, t.value_inr)} />
+      <FinTests title="GeM: OEM and past supplies" href="/app/vault/brands" link="Vault → Brands & supplies" rows={oemCheck({ gem: read?.fields?.gem, title: t.title, oems: oemsFrom(oemFacts || []), supplies: suppliesFrom(oemFacts || []), dueAt: t.due_at })} />
 
       <GetReady items={prerequisiteList({ found: read?.fields?.prereq || t.prereq || [], fields: read?.fields || {}, tender: t, unmet: mandatoryUnmet(m.reasons), checklist, msme: !!msme, aiLines: read?.fields?.prepare_before })} />
 
