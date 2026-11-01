@@ -15,7 +15,7 @@ export default async function AdminLayout({ children }) {
     supabase.from("voice_lessons").select("id", { count: "exact", head: true }).is("tenant_id", null).eq("status", "proposed"),
   ]);
   const sections = [
-    { items: [{ href: "/admin", label: "Overview", icon: "home" }] },
+    { items: [{ href: "/admin", label: "Overview", icon: "home" }, { href: "/admin/learning", label: "What Dhandha has learned", icon: "sparkle" }] },
     { title: "Customers", items: [
       { href: "/admin/tenants", label: "Workspaces", icon: "building" },
       { href: "/admin/tickets", label: "Ticket queue", icon: "ticket", tag: open?.length ? String(open.length) : undefined },

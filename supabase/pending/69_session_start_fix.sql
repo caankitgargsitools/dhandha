@@ -52,3 +52,7 @@ create trigger b_skip_winners_captcha before insert or update on public.portal_s
 create or replace function private.session_portals() returns setof text language sql stable security definer set search_path to '' as $function$
   select distinct portal from public.tenders where portal not in ('SBI e-Procurement', 'IREPS', 'CPPP', 'HSVP e-Tender', 'Gujarat nProcure', 'Karnataka KPPP', 'AP eProcurement', 'Telangana eProcurement', 'Bihar eProc', 'NTPC Tenders', 'SAIL Tenders', 'World Bank') and portal not ilike '%gem%' and status = 'live'
 $function$;
+
+-- learning_stats() for Admin → What Dhandha has learned (applied with execute_sql, 1 Nov): counts and growth of every
+-- learning store (format_catalog, tender_texts, tender_reads, tender_matches decisions, win_stats, tender_awards, rivals,
+-- voice_lessons, portal_session_log, master.* facts, taxonomy_custom, ai_usage, harvest jobs). See the database for the body.
