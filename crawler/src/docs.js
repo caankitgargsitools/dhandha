@@ -296,6 +296,7 @@ async function openSession(browser, req) {
 // After the session's portals are open (nothing left to claim), the winners pages one portal at a time, each captcha
 // waiting 2 minutes at most — so the session itself is not held up and an unattended one does not block fetching.
 const winnersQueue = new Set();
+const SESSION_PARALLEL = Math.max(1, Math.min(5, Number(env.SESSION_PARALLEL || 3)));
 async function winnersPass() {
   for (const portal of winnersQueue) {
     winnersQueue.delete(portal);
@@ -501,8 +502,15 @@ try {
       // waiting job (people's jobs are claimed first) runs, so customers are not held up for the whole session
       if (!afterSession && Date.now() - lastSessionCheck > 10000) {
         lastSessionCheck = Date.now();
-        const req = await rpc("session_claim", { p_runner: RUNNER }).catch((e) => { log("session_claim", e.message); return null; });
-        if (req) { await openSession(browser, req); lastSessionCheck = 0; lastPortal = req.portal; afterSession = true; continue; }
+        // several portals open at once (SESSION_PARALLEL, default 3): their captchas come together, so the person types
+        // them one after another instead of waiting minutes for each slow portal to load
+        const reqs = [];
+        for (let k = 0; k < SESSION_PARALLEL; k++) {
+          const req = await rpc("session_claim", { p_runner: RUNNER }).catch((e) => { log("session_claim", e.message); return null; });
+          if (!req) break;
+          reqs.push(req);
+        }
+        if (reqs.length) { await Promise.all(reqs.map((r) => openSession(browser, r).catch((e) => log("session", r.portal, e.message)))); lastSessionCheck = 0; lastPortal = reqs[reqs.length - 1].portal; afterSession = true; continue; }
         const pr = await rpc("probe_claim", { p_runner: RUNNER }).catch(() => null);
         if (pr) { await runProbe(browser, pr); lastSessionCheck = 0; continue; }
       }
