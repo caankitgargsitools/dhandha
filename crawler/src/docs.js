@@ -54,7 +54,9 @@ const sessionChannel = (portal) => ({
 });
 
 // Show the captcha picture to a person and wait for the answer; fill it and press the visible button.
-async function captchaFromPerson(page, job, channel = jobChannel(job), label = "The portal asked for a captcha", waitMs = 9 * 60000) {
+// A person waits on their own fetch for up to 9 minutes; background fetches (prefetch, study) give up after 2, so one
+// unanswered captcha does not hold the single worker — and every other waiting job — for long.
+async function captchaFromPerson(page, job, channel = jobChannel(job), label = "The portal asked for a captcha", waitMs = job?.auto ? 2 * 60000 : 9 * 60000) {
   for (let attempt = 1; attempt <= 3; attempt++) {
     const img = await visible(page, CAPTCHA_IMG), input = await visible(page, CAPTCHA_INPUT);
     if (!img || !input) return true;
