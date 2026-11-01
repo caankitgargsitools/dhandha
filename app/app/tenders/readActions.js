@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { getContext } from "@/lib/session";
 import { pdfPages } from "@/lib/pdftext";
 import { readTenderText, formatId } from "@/lib/tenderRules";
+import { gemReadFields, gemLines } from "@/lib/gemFields";
 import { aiReadTender } from "@/lib/tenderAi";
 import { aiTiers } from "@/lib/ai";
 import { aiDocument } from "@/lib/tenderPdf";
@@ -118,6 +119,11 @@ async function readTenderLocked({ supabase, tenant, user, m, matchId, mode, file
       });
     }
     if (Array.isArray(d.risks) && d.risks.length) risks = d.risks.slice(0, 15);
+    // a GeM bid's labelled fields are exact: they win over the AI's reading, and their lines lead "Get ready"
+    if (fields.gem) {
+      Object.assign(fields, gemReadFields(fields.gem));
+      fields.prepare_before = [...gemLines(fields.gem), ...(fields.prepare_before || []).filter((l) => !gemLines(fields.gem).includes(l))].slice(0, 20);
+    }
     summary = d.summary.join("\n");
     engine = ai.engine;
     confidence = Math.max(confidence, 85);
