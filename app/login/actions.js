@@ -22,13 +22,10 @@ async function confirmByInvite(supabase, token, email) {
 export async function signIn(prev, formData) {
   const supabase = await createClient();
   const email = String(formData.get("email") || "").trim(), password = String(formData.get("password") || "");
-  let { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error?.message === "Email not confirmed" && (await confirmByInvite(supabase, inviteOf(formData), email))) {
-    ({ error } = await supabase.auth.signInWithPassword({ email, password }));
-  }
-  if (error) return { error: error.message === "Email not confirmed" ? "Please confirm your email first — check your inbox (and spam)." : error.message };
-  // signed in from another workspace's invite link: record that link, so this workspace's invite can be claimed
+  // from an invite link: confirms the invited address and records this workspace's link (so its invite can be claimed)
   await confirmByInvite(supabase, inviteOf(formData), email);
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return { error: error.message === "Email not confirmed" ? "Please confirm your email first — check your inbox (and spam)." : error.message };
   redirect("/app");
 }
 

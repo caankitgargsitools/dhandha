@@ -21,10 +21,12 @@ export default function Sessions({ initial }) {
     const { data, error } = await db.current.rpc("portal_sessions_view");
     if (!error) setRows(data || []);
   }, []);
+  // every 2 s while a portal is opening or a captcha waits / is being checked, every 6 s otherwise
+  const fast = rows.some((r) => ["captcha", "opening", "requested"].includes(r.state));
   useEffect(() => {
-    const p = setInterval(load, 2000), t = setInterval(() => tick((x) => x + 1), 30000);
+    const p = setInterval(load, fast ? 2000 : 6000), t = setInterval(() => tick((x) => x + 1), 30000);
     return () => { clearInterval(p); clearInterval(t); };
-  }, [load]);
+  }, [load, fast]);
 
   async function start(portals = null) {
     setBusy(portals ? portals[0] : "all"); setErr("");
@@ -62,7 +64,7 @@ export default function Sessions({ initial }) {
               <img src={r.captcha_image} alt={`Captcha from ${r.portal}`} style={{ maxWidth: "100%", background: "#fff", borderRadius: 6, minHeight: 40, imageRendering: "pixelated" }} />
               <div className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
                 <input name="a" autoFocus={r === waiting[0]} autoComplete="off" autoCapitalize="off" spellCheck={false} required maxLength={40} aria-label={`Captcha for ${r.portal}`} style={{ flex: 1, width: "auto" }} />
-                <button className="sm" disabled={busy === r.portal} aria-busy={busy === r.portal}>Send</button>
+                <button className="sm">Send</button>
               </div>
             </form>
           ))}

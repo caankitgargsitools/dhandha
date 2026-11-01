@@ -2,8 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { openOutside, syncOutside, uploadFilled } from "../../outsideActions";
+import { MAX_UPLOAD } from "@/lib/gdocs";
 
-const MAX_UPLOAD = 3.5 * 1024 * 1024;
 
 // Fill a big format where people are comfortable: Google Docs / Google Sheets (in the workspace's own Drive; what is
 // saved there comes back when they return to this page), or Word / Excel (download, fill, upload the file back).

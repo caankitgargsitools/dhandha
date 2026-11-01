@@ -63,7 +63,7 @@ async function captchaFromPerson(page, job, channel = jobChannel(job), label = "
     const until = Date.now() + waitMs;
     let answer = null;
     while (Date.now() < until) {
-      await sleep(1000); // the answer is picked up within a second of being sent
+      await sleep(Date.now() - (until - waitMs) < 60000 ? 1000 : 3000); // within a second at first, then every 3 s
       const s = await channel.poll();
       if (s.stop) throw new Error("stopped");
       if (s.answer && s.seq === seq) { answer = s.answer; break; }
@@ -220,12 +220,11 @@ async function upload(job, files) {
 const SESSION_IDLE_MS = 45 * 60000, LIVE_IDLE_MS = 24 * 3600000;
 const KEEPALIVE_MS = 4 * 60000;
 const EXPIRED_RX = /session\s+(?:has\s+)?(?:expired|timed?\s*out)|session\s+time\s*out|invalid\s+session/i;
-const MAX_IDLE_SESSIONS = 8; // non-live sessions kept open at once; the least recently used close first
 const MAX_OPEN_PAGES = Math.max(2, Number(env.MAX_OPEN_PAGES || 5)); // all portal pages, live or not
 const sessions = new Map(); // portal -> { ctx, page, last, live, touched }
 const event = (portal, e, cookies = null) => rpc("session_event", { p_portal: portal, p_event: e, p_runner: RUNNER, p_cookies: cookies }).catch((x) => log("session_event", x.message));
 const saveCookies = async (portal, s) => event(portal, "cookies", await s.ctx.cookies().catch(() => null));
-// Close sessions idle past their limit, and the least recently used non-live ones beyond MAX_IDLE_SESSIONS.
+// Close sessions idle past their limit, then keep at most MAX_OPEN_PAGES pages open (non-live ones go first).
 async function evictIdle(keep = null) {
   for (const [p, s] of sessions) {
     if (p !== keep && Date.now() - s.last > (s.live ? LIVE_IDLE_MS : SESSION_IDLE_MS)) {
@@ -233,11 +232,9 @@ async function evictIdle(keep = null) {
       await dropSession(p);
     }
   }
-  const idle = [...sessions].filter(([p, s]) => p !== keep && !s.live).sort((a, b) => a[1].last - b[1].last);
-  for (const [p] of idle.slice(0, Math.max(0, idle.length - MAX_IDLE_SESSIONS))) await dropSession(p);
-  // memory cap (the server is small and shared): at most MAX_OPEN_PAGES portal pages open at once. A live session past
-  // the cap is put away — its cookies are saved first and sessionFor() restores them when the portal is needed again.
-  const open = [...sessions].filter(([p]) => p !== keep).sort((a, b) => a[1].last - b[1].last);
+  // memory cap (the server is small and shared): at most MAX_OPEN_PAGES portal pages open at once. Non-live pages close
+  // first; a live session past the cap is put away with its cookies saved, and sessionFor() restores them when needed.
+  const open = [...sessions].filter(([p]) => p !== keep).sort((a, b) => (a[1].live - b[1].live) || (a[1].last - b[1].last));
   for (const [p, x] of open.slice(0, Math.max(0, open.length - (MAX_OPEN_PAGES - 1)))) {
     if (x.live) await saveCookies(p, x);
     await dropSession(p);
@@ -425,6 +422,7 @@ async function runGemJob(browser, job) {
     if (!url || !/^https:\/\/bidplus\.gem\.gov\.in\/show/i.test(url)) { await update(job, { status: "failed", error: "This GeM bid has no document link." }); return; }
     const get = async () => {
       const r = await ctx.request.get(url, { timeout: 60000 });
+      if (Number(r.headers()["content-length"] || 0) > MAX_BYTES) return null; // too large: not read into memory
       const body = r.ok() ? await r.body() : null;
       return body && body.subarray(0, 4).toString() === "%PDF" ? body : null;
     };
@@ -437,8 +435,7 @@ async function runGemJob(browser, job) {
     }
     if (!data) { await update(job, { status: "failed", error: "GeM did not give the bid document. Download it from GeM and upload here." }); return; }
     if (data.length > MAX_BYTES) { await update(job, { status: "failed", error: "The GeM bid document is too large to fetch here." }); return; }
-    const name = `${String(job.tender_ref || "GeM-bid").replace(/[^\w-]+/g, "-")}.pdf`;
-    const list = await upload(job, [{ name, data }]);
+    const list = await upload(job, [{ name: `${job.tender_ref || "GeM-bid"}.pdf`, data }]); // upload() cleans the name
     await update(job, { status: "fetched", step: "Fetched the GeM bid document", files: list });
     log(`job ${job.id}: GeM ${job.tender_ref} ${Math.round(data.length / 1024)} KB`);
   } catch (e) {
