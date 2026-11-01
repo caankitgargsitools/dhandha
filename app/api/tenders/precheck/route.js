@@ -33,6 +33,8 @@ export async function POST(request) {
           if (!b64) continue;
           try { pages.push(...(await pdfPages(new Uint8Array(Buffer.from(b64, "base64")))).pages); } catch {}
         }
+        // the full public text is kept for the tender study (what departments ask for, how they evaluate); page breaks as form feeds
+        if (pages.length) await supabase.rpc("tender_text_save", { p_key: key, p_tender: j.tender, p_text: pages.join("\f").slice(0, 300000), p_pages: pages.length });
         // nothing readable (no PDF, scanned only, too big): still report, so the job is marked pre-checked and not claimed again
         const rules = pages.length ? readTenderText(pages) : null;
         const read = !rules ? { fields: { _note: "Automatic pre-check: no readable PDF" }, required_docs: [], formats: [], risks: [], confidence: 0 } : {
