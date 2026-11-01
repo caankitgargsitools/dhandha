@@ -12,6 +12,7 @@ import CostPlanner from "./CostPlanner";
 import { MasterAnswer, WorkAnswer, PersonAnswer, FormatPicker } from "./Questions";
 import AnnexureEditor from "./AnnexureEditor";
 import EvalPanel from "./EvalPanel";
+import PreferencePanel from "./PreferencePanel";
 import OutsideEdit from "./OutsideEdit";
 import { syncOutside } from "../../outsideActions";
 import { Spinner, TimedProgress } from "@/components/Progress";
@@ -278,6 +279,7 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
               <button className="ghost" disabled={busy} onClick={skip}>Not now</button>
             </div>
           )}
+          {current.kind === "price" && current.gem && <PreferencePanel gem={current.gem} msme={current.msme} quote={current.quote} estimate={current.estimate} cost={current.cost} />}
           {current.kind === "price" && current.ev && <EvalPanel ev={current.ev} estimate={current.estimate} cost={current.cost} quote={current.quote} />}
           {current.kind === "price" && <CostPlanner matchId={matchId} boqDocs={boqDocs} initial={current.sheet} estimate={current.estimate} fresh={current.fresh} saved={current.quote ? { price: current.quote } : null} onDone={(label) => { askedNow(); say("me", label); say("bot", "Price saved for this tender. It goes on the preparation sheet; you enter it in the portal's price bid."); router.refresh(); }} />}
           {current.kind === "draft" && (

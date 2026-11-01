@@ -117,3 +117,19 @@ test("the figures land in the reader's own fields and in plain lines", () => {
   assert.match(lines, /attached files/);
   assert.equal(parseGemFields("An ordinary NIT of CPWD"), null);
 });
+
+test("MSE / Make in India: who may match L1, and for how much", async () => {
+  const { matchL1 } = await import("../lib/gemFields.js");
+  const gem = { mse_preference: true, mse_margin_pct: 15, mse_share_pct: 25, mii_preference: true, total_qty: 1013 };
+  let r = matchL1({ gem, msme: true, classOne: true, ourPrice: 110000, l1Price: 100000 });
+  assert.match(r.find((x) => x.kind === "mse").line, /match L1 at ₹1,00,000 for 25% of the order/);
+  assert.match(r.find((x) => x.kind === "mii").line, /for 50% of the order/);
+  assert.match(r.find((x) => x.kind === "net").line, /for 50% of the order/);
+  r = matchL1({ gem, msme: true, ourPrice: 120000, l1Price: 100000 });
+  assert.equal(r.find((x) => x.kind === "mse").ok, false);
+  assert.match(r.find((x) => x.kind === "mse").line, /Come down by ₹5,000/);
+  r = matchL1({ gem: { ...gem, total_qty: 1 }, msme: true, ourPrice: 105000, l1Price: 100000, l1IsMse: true });
+  assert.match(r.find((x) => x.kind === "mse").line, /L1 is itself an MSE/);
+  assert.equal(matchL1({ gem, msme: true, ourPrice: 90000, l1Price: 100000 })[0].kind, "l1");
+  assert.deepEqual(matchL1({ gem: null, ourPrice: 1, l1Price: 1 }), []);
+});
