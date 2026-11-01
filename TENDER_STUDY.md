@@ -68,6 +68,6 @@ with questions for the owner. Questions never block the work — they wait here 
 | Q7 | Show **MSE / Make-in-India "match L1"** scenarios and the share of the order in the price step (F12)? | Yes / Later | **Yes** (1 Nov) — built: `matchL1` + `PreferencePanel.js` |
 | Q8 | Add **working capital** (wages first, payment days) and guarantee charges to the cost planner (F14)? | Yes / Later | **Yes** (1 Nov) — built: `financeCost` in `lib/costing.js` |
 | Q9 | Check **railway / PSU financial tests** (aggregate turnover, liquidity, net worth, profit each year) from the Vault (F16)? | Yes / Later | **Yes** (1 Nov) — built: `lib/finTests.js` + "Money tests" panel |
-| Q10 | Keep **OEM partners** and product-wise supply quantities per year in the Vault for resellers (F18)? | Yes / Later | |
+| Q10 | Keep **OEM partners** and product-wise supply quantities per year in the Vault for resellers (F18)? | Yes / Later | **Yes** (1 Nov) — built: Vault → Brands & supplies, `lib/oem.js` |
 | Q11 | Store **ICAI firm details** (FRN date, CAs, partners, DISA/CISA, staff, C&AG empanelment) and check CA-firm criteria automatically (F19)? | Yes / Later | |
 | Q12 | **Hide bids reserved for a named vendor** from matches automatically (F20)? | Yes / No | |
