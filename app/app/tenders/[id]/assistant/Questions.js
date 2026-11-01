@@ -67,25 +67,51 @@ export function PersonAnswer({ busy, send, skip }) {
 }
 
 // The format picker: each of the tender's formats with the best choice pre-selected and the alternatives —
-// several standard versions where the tender only names the format, each with a preview of how it will read.
+// several standard versions where the tender only names the format, versions other tenders use (the learned
+// catalogue, filtered by industry), each with a preview; and formats the tender did not list can be added from the catalogue.
 export function FormatPicker({ step, busy, send }) {
+  const [rows, setRows] = useState(step.formats);
   const [pick, setPick] = useState(() => Object.fromEntries(step.formats.map((f) => [f.title, f.options[0].kind])));
   const [open, setOpen] = useState(null);
-  const list = step.formats.map((f) => ({ title: f.title, page: f.page, kind: pick[f.title] }));
+  const [sector, setSector] = useState(step.sector || "all");
+  const [q, setQ] = useState("");
+  const list = rows.map((f) => ({ title: f.title, page: f.page, kind: pick[f.title] }));
   const ai = list.filter((x) => x.kind === "custom").length;
-  const free = list.filter((x) => String(x.kind).startsWith("tpl:")).length;
+  const free = list.filter((x) => /^(tpl|cat):/.test(String(x.kind))).length;
+  const fits = (o) => !String(o.kind).startsWith("cat:") || sector === "all" || (o.sectors || []).includes(sector);
+  const have = new Set(rows.flatMap((f) => f.options.map((o) => o.kind)));
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const more = (step.catalog || []).filter((e) => !have.has(`cat:${e.id}`) && (sector === "all" || (e.sectors || []).includes(sector)) && words.every((w) => e.heading.toLowerCase().includes(w))).slice(0, 12);
+  const add = (e) => {
+    let title = e.heading;
+    while (rows.some((r) => r.title === title)) title = `${title} (2)`;
+    const opt = { kind: `cat:${e.id}`, label: `${e.heading} — used in ${e.seen_count} tender${e.seen_count === 1 ? "" : "s"} (free)`, sectors: e.sectors || [] };
+    setRows([...rows, { title, page: null, added: true, options: [opt, { kind: "manual", label: "I'll fill this one myself" }] }]);
+    setPick({ ...pick, [title]: opt.kind });
+  };
   return (
     <div className="stack-sm">
-      {step.formats.map((f) => {
+      {step.sectors?.length ? (
+        <div className="row" style={{ gap: 8, alignItems: "center" }}>
+          <label htmlFor="fp-sector" className="small faint">Formats other tenders use, from</label>
+          <select id="fp-sector" value={sector} onChange={(e) => setSector(e.target.value)} style={{ maxWidth: 280 }}>
+            <option value="all">All industries</option>
+            {step.sectors.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+          </select>
+        </div>
+      ) : null}
+      {rows.map((f) => {
         const chosen = f.options.find((o) => o.kind === pick[f.title]);
         return (
           <div key={f.title} style={{ borderTop: "1px solid var(--line-soft)", paddingTop: 8 }}>
-            <div className="small"><strong>{f.title}</strong>{f.page ? <span className="faint"> · p. {f.page}</span> : null}</div>
+            <div className="small"><strong>{f.title}</strong>{f.page ? <span className="faint"> · p. {f.page}</span> : null}{f.added ? <span className="faint"> · added by you</span> : null}
+              {f.added && <button type="button" className="ghost sm" style={{ marginLeft: 6 }} onClick={() => setRows(rows.filter((r) => r.title !== f.title))}>Remove</button>}
+            </div>
             <div className="row" style={{ gap: 6, marginTop: 4 }}>
-              {f.options.map((o, i) => (
+              {f.options.filter((o) => fits(o) || pick[f.title] === o.kind).map((o, i) => (
                 <label key={o.kind} className={`chip ${pick[f.title] === o.kind ? "ok" : "mute"}`} style={{ cursor: "pointer", fontWeight: pick[f.title] === o.kind ? 700 : 400 }} title={o.when || undefined}>
                   <input type="radio" name={f.title} checked={pick[f.title] === o.kind} onChange={() => setPick({ ...pick, [f.title]: o.kind })} style={{ display: "none" }} />
-                  {o.label}{i === 0 ? " (best fit)" : ""}
+                  {o.label}{i === 0 && !f.added ? " (best fit)" : ""}
                 </label>
               ))}
             </div>
@@ -99,8 +125,18 @@ export function FormatPicker({ step, busy, send }) {
           </div>
         );
       })}
+      {step.catalog?.length ? (
+        <details style={{ borderTop: "1px solid var(--line-soft)", paddingTop: 8 }}>
+          <summary className="small" style={{ cursor: "pointer" }}>＋ Add a format the tender didn't list (from {step.catalog.length} formats other tenders use)</summary>
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search, e.g. affidavit, power of attorney, solvency" style={{ margin: "6px 0" }} />
+          <div className="row" style={{ gap: 6 }}>
+            {more.map((e) => <button key={e.id} type="button" className="ghost sm" onClick={() => add(e)}>{e.heading} · {e.seen_count}</button>)}
+            {!more.length && <span className="tiny faint">Nothing matches{sector !== "all" ? " in this industry — try All industries" : ""}.</span>}
+          </div>
+        </details>
+      ) : null}
       <div className="row" style={{ gap: 8 }}>
-        <button disabled={busy} onClick={() => send(`Use these ${list.length} formats${free ? ` (${free} standard, filled free)` : ""}${ai ? ` (${ai} by AI)` : ""}`, list)}>Confirm formats</button>
+        <button disabled={busy} onClick={() => send(`Use these ${list.length} formats${free ? ` (${free} ready versions, filled free)` : ""}${ai ? ` (${ai} by AI)` : ""}`, list)}>Confirm formats</button>
       </div>
     </div>
   );

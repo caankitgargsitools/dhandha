@@ -8,7 +8,10 @@ import { missingMasters, fillPlaceholders, isReference } from "@/lib/masters";
 import { buildSegments, blanksLeft } from "@/lib/annexure";
 import { computeSheet } from "@/lib/costing";
 import { candidates, choiceLabel } from "@/lib/formatLibrary";
-import { dataFor, renderTemplate, templateById, templateHint } from "@/lib/formatTemplates";
+import { dataFor, renderTemplate, templateById, templateHint, EXEC_NOTE } from "@/lib/formatTemplates";
+import { suggestLearned, sectorOf, sectorLabel, SECTORS } from "@/lib/formatHarvest";
+import { prefersSheet } from "@/lib/gdocs";
+import { driveReady } from "@/lib/google";
 import { emptySheet, monthsFrom } from "@/lib/costing";
 import Assistant from "./Assistant";
 import { summarise, adviceLine, priceToWin } from "@/lib/pastResults";
@@ -28,7 +31,7 @@ const STANDARD = [
 // needs on the way. Every answer goes into the Vault, so the next tender asks less.
 export default async function TenderAssistant({ params }) {
   const { id } = await params;
-  const { supabase, company, role, isPlatformAdmin } = await getContext();
+  const { supabase, company, role, isPlatformAdmin, tenant } = await getContext();
   const { data: m } = await supabase.from("tender_matches").select("*, tenders(*)").eq("id", id).eq("company_id", company.id).maybeSingle();
   if (!m) notFound();
   const t = m.tenders;
@@ -111,16 +114,35 @@ export default async function TenderAssistant({ params }) {
 
   // 4. formats: the best template for each, alternatives offered; confirmed with one click
   const plan = m.filled_formats || [];
-  let formatsView = null;
+  let formatsView = null, google = null;
   if (!plan.length) {
     const seen = {};
     const fmts = (read?.formats?.length ? read.formats : STANDARD).map((f) => { seen[f.title] = (seen[f.title] || 0) + 1; return seen[f.title] > 1 ? { ...f, title: `${f.title} (${f.page ? `p. ${f.page}` : seen[f.title]})` } : f; });
     const tplData = dataFor({ company: c, facts: facts || [], people: peopleRows || [], works: workRows || [], docs: docs || [], docTypes: types || [], tender: { ...t, bid_validity_days: read?.fields?.bid_validity_days } });
-    steps.push({ id: "choose", kind: "choose_formats", say: `The tender asks for ${fmts.length} format${fmts.length === 1 ? "" : "s"}. For each one I've picked the best fit from my templates — change any you like, then confirm.`,
-      formats: fmts.map((f) => ({ title: f.title, page: f.page || null, options: (f.kind ? [f.kind, "custom", "manual"] : candidates(f.title, f.text, { constitution: c.constitution })).map((k) => {
-        const tpl = k.startsWith("tpl:") ? templateById(k.slice(4)) : null;
-        return { kind: k, label: choiceLabel(k, f.text), when: tpl ? templateHint(tpl) : null, preview: tpl ? renderTemplate(tpl, tplData).slice(0, 2500) : null };
-      }) })) });
+    // formats learned from other tenders: up to 3 per heading, the tender's own industry first
+    const sector = sectorOf(t);
+    const { data: index } = await supabase.rpc("format_catalog_index");
+    const learnedFor = Object.fromEntries(fmts.map((f) => [f.title, f.kind ? [] : suggestLearned(f.title, f.text, index || [], { sector })]));
+    const ids = [...new Set(Object.values(learnedFor).flat().map((e) => e.id))];
+    const { data: bodies } = ids.length ? await supabase.from("format_catalog").select("id, body").in("id", ids) : { data: [] };
+    const bodyOf = Object.fromEntries((bodies || []).map((b) => [b.id, b.body]));
+    const catOption = (e) => ({ kind: `cat:${e.id}`, label: `${e.heading} — used in ${e.seen_count} tender${e.seen_count === 1 ? "" : "s"} (free)`, sectors: e.sectors || [],
+      when: [`Wording other tenders${(e.sectors || []).length ? ` in ${(e.sectors || []).map(sectorLabel).join(", ")}` : ""} use`, EXEC_NOTE[e.exec]].filter(Boolean).join(" · "),
+      preview: bodyOf[e.id] ? renderTemplate({ body: bodyOf[e.id] }, tplData).slice(0, 2500) : null });
+    const LIB_KINDS = ["covering_letter", "bidder_info", "turnover", "similar_works", "key_personnel", "non_blacklisting", "mse"];
+    steps.push({ id: "choose", kind: "choose_formats", sector, catalog: (index || []).slice(0, 400).map((e) => ({ id: e.id, heading: e.heading, sectors: e.sectors, seen_count: e.seen_count })), sectors: Object.entries(SECTORS).map(([k, v]) => ({ key: k, label: v.label })),
+      say: `The tender asks for ${fmts.length} format${fmts.length === 1 ? "" : "s"}. For each one I've picked the best fit from my templates and from formats other tenders use — change any you like, then confirm.`,
+      formats: fmts.map((f) => {
+        const base = (f.kind ? [f.kind, "custom", "manual"] : candidates(f.title, f.text, { constitution: c.constitution })).map((k) => {
+          const tpl = k.startsWith("tpl:") ? templateById(k.slice(4)) : null;
+          return { kind: k, label: choiceLabel(k, f.text), when: tpl ? templateHint(tpl) : null, preview: tpl ? renderTemplate(tpl, tplData).slice(0, 2500) : null };
+        });
+        // learned versions sit after the standard ones, before "the tender's wording" and "fill myself"
+        const learned = (learnedFor[f.title] || []).map(catOption);
+        const at = base.findIndex((o) => !o.kind.startsWith("tpl:") && !LIB_KINDS.includes(o.kind));
+        const options = at < 0 ? [...base, ...learned] : [...base.slice(0, at), ...learned, ...base.slice(at)];
+        return { title: f.title, page: f.page || null, options };
+      }) });
   } else {
     const n = (k) => plan.filter((p) => p.kind === k && !p.tpl).length;
     const std = plan.filter((p) => p.tpl).length;
@@ -143,6 +165,8 @@ export default async function TenderAssistant({ params }) {
         say: `Here is “${p.title}”, filled from your masters.${left ? ` ${left} yellow box${left === 1 ? "" : "es"} need${left === 1 ? "s" : ""} you` : " Check it"} — add rows or change wording if you like, then save.` });
     });
     // the formats as they will go into the bid file, to look at (and open again) any time
+    const { data: conn } = await supabase.from("drive_connections").select("revoked_at").eq("tenant_id", tenant.id).maybeSingle();
+    google = { ready: driveReady(), connected: !!conn && !conn.revoked_at };
     formatsView = plan.map((p, idx) => {
       if (p.kind === "price") return { title: p.title, status: "Price — quoted on the portal" };
       if (p.kind !== "custom" && p.kind !== "manual") return { title: p.title, status: "Ready — from my template" };
@@ -151,7 +175,9 @@ export default async function TenderAssistant({ params }) {
       if (isReference(src)) return { title: p.title, status: "Reference page — nothing to fill" };
       const text = p.edited_text || fillPlaceholders(src, facts || [], { people: peopleRows || [], works: workRows || [], company: c, tender: t });
       const left = (text.match(/\[TO BE FILLED:/gi) || []).length;
-      return { idx, editable: canPrepare, title: p.title, status: left ? `${left} blank${left === 1 ? "" : "s"} left` : p.reviewed ? "Ready — checked by you" : "Ready", text: text.replace(/⟦\/?table[^⟧]*⟧/g, "").slice(0, 6000) };
+      return { idx, editable: canPrepare, title: p.title, status: left ? `${left} blank${left === 1 ? "" : "s"} left` : p.reviewed ? "Ready — checked by you" : "Ready", text: text.replace(/⟦\/?table[^⟧]*⟧/g, "").slice(0, 6000),
+        hasTable: /⟦table /.test(text), sheetFirst: prefersSheet(text), gdoc: p.gdoc && !p.gdoc.trashed ? { kind: p.gdoc.kind, url: p.gdoc.url, pulled: p.gdoc.pulled || null } : null,
+        outside: p.outside || null };
     });
   }
 
@@ -179,10 +205,10 @@ export default async function TenderAssistant({ params }) {
   const left = daysLeft(t.due_at);
   // results can be redone (e.g. after a bad read of a big scanned document)
   const redo = canPrepare && read ? { read: aiTiers().length > 0, tech: !!m.tech_eval && paidAi, price: m.quoted_price ? { price: m.quoted_price, sheet: sheet(), estimate } : null } : null;
-  return page({ m, t, left, done, steps, role, canPrepare, files, history, balance: Number(wallet?.balance || 0), formatsView, redo, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} msme={!!msme} /> : null });
+  return page({ m, t, left, done, steps, role, canPrepare, files, history, balance: Number(wallet?.balance || 0), formatsView, google, redo, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} msme={!!msme} /> : null });
 }
 
-function page({ m, t, left, done, steps, role, canPrepare, files, history, balance, brief, formatsView = null, redo = null }) {
+function page({ m, t, left, done, steps, role, canPrepare, files, history, balance, brief, formatsView = null, google = null, redo = null }) {
   return (
     <div className="stack" style={{ maxWidth: 1040 }}>
       <Link href={`/app/tenders/${m.id}`} className="small">Back to the tender</Link>
@@ -196,7 +222,7 @@ function page({ m, t, left, done, steps, role, canPrepare, files, history, balan
         </div>
         <span className={`chip ${mandatoryUnmet(m.reasons).length || m.pending ? "warn" : "ok"}`}>{mandatoryUnmet(m.reasons).length ? (m.forced_at ? "Filing despite a warning" : "⚠ Mandatory condition not met") : m.pending ? `Qualifies if you answer ${m.pending}` : "Qualified"}</span>
       </div>
-      <Assistant matchId={m.id} tenderId={t.id} portal={t.portal} files={files} history={history} balance={balance} done={done} steps={steps} brief={brief} formats={formatsView} redo={redo} canAnswer={role !== "viewer"} canPrepare={canPrepare} />
+      <Assistant matchId={m.id} tenderId={t.id} portal={t.portal} files={files} history={history} balance={balance} done={done} steps={steps} brief={brief} formats={formatsView} google={google} redo={redo} canAnswer={role !== "viewer"} canPrepare={canPrepare} />
     </div>
   );
 }
