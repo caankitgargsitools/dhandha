@@ -117,3 +117,4 @@ Social lead sources:
 94. `pending/71_health_watch.sql` (1 Nov, execute_sql) — watchdog `private.health_watch()` every 30 min, phone push to platform admins only when something breaks
 95. `pending/72_security_fixes.sql` (1 Nov, execute_sql) — security review: spend_credits quantity check, invite-confirmed accounts join only their invite workspaces, tender_matches insert closed + keys fixed, lead-same-company trigger on 17 tables, cron functions not callable from outside
 96. `pending/73_credential_stats.sql` (1 Nov, execute_sql) — `credential_stats(p_rx)`: how many fetched tenders (newest reading) ask for each credential, optionally only titles matching an industry's words
+97. `pending/74_reserved_bids.sql` (1 Nov, execute_sql) — `tenders.reserved_for`, `private.firm_named`, `tender_fits` refuses a bid reserved for another named vendor, `tender_reserved_set` (worker key, from the pre-check)

@@ -133,3 +133,9 @@ test("MSE / Make in India: who may match L1, and for how much", async () => {
   assert.equal(matchL1({ gem, msme: true, ourPrice: 90000, l1Price: 100000 })[0].kind, "l1");
   assert.deepEqual(matchL1({ gem: null, ourPrice: 1, l1Price: 1 }), []);
 });
+
+test("a bid reserved for one named vendor (real GeM wording)", () => {
+  const head = "Bid Details GEM/2026/B/8000001 Bid End Date/Time 10-11-2026 12:00:00\n";
+  assert.equal(parseGemFields(head + "THIS IS AN OEM TENDER. Bidders to note that this GeM bid is reserved only for proprietary vendor M/s. CELLCOMM SOLUTIONS LIMIT ED Other bidders are not acceptable.").reserved_for, "M/s. CELLCOMM SOLUTIONS LIMIT ED");
+  assert.equal(parseGemFields(head + "Reserved for Make In India products Yes. Reserved for MSE Yes").reserved_for, undefined);
+});

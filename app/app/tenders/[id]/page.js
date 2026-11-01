@@ -128,6 +128,7 @@ export default async function TenderDetail({ params, searchParams }) {
         ))}
       </div>
 
+      {t.reserved_for && <div className="notice small"><span>⚠ <strong>Reserved for {t.reserved_for}</strong> — the buyer says other bidders are not considered, so Dhandha keeps it out of your matches.</span></div>}
       <FinTests rows={checkFinTests(read?.fields?.fin_tests, facts, t.value_inr)} />
       <FinTests title="Licences, registrations and team" href="/app/vault/credentials" link="Vault → Credentials" rows={checkCredentials(read?.fields?.credentials, oemFacts || [])} />
       <FinTests title="GeM: OEM and past supplies" href="/app/vault/brands" link="Vault → Brands & supplies" rows={oemCheck({ gem: read?.fields?.gem, title: t.title, oems: oemsFrom(oemFacts || []), supplies: suppliesFrom(oemFacts || []), dueAt: t.due_at })} />
