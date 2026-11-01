@@ -27,6 +27,10 @@ test("detail table", () => {
 test("classify", () => {
   assert.equal(industryPack("Construction of storm water drains"), "construction");
   assert.equal(industryPack("Concurrent audit of branches"), "ca_audit");
+  assert.equal(industryPack("Energy audit of pumping stations"), null);
+  assert.equal(industryPack("Fire safety audit of hospital building"), "construction");
+  assert.equal(industryPack("Cyber security audit of the website"), "it_services");
+  assert.equal(industryPack("Internal audit and energy audit by chartered accountant firm"), "ca_audit");
   assert.equal(industryPack("Supply of bituminous emulsion"), "goods_supply");
   assert.equal(stateFrom("Public Works Department||Haryana Circle"), "Haryana");
 });

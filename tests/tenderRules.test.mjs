@@ -24,3 +24,9 @@ test("reads NIT facts", () => {
   assert.equal(r.risks[0].label, "Liquidated damages");
   assert.equal(r.confidence, 100);
 });
+
+test("turnover written only in the buyer's terms (study F51); aggregate turnover is not average turnover", async () => {
+  const { readTenderText } = await import("../lib/tenderRules.js");
+  assert.equal(readTenderText(["The bidder should have CA-certified turnover of Rs.50 Lakh in each of the last three years."]).fields.req_avg_turnover, 5000000);
+  assert.equal(readTenderText(["Aggregate turnover of Rs 2 crore in three years."]).fields.req_avg_turnover, undefined);
+});
