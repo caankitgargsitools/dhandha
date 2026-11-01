@@ -34,14 +34,14 @@ export async function POST(request) {
           try { pages.push(...(await pdfPages(new Uint8Array(Buffer.from(b64, "base64")))).pages); } catch {}
         }
         // the full public text is kept for the tender study (what departments ask for, how they evaluate); page breaks as form feeds
-        if (pages.length) await supabase.rpc("tender_text_save", { p_key: key, p_tender: j.tender, p_text: pages.join("\f").slice(0, 300000), p_pages: pages.length });
+        const saved = pages.length ? supabase.rpc("tender_text_save", { p_key: key, p_tender: j.tender, p_text: pages.join("\f").slice(0, 300000), p_pages: pages.length }) : null;
         // nothing readable (no PDF, scanned only, too big): still report, so the job is marked pre-checked and not claimed again
         const rules = pages.length ? readTenderText(pages) : null;
         const read = !rules ? { fields: { _note: "Automatic pre-check: no readable PDF" }, required_docs: [], formats: [], risks: [], confidence: 0 } : {
           fields: { ...rules.fields, prereq: findPrerequisites(pages), _evidence: rules.evidence, _note: "Automatic pre-check (free reader)" },
           required_docs: rules.required_docs, formats: rules.formats, risks: rules.risks, confidence: rules.confidence,
         };
-        const { error: re } = await supabase.rpc("precheck_report", { p_key: key, p_job: j.job, p_read: read, p_conditions: rules ? extractConditions(pages, { state: j.state }) : [] });
+        const [{ error: re }] = await Promise.all([supabase.rpc("precheck_report", { p_key: key, p_job: j.job, p_read: read, p_conditions: rules ? extractConditions(pages, { state: j.state }) : [] }), saved]);
         if (re) { console.error("precheck report", re.message); continue; } // the job stays fetched and is claimed again later
         done++;
         // a harvest job (fetched only to learn its formats): its downloaded files are cleared and the formats learned

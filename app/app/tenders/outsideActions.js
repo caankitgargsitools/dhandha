@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { getContext } from "@/lib/session";
 import { openInGoogle, pullFromGoogle, filledFormatText } from "@/lib/outsideEdit";
-import { fromDocHtml, fromDocxXml, parseCsv, withSheetTables } from "@/lib/gdocs";
+import { fromDocHtml, fromDocxXml, parseCsv, withSheetTables, MAX_UPLOAD } from "@/lib/gdocs";
 import { readXlsx, unzip } from "@/lib/xlsx";
 
 const CAN = ["admin", "manager", "bid_preparer"];
@@ -47,7 +47,7 @@ export async function uploadFilled(formData) {
     const idx = Number(formData.get("idx"));
     const file = formData.get("file");
     if (!file || typeof file.arrayBuffer !== "function" || !file.size) return { error: "Choose the filled file." };
-    if (file.size > 3.5 * 1024 * 1024) return { error: "That file is over 3.5 MB." }; // server actions take at most 4 MB
+    if (file.size > MAX_UPLOAD) return { error: "That file is over 3.5 MB." };
     const { supabase, plan, company, m } = await load(matchId);
     const p = plan[idx];
     if (!p) return { error: "Format not found." };
