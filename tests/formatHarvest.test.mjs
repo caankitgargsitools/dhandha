@@ -54,3 +54,12 @@ test("industry, execution and suggestions", () => {
   const entries = [{ id: 1, title_key: titleKey("Curriculum Vitae of Key Personnel"), sectors: ["audit"], seen_count: 9 }, { id: 2, title_key: titleKey("Power of Attorney"), sectors: ["works"], seen_count: 3 }];
   assert.deepEqual(suggestLearned("Annexure 5: CV of key personnel (Curriculum Vitae)", "", entries, { sector: "audit" }).map((e) => e.id), [1]);
 });
+
+test("headings: dashes, list numbers and non-forms", async () => {
+  const { NOT_FORM } = await import("../lib/formatHarvest.js");
+  assert.equal(headingOf("Annexure – III: Bidder Experience and Proposed Team"), "Bidder Experience and Proposed Team");
+  assert.equal(headingOf("(ii) CV of Key Personnel"), "CV of Key Personnel");
+  assert.ok(NOT_FORM.test("General Instructions for Online Bid Submission"));
+  assert.ok(NOT_FORM.test("Notice for Appointment of Arbitrator"));
+  assert.ok(!NOT_FORM.test("Power of Attorney"));
+});
