@@ -139,3 +139,9 @@ test("a bid reserved for one named vendor (real GeM wording)", () => {
   assert.equal(parseGemFields(head + "THIS IS AN OEM TENDER. Bidders to note that this GeM bid is reserved only for proprietary vendor M/s. CELLCOMM SOLUTIONS LIMIT ED Other bidders are not acceptable.").reserved_for, "M/s. CELLCOMM SOLUTIONS LIMIT ED");
   assert.equal(parseGemFields(head + "Reserved for Make In India products Yes. Reserved for MSE Yes").reserved_for, undefined);
 });
+
+test("reverse-auction floor", async () => {
+  const { raFloor } = await import("../lib/gemFields.js");
+  assert.deepEqual(raFloor({ cost: 100000, minMargin: 3, quote: 112000 }), { floor: 103000, room: 9000, roomPct: 8 });
+  assert.equal(raFloor({ cost: 0 }), null);
+});
