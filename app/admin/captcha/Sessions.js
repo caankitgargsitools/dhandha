@@ -22,7 +22,7 @@ export default function Sessions({ initial }) {
     if (!error) setRows(data || []);
   }, []);
   useEffect(() => {
-    const p = setInterval(load, 4000), t = setInterval(() => tick((x) => x + 1), 30000);
+    const p = setInterval(load, 2000), t = setInterval(() => tick((x) => x + 1), 30000);
     return () => { clearInterval(p); clearInterval(t); };
   }, [load]);
 
