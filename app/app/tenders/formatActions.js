@@ -1,12 +1,13 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { withLock } from "@/lib/locks";
 import { getContext } from "@/lib/session";
 import { classifyFormat } from "@/lib/formatLibrary";
 import { aiFillFormats } from "@/lib/formatAi";
 import { aiTiers } from "@/lib/ai";
 import { labelKey } from "@/lib/masters";
 
-export async function prepareFormats(prev, formData) {
+async function prepareFormatsLocked(prev, formData) {
   const { supabase, tenant, company, role } = await getContext();
   if (!["admin", "manager", "bid_preparer"].includes(role)) return { error: "Only admins, managers and bid preparers can prepare formats." };
   const matchId = String(formData.get("match_id"));
@@ -83,4 +84,9 @@ export async function answerGaps(prev, formData) {
   revalidatePath(`/app/tenders/${matchId}`);
   revalidatePath(`/app/tenders/${matchId}/assistant`);
   return { message: `Saved ${facts.length} answer(s) to your Vault. They go into the formats' blanks in the bid file automatically — no need to fill with AI again. Future tenders will use them too.` };
+}
+
+export async function prepareFormats(prev, formData) {
+  const { supabase, company } = await getContext();
+  return withLock(supabase, { company: company.id, action: "format_fill", ref: formData.get("match_id"), seconds: 300 }, () => prepareFormatsLocked(prev, formData));
 }

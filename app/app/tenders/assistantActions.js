@@ -1,11 +1,12 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { withLock } from "@/lib/locks";
 import { getContext } from "@/lib/session";
 import { runJson, aiTiers } from "@/lib/ai";
 import { tenderPdfFor, vaultFor } from "@/lib/tenderPdf";
 import { normaliseEval } from "@/lib/evaluation";
 import { buildSegments, composeText } from "@/lib/annexure";
-import { labelKey, partnerLabel } from "@/lib/masters";
+import { labelKey, partnerLabel, PER_TENDER } from "@/lib/masters";
 
 // The tender assistant's own actions: filing despite an unmet mandatory condition, technical marking, questions
 // to the assistant (Claude), and annexures edited as forms.
@@ -41,7 +42,7 @@ If the tender has no technical marking (lowest price among qualified bids wins),
 "awarded" is null only where the marks depend on something not in the data (a presentation, a site visit). Never invent bidder data.
 Bidder data (JSON): ${JSON.stringify(vault)}`;
 
-export async function techMarking({ matchId }) {
+async function techMarkingLocked({ matchId }) {
   const { supabase, tenant, company, role } = await getContext();
   if (!preparer(role)) return { error: "Only admins, managers and bid preparers can do this." };
   if (!aiTiers().some((t) => !t.free)) return { error: PAID };
@@ -62,7 +63,7 @@ export async function techMarking({ matchId }) {
 }
 
 // 2. Ask anything about the tender or the current question. Answered by Claude from the documents and the Vault.
-export async function askAssistant({ matchId, question, about, history = [] }) {
+async function askAssistantLocked({ matchId, question, about, history = [] }) {
   const { supabase, tenant, company, role } = await getContext();
   if (role === "viewer") return { error: "Viewers cannot ask the assistant." };
   const q = String(question || "").trim().slice(0, 1500);
@@ -115,6 +116,7 @@ export async function saveAnnexure({ matchId, idx, segments }) {
     if (s.kind === "partner" && s.personId && ["name", "designation", "qualification", "years_experience", "membership_no", "pan"].includes(s.field)) {
       await supabase.from("people").update({ [s.field]: s.field === "years_experience" ? Number(s.value) || null : s.field === "pan" ? s.value.trim().toUpperCase().slice(0, 10) : s.value.trim().slice(0, 120) }).eq("id", s.personId).eq("company_id", company.id);
     } else {
+      if (s.kind !== "partner" && PER_TENDER.test(s.label)) continue; // this tender's own detail, not a master
       const key = labelKey(s.kind === "partner" ? partnerLabel({ label: s.label, n: s.n }) : s.label);
       if (/^master\.[a-z0-9_]{1,60}$/.test(key)) facts.push({ tenant_id: tenant.id, company_id: company.id, key, period: "", value: s.value.trim(), source: "tender assistant" });
     }
@@ -143,15 +145,16 @@ export async function saveAnnexure({ matchId, idx, segments }) {
 // The form for one annexure, rebuilt from what is stored (used when the person opens it again).
 export async function annexureSegments({ matchId, idx }) {
   const { supabase, company } = await getContext();
-  const [{ data: m }, { data: facts }, { data: people }, { data: works }] = await Promise.all([
-    supabase.from("tender_matches").select("filled_formats").eq("id", matchId).eq("company_id", company.id).single(),
+  const [{ data: m }, { data: facts }, { data: people }, { data: works }, { data: c }] = await Promise.all([
+    supabase.from("tender_matches").select("filled_formats, tenders(*)").eq("id", matchId).eq("company_id", company.id).single(),
     supabase.from("company_facts").select("key, period, value").eq("company_id", company.id),
     supabase.from("people").select("*").eq("company_id", company.id).order("created_at"),
     supabase.from("experience_items").select("*").eq("company_id", company.id),
+    supabase.from("companies").select("*").eq("id", company.id).single(),
   ]);
   const p = m?.filled_formats?.[idx];
   if (!p) return { error: "Format not found." };
-  return { title: p.title, segments: buildSegments(p.edited_text || p.filled_text || p.text || "", { facts: facts || [], people: people || [], works: works || [] }) };
+  return { title: p.title, segments: buildSegments(p.edited_text || p.filled_text || p.text || "", { facts: facts || [], people: people || [], works: works || [], company: c, tender: m.tenders }) };
 }
 
 // The chat is kept per tender, so questions and answers stay on screen when the page is opened again.
@@ -161,4 +164,14 @@ export async function saveChat({ matchId, entries }) {
   const rows = entries.slice(0, 10).map((e) => ({ tenant_id: tenant.id, match_id: matchId, who: e.who === "me" ? "me" : "bot", body: String(e.text || "").slice(0, 4000), error: !!e.error })).filter((r) => r.body);
   const { error } = await supabase.from("tender_chat").insert(rows);
   return error ? { error: error.message } : { ok: true };
+}
+
+export async function techMarking(args) {
+  const { supabase, company } = await getContext();
+  return withLock(supabase, { company: company.id, action: "tech_marking", ref: args.matchId, seconds: 240 }, () => techMarkingLocked(args));
+}
+
+export async function askAssistant(args) {
+  const { supabase, company } = await getContext();
+  return withLock(supabase, { company: company.id, action: "assistant_chat", ref: args.matchId, seconds: 120 }, () => askAssistantLocked(args));
 }

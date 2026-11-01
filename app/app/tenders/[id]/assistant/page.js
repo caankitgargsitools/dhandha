@@ -7,7 +7,8 @@ import { requiredDocs } from "@/lib/bidpack";
 import { missingMasters, fillPlaceholders, isReference } from "@/lib/masters";
 import { buildSegments, blanksLeft } from "@/lib/annexure";
 import { computeSheet } from "@/lib/costing";
-import { candidates, CHOICES } from "@/lib/formatLibrary";
+import { candidates, choiceLabel } from "@/lib/formatLibrary";
+import { dataFor, renderTemplate, templateById } from "@/lib/formatTemplates";
 import { emptySheet, monthsFrom } from "@/lib/costing";
 import Assistant from "./Assistant";
 import { summarise, adviceLine, priceToWin } from "@/lib/pastResults";
@@ -40,7 +41,7 @@ export default async function TenderAssistant({ params }) {
     supabase.from("people").select("*").eq("company_id", company.id).order("created_at"),
     supabase.from("bid_packs").select("id, kind, created_at").eq("match_id", m.id).order("created_at", { ascending: false }).limit(1),
     supabase.from("tender_doc_jobs").select("id, status, step, detail, error, created_at").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
-    supabase.from("documents").select("type_code, valid_until").eq("company_id", company.id).eq("status", "active"),
+    supabase.from("documents").select("type_code, valid_until, title, number").eq("company_id", company.id).eq("status", "active"),
     supabase.from("document_types").select("code, name"),
     supabase.from("tender_chat").select("who, body, error").eq("match_id", id).order("id", { ascending: false }).limit(300),
     supabase.from("wallets").select("balance").eq("tenant_id", m.tenant_id).maybeSingle(),
@@ -112,12 +113,18 @@ export default async function TenderAssistant({ params }) {
   const plan = m.filled_formats || [];
   let formatsView = null;
   if (!plan.length) {
-    const fmts = read?.formats?.length ? read.formats : STANDARD;
+    const seen = {};
+    const fmts = (read?.formats?.length ? read.formats : STANDARD).map((f) => { seen[f.title] = (seen[f.title] || 0) + 1; return seen[f.title] > 1 ? { ...f, title: `${f.title} (${f.page ? `p. ${f.page}` : seen[f.title]})` } : f; });
+    const tplData = dataFor({ company: c, facts: facts || [], people: peopleRows || [], works: workRows || [], docs: docs || [], docTypes: types || [], tender: t });
     steps.push({ id: "choose", kind: "choose_formats", say: `The tender asks for ${fmts.length} format${fmts.length === 1 ? "" : "s"}. For each one I've picked the best fit from my templates — change any you like, then confirm.`,
-      formats: fmts.map((f) => ({ title: f.title, page: f.page || null, options: (f.kind ? [f.kind, "custom", "manual"] : candidates(f.title, f.text)).map((k) => ({ kind: k, label: CHOICES[k] })) })) });
+      formats: fmts.map((f) => ({ title: f.title, page: f.page || null, options: (f.kind ? [f.kind, "custom", "manual"] : candidates(f.title, f.text, { constitution: c.constitution })).map((k) => {
+        const tpl = k.startsWith("tpl:") ? templateById(k.slice(4)) : null;
+        return { kind: k, label: choiceLabel(k, f.text), when: tpl?.when || null, preview: tpl ? renderTemplate(tpl, tplData).slice(0, 2500) : null };
+      }) })) });
   } else {
-    const n = (k) => plan.filter((p) => p.kind === k).length;
-    done.push(`Formats chosen: ${plan.length - n("custom") - n("manual") - n("price")} from my templates${n("custom") ? `, ${n("custom")} in the tender's own wording` : ""}${n("manual") ? `, ${n("manual")} you'll fill yourself` : ""}${n("price") ? ", the price bid on the portal" : ""}.`);
+    const n = (k) => plan.filter((p) => p.kind === k && !p.tpl).length;
+    const std = plan.filter((p) => p.tpl).length;
+    done.push(`Formats chosen: ${plan.length - n("custom") - n("manual") - n("price") - n("reference")} from my templates${std ? ` (${std} standard versions, filled free)` : ""}${n("custom") ? `, ${n("custom")} in the tender's own wording` : ""}${n("manual") ? `, ${n("manual")} you'll fill yourself` : ""}${n("price") ? ", the price bid on the portal" : ""}${n("reference") ? `, ${n("reference")} left out (reference / after award)` : ""}.`);
     // 5. master questions: only what the chosen formats need and the masters don't have, one at a time
     for (const q of missingMasters(c, ["covering_letter", ...plan.map((p) => p.kind)], { facts: facts || [], counts: { works, people } })) steps.push(q);
     // 6. formats kept in the tender's own wording: filled from the masters by AI; blanks it could not fill become master questions
@@ -125,7 +132,7 @@ export default async function TenderAssistant({ params }) {
     if (todo.length && canPrepare) steps.push({ id: "fill_ai", kind: "fill_ai", paidAi, say: `${todo.length} format${todo.length === 1 ? " is" : "s are"} in the tender's own wording. Shall I fill ${todo.length === 1 ? "it" : "them"} from your masters with AI (49 credits)? Your company data only goes to paid AI.` });
     // each annexure in the tender's own wording opens as a form, pre-filled from the masters; the person fills the
     // yellow boxes, adds rows, changes wording, and saves (answers and new rows go to the masters)
-    const ctx = { facts: facts || [], people: peopleRows || [], works: workRows || [] };
+    const ctx = { facts: facts || [], people: peopleRows || [], works: workRows || [], company: c, tender: t };
     plan.forEach((p, idx) => {
       if (p.reviewed || !canPrepare) return;
       const text = p.kind === "custom" ? p.filled_text : p.kind === "manual" ? p.text : null;
@@ -142,7 +149,7 @@ export default async function TenderAssistant({ params }) {
       const src = p.edited_text || (p.kind === "custom" ? p.filled_text : p.text);
       if (!src) return { title: p.title, status: p.kind === "custom" ? "Waiting for AI fill" : "You fill it in the draft" };
       if (isReference(src)) return { title: p.title, status: "Reference page — nothing to fill" };
-      const text = p.edited_text || fillPlaceholders(src, facts || [], { people: peopleRows || [], works: workRows || [] });
+      const text = p.edited_text || fillPlaceholders(src, facts || [], { people: peopleRows || [], works: workRows || [], company: c, tender: t });
       const left = (text.match(/\[TO BE FILLED:/gi) || []).length;
       return { idx, editable: canPrepare, title: p.title, status: left ? `${left} blank${left === 1 ? "" : "s"} left` : p.reviewed ? "Ready — checked by you" : "Ready", text: text.replace(/⟦\/?table[^⟧]*⟧/g, "").slice(0, 6000) };
     });
@@ -158,7 +165,7 @@ export default async function TenderAssistant({ params }) {
 
   // 7. the price — the one thing asked for every tender: typed, or worked out in the cost planner
   const f = read?.fields || {};
-  const estimate = Number(f.value_inr || t.value_inr || job?.detail?.value_inr) || null;
+  const estimate = Number(t.value_inr || job?.detail?.value_inr || f.value_inr) || null;
   const sheet = () => m.cost_sheet || emptySheet({ months: monthsFrom(f.completion_period || job?.detail?.period_of_work), value: estimate, scope: f.work_scope || [], travel: !!(t.state && c.state && t.state !== c.state) });
   if (m.quoted_price) done.push(`Your price: ₹${Number(m.quoted_price).toLocaleString("en-IN")} + GST${m.price_note ? ` (${m.price_note})` : ""}.`);
   else if (canPrepare && read) {

@@ -31,7 +31,7 @@ export async function readTender(prev, formData) {
 
   // the same reading a few minutes ago (a retry after a dropped connection, a second click): keep it, charge nothing
   const { data: recent } = await supabase.from("tender_reads").select("id, engine, created_by").eq("tender_id", m.tender_id)
-    .gte("created_at", new Date(Date.now() - 30 * 60000).toISOString()).order("created_at", { ascending: false }).limit(5);
+    .gte("created_at", new Date(Date.now() - 3 * 60000).toISOString()).order("created_at", { ascending: false }).limit(5);
   const { data: team } = await supabase.from("tenant_members").select("user_id").eq("tenant_id", tenant.id);
   const ours = new Set((team || []).map((t) => t.user_id));
   if ((recent || []).some((r) => ours.has(r.created_by) && (mode === "basic" || !["rules", "precheck"].includes(r.engine)))) {
@@ -75,7 +75,7 @@ async function readTenderLocked({ supabase, tenant, user, m, matchId, mode, file
   const rules = readTenderText(pages);
   let fields = { ...rules.fields }, docs = rules.required_docs, formats = rules.formats, risks = rules.risks, summary = null;
   fields.prereq = findPrerequisites(pages); // "Get ready before you file", free
-  let engine = "rules", confidence = rules.confidence, note = null;
+  let engine = "rules", confidence = rules.confidence, note = null, aiFailed = null;
 
   if (mode === "basic" && scanned && rules.confidence < 40) return { error: "These look like scanned pages, which the free reader cannot read. Use “Read with AI”." };
 
@@ -87,7 +87,8 @@ async function readTenderLocked({ supabase, tenant, user, m, matchId, mode, file
     const { pdf = null, text = null } = doc;
     note = doc.note || null;
     const ai = await aiReadTender({ supabase, tenantId: tenant.id, pdf, text });
-    if (ai.error) return { error: `${ai.error} Free reading result kept. (${ai.attempts.join("; ").slice(0, 300)})` };
+    if (ai.error) { aiFailed = `AI could not read it (${ai.attempts.join("; ").slice(0, 200)}); the free reading is kept and nothing was charged.`; }
+    else {
     const d = ai.data;
     for (const k of ["value_inr", "emd_inr", "req_avg_turnover", "req_similar_one", "req_similar_two", "req_similar_three", "req_similar_years", "bid_validity_days", "performance_security_pct", "turnover_years"]) {
       if (num(d[k]) !== null) fields[k] = num(d[k]);
@@ -111,10 +112,13 @@ async function readTenderLocked({ supabase, tenant, user, m, matchId, mode, file
     summary = d.summary.join("\n");
     engine = ai.engine;
     confidence = Math.max(confidence, 85);
+    }
   }
 
-  const { error: se } = await supabase.rpc("spend_credits", { p_tenant: tenant.id, p_action: mode === "ai" ? "tender_deep_read" : "tender_read_basic", p_qty: 1, p_ref: m.tenders.tender_ref });
-  if (se) return { error: se.message };
+  if (!aiFailed) {
+    const { error: se } = await supabase.rpc("spend_credits", { p_tenant: tenant.id, p_action: mode === "ai" ? "tender_deep_read" : "tender_read_basic", p_qty: 1, p_ref: m.tenders.tender_ref });
+    if (se) return { error: se.message };
+  }
   await supabase.from("tender_reads").insert({ tender_id: m.tender_id, engine, confidence, fields: { ...fields, _evidence: rules.evidence, _note: note }, required_docs: docs, formats, risks, summary, created_by: user.id });
   const apply = Object.fromEntries(Object.entries(fields).filter(([k]) => ["value_inr", "emd_inr", "req_avg_turnover", "req_similar_one", "req_similar_two", "req_similar_three", "req_similar_years", "mse_emd_exempt", "prebid_on", "due_at"].includes(k)));
   await supabase.rpc("apply_tender_read", { p_tender: m.tender_id, p_fields: apply, p_docs: docs });
@@ -127,5 +131,5 @@ async function readTenderLocked({ supabase, tenant, user, m, matchId, mode, file
   revalidatePath(`/app/tenders/${matchId}`);
   revalidatePath("/app/tenders");
   const asks = after?.pending || 0;
-  return { message: `Read by ${engine === "rules" ? "the free reader" : engine}: ${Object.keys(apply).length} criteria, ${conditions.length} conditions, ${docs.length} documents, ${formats.length} formats, ${risks.length} risk clauses. Score updated. ${price} credits used.${asks ? ` ${asks} question${asks === 1 ? "" : "s"} for you in the assistant.` : ""}`, asks };
+  return { message: `Read by ${engine === "rules" ? "the free reader" : engine}: ${Object.keys(apply).length} criteria, ${conditions.length} conditions, ${docs.length} documents, ${formats.length} formats, ${risks.length} risk clauses. Score updated. ${aiFailed ? aiFailed : `${price} credits used.`}${asks ? ` ${asks} question${asks === 1 ? "" : "s"} for you in the assistant.` : ""}`, asks };
 }

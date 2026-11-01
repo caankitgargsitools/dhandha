@@ -1,7 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { dataFor, renderTemplate, templateById } from "@/lib/formatTemplates";
 import { getContext } from "@/lib/session";
-import { checkField } from "@/lib/masters";
+import { checkField, normaliseBlanks } from "@/lib/masters";
 import { cleanSheet, computeSheet } from "@/lib/costing";
 import { aiFillFormats } from "@/lib/formatAi";
 import { aiTiers } from "@/lib/ai";
@@ -99,15 +100,34 @@ export async function chooseFormats({ matchId, choices }) {
   if (!m) return { error: "Tender not found." };
   const { data: reads } = await supabase.from("tender_reads").select("formats").eq("tender_id", m.tender_id).order("created_at", { ascending: false }).limit(5);
   const withText = (reads || []).find((r) => (r.formats || []).some((f) => f.text)) || reads?.[0];
-  const text = Object.fromEntries((withText?.formats || []).map((f) => [f.title, f.text || ""]));
+  // the same renaming as the picker: a repeated title gets its page (or number) so each keeps its own text
+  const seen = {};
+  const text = Object.fromEntries((withText?.formats || []).map((f) => { seen[f.title] = (seen[f.title] || 0) + 1; return [seen[f.title] > 1 ? `${f.title} (${f.page ? `p. ${f.page}` : seen[f.title]})` : f.title, f.text || ""]; }));
   const old = Object.fromEntries((m.filled_formats || []).map((f) => [f.title, f]));
-  const KINDS = ["covering_letter", "bidder_info", "turnover", "similar_works", "key_personnel", "non_blacklisting", "mse", "custom", "price", "manual"];
-  const plan = (choices || []).slice(0, 40).filter((c) => KINDS.includes(c.kind)).map((c) => {
-    const o = old[c.title], same = o?.kind === c.kind;
+  const KINDS = ["covering_letter", "bidder_info", "turnover", "similar_works", "key_personnel", "non_blacklisting", "mse", "custom", "price", "manual", "reference"];
+  // a standard version from the catalogue: rendered from the Vault now, free, then edited like any other format
+  const wantsTpl = (choices || []).some((c) => String(c.kind).startsWith("tpl:"));
+  let tplData = null;
+  if (wantsTpl) {
+    const [{ data: c }, { data: facts }, { data: people }, { data: works }, { data: docs }, { data: types }, { data: t }] = await Promise.all([
+      supabase.from("companies").select("*").eq("id", company.id).single(),
+      supabase.from("company_facts").select("key, period, value").eq("company_id", company.id),
+      supabase.from("people").select("*").eq("company_id", company.id).order("created_at"),
+      supabase.from("experience_items").select("*").eq("company_id", company.id),
+      supabase.from("documents").select("type_code, title, number, valid_until").eq("company_id", company.id).eq("status", "active"),
+      supabase.from("document_types").select("code, name"),
+      supabase.from("tenders").select("*").eq("id", m.tender_id).single(),
+    ]);
+    tplData = dataFor({ company: c, facts: facts || [], people: people || [], works: works || [], docs: docs || [], docTypes: types || [], tender: t || {} });
+  }
+  const plan = (choices || []).slice(0, 40).filter((c) => KINDS.includes(c.kind) || (String(c.kind).startsWith("tpl:") && templateById(c.kind.slice(4)))).map((c) => {
+    const tpl = String(c.kind).startsWith("tpl:") ? templateById(c.kind.slice(4)) : null;
+    const kind = tpl ? "custom" : c.kind;
+    const o = old[c.title], same = o?.kind === kind && (o?.tpl || null) === (tpl?.id || null);
     return {
-      title: String(c.title).slice(0, 200), page: c.page || null, kind: c.kind, text: text[c.title] || "",
-      filled_text: c.kind === "custom" && o?.kind === "custom" ? o.filled_text : undefined,
-      engine: c.kind === "custom" ? o?.engine : "library", missing: [],
+      title: String(c.title).slice(0, 200), page: c.page || null, kind, text: text[c.title] || "", ...(tpl ? { tpl: tpl.id, stamp: !!tpl.stamp } : {}),
+      filled_text: tpl ? renderTemplate(tpl, tplData) : kind === "custom" && o?.kind === "custom" && !o?.tpl ? o.filled_text : undefined,
+      engine: tpl ? `template:${tpl.id}` : kind === "custom" ? o?.engine : "library", missing: [],
       // the same format with the same choice keeps what the user typed into it and its review mark
       ...(same && o.edited_text ? { edited_text: o.edited_text } : {}), ...(same && o.reviewed ? { reviewed: o.reviewed } : {}),
     };
@@ -151,14 +171,36 @@ async function fillCustomLocked({ supabase, tenant, company, matchId, m, plan, t
     supabase.from("experience_items").select("*").eq("company_id", company.id),
     supabase.from("people").select("*").eq("company_id", company.id),
   ]);
-  const ai = await aiFillFormats({ supabase, tenantId: tenant.id, company: c, facts: facts || [], works: works || [], people: people || [], tender: m.tenders, formats: todo });
-  if (ai.error) return { error: `${ai.error}` };
-  todo.forEach((p, i) => { p.filled_text = ai.data.formats[i].filled_text; p.engine = ai.engine; });
-  const { error: se } = await supabase.rpc("spend_credits", { p_tenant: tenant.id, p_action: "format_fill", p_qty: 1, p_ref: m.tenders.tender_ref });
-  if (se) return { error: se.message };
-  await supabase.from("tender_matches").update({ filled_formats: plan }).eq("id", matchId);
+  // batches of about five formats (a long format alone), in parallel: one big call was cut short on long tenders
+  const batches = [];
+  for (const p of todo) {
+    const last = batches.at(-1);
+    const size = String(p.text || "").length;
+    if (!last || last.length >= 5 || size > 9000 || last.reduce((n, x) => n + String(x.text || "").length, 0) + size > 12000) batches.push([p]);
+    else last.push(p);
+  }
+  const results = await Promise.all(batches.map((formats) => aiFillFormats({ supabase, tenantId: tenant.id, company: c, facts: facts || [], works: works || [], people: people || [], tender: m.tenders, formats })));
+  let filled = 0, engine = null;
+  results.forEach((ai, b) => {
+    if (ai.error) return;
+    engine = ai.engine;
+    batches[b].forEach((p, i) => { const t = ai.data.formats[i]?.filled_text; if (t) { p.filled_text = normaliseBlanks(t); p.engine = ai.engine; filled++; } });
+  });
+  if (!filled) return { error: results.find((r) => r.error)?.error || "AI could not fill the formats." };
+  // one charge per tender per hour: filling the rest after a partial fill is free
+  const { data: paid } = await supabase.from("credit_ledger").select("id").eq("tenant_id", tenant.id).eq("action_code", "format_fill").eq("ref", m.tenders.tender_ref).gte("created_at", new Date(Date.now() - 3600e3).toISOString()).limit(1);
+  if (!paid?.length) {
+    const { error: se } = await supabase.rpc("spend_credits", { p_tenant: tenant.id, p_action: "format_fill", p_qty: 1, p_ref: m.tenders.tender_ref });
+    if (se) return { error: se.message };
+  }
+  // merge into what is saved now (someone may have edited another format meanwhile), by title
+  const { data: now } = await supabase.from("tender_matches").select("filled_formats").eq("id", matchId).single();
+  const byTitle = Object.fromEntries(todo.filter((p) => p.filled_text).map((p) => [p.title, p]));
+  const merged = (now?.filled_formats || plan).map((p) => (byTitle[p.title] && p.kind === "custom" && !p.filled_text ? { ...p, filled_text: byTitle[p.title].filled_text, engine: byTitle[p.title].engine } : p));
+  await supabase.from("tender_matches").update({ filled_formats: merged }).eq("id", matchId);
   done(matchId);
-  return { ok: true, message: `Filled ${todo.length} format${todo.length === 1 ? "" : "s"} from your masters (49 credits). Any blank left is asked next, once.` };
+  const left = todo.length - filled;
+  return { ok: true, message: `Filled ${filled} format${filled === 1 ? "" : "s"} from your masters (49 credits${engine ? `, ${engine}` : ""}).${left ? ` ${left} could not be filled this time — press Fill again for those (no second charge within the hour).` : ""} Blanks the Vault cannot answer are shown in each form.` };
 }
 
 // The price: typed directly, or the cost planner's sheet with its suggested quote.
