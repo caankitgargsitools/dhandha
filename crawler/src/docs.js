@@ -9,6 +9,7 @@ import { readFile } from "node:fs/promises";
 import { GEPNIC } from "./sources.js";
 import { parseDetail, parseTitleCell } from "./adapters/gepnic.js";
 import { unzip } from "./unzip.js";
+import { pdfLinks } from "./pdfLinks.js";
 import { readResults, RESULTS_LIST } from "./adapters/gepnicResults.js";
 import { sendAwards } from "./ingest.js";
 
@@ -437,9 +438,29 @@ async function runGemJob(browser, job) {
     }
     if (!data) { await update(job, { status: "failed", error: "GeM did not give the bid document. Download it from GeM and upload here." }); return; }
     if (data.length > MAX_BYTES) { await update(job, { status: "failed", error: "The GeM bid document is too large to fetch here." }); return; }
-    const list = await upload(job, [{ name: `${job.tender_ref || "GeM-bid"}.pdf`, data }]); // upload() cleans the name
-    await update(job, { status: "fetched", step: "Fetched the GeM bid document", files: list });
-    log(`job ${job.id}: GeM ${job.tender_ref} ${Math.round(data.length / 1024)} KB`);
+    // the buyer's own terms, scope of work, payment terms, BOQ…: linked from the bid PDF, fetched with it (tender study F10)
+    const files = [{ name: `${job.tender_ref || "GeM-bid"}.pdf`, data }];
+    const links = pdfLinks(data, { hosts: /(^|\.)gem\.gov\.in$/i }).filter((u) => u !== url).slice(0, 12);
+    let total = data.length;
+    for (const [i, link] of links.entries()) {
+      if (total > 40 * 1024 * 1024) break;
+      await update(job, { step: `Downloading attachment ${i + 1} of ${links.length}` });
+      try {
+        const r = await ctx.request.get(link, { timeout: 60000 });
+        if (!r.ok() || Number(r.headers()["content-length"] || 0) > MAX_BYTES) continue;
+        const body = await r.body();
+        const kind = body.subarray(0, 4).toString("latin1");
+        const ext = kind === "%PDF" ? "pdf" : kind.startsWith("PK") ? (/xlsx|spreadsheet/i.test(r.headers()["content-type"] || link) ? "xlsx" : /docx|word/i.test(r.headers()["content-type"] || link) ? "docx" : "zip") : null;
+        if (!ext || body.length > MAX_BYTES) continue; // web pages and images are not documents
+        if (ext === "zip") { try { for (const x of unzip(body, { maxBytes: MAX_BYTES })) if (/\.pdf$/i.test(x.name)) files.push({ name: `attachment-${i + 1}-${x.name}`, data: x.data }); } catch {} }
+        else files.push({ name: `attachment-${i + 1}.${ext}`, data: body });
+        total += body.length;
+      } catch (e) { log(`  GeM attachment ${i + 1}: ${e.message.split("\n")[0]}`); }
+    }
+    files.splice(MAX_FILES);
+    const list = await upload(job, files); // upload() cleans the names
+    await update(job, { status: "fetched", step: `Fetched the GeM bid document${files.length > 1 ? ` and ${files.length - 1} attachment${files.length === 2 ? "" : "s"}` : ""}`, files: list });
+    log(`job ${job.id}: GeM ${job.tender_ref} ${Math.round(data.length / 1024)} KB + ${files.length - 1} attachment(s)`);
   } catch (e) {
     log(`job ${job.id} (GeM) failed: ${e.message}`);
     await update(job, { status: "failed", error: e.message.split("\n")[0] }).catch(() => {});
