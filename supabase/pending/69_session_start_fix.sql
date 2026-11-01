@@ -32,3 +32,23 @@ create or replace function public.portal_sessions_view()
   where public.is_platform_admin()
   order by p.portal
 $function$;
+
+-- Tender winners' captcha switched off for now (1 Nov): the results page rejected every typed answer, so each portal
+-- asked the admin a third captcha for nothing. app_config session_winners = 'off'; set 'on' once the results form is fixed.
+insert into private.app_config (key, value) values ('session_winners', 'off') on conflict (key) do update set value = 'off';
+create or replace function private.skip_winners_captcha() returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if new.state = 'captcha' and coalesce(new.step, '') ilike 'Tender winners%'
+     and coalesce((select value from private.app_config where key = 'session_winners'), 'on') = 'off' then
+    new.state := 'live';
+    new.step := 'Live — tender winners skipped (switched off for now)';
+    new.captcha_image := null;
+  end if;
+  return new;
+end $$;
+create trigger b_skip_winners_captcha before insert or update on public.portal_sessions for each row execute function private.skip_winners_captcha();
+
+-- World Bank is not a captcha portal
+create or replace function private.session_portals() returns setof text language sql stable security definer set search_path to '' as $function$
+  select distinct portal from public.tenders where portal not in ('SBI e-Procurement', 'IREPS', 'CPPP', 'HSVP e-Tender', 'Gujarat nProcure', 'Karnataka KPPP', 'AP eProcurement', 'Telangana eProcurement', 'Bihar eProc', 'NTPC Tenders', 'SAIL Tenders', 'World Bank') and portal not ilike '%gem%' and status = 'live'
+$function$;
