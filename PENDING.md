@@ -85,7 +85,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 Running list in `TENDER_STUDY.md`: findings from reading tenders across industries and questions Q1, Q2, … Answer any time ("Q2: yes").
 - **Answered 1 Nov:** Q5–Q12 yes (all built and live), Q12 = hide.
 - **Parked on the pending list by you (1 Nov):** Q1 — work out bid capacity (A × N × 2) − B for works tenders from the Vault's works and work in hand (F1); Q2 — load each state's minimum wages into the manpower cost sheet (F8). Ask again later.
-- Q3 (reverse-auction floor) yes — built 1 Nov. **Still to ask:** Q4 (CA-firm empanelment points).
+- Q3 (reverse-auction floor) and Q4 (points table with your figures) yes — built 1 Nov.
 
 ## Done (recent)
 - 1 Nov (morning): no owner items done since 31 Oct. Tender winners 28 (5 new). 49 leads for ₹98; 3 new GSC matches; ~6,100 tenders crawled. Still no Vault document uploaded to try the new reading.

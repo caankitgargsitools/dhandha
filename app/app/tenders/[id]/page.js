@@ -6,6 +6,8 @@ import FinTests from "@/components/FinTests";
 import { checkFinTests } from "@/lib/finTests";
 import { oemCheck, oemsFrom, suppliesFrom } from "@/lib/oem";
 import { checkCredentials } from "@/lib/credentials";
+import { pointsRows } from "@/lib/firmPoints";
+import PointsTable from "@/components/PointsTable";
 import { mandatoryUnmet } from "@/lib/conditions";
 import { notFound } from "next/navigation";
 import { getContext, daysLeft, lakh, fmtDate } from "@/lib/session";
@@ -52,7 +54,7 @@ export default async function TenderDetail({ params, searchParams }) {
     supabase.from("tender_changes").select("*").eq("tender_id", t.id).order("seen_at", { ascending: false }),
     supabase.from("wallets").select("balance").eq("tenant_id", m.tenant_id).maybeSingle(),
   ]);
-  const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }, { data: deposits }, { data: board }, { data: team }, { data: outcomes }, { data: oemFacts }] = await Promise.all([
+  const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }, { data: deposits }, { data: board }, { data: team }, { data: outcomes }, { data: oemFacts }, { count: worksDone }] = await Promise.all([
     supabase.from("tender_files").select("*").eq("tender_id", t.id).order("created_at"),
     supabase.from("tender_reads").select("*").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
     supabase.rpc("similar_awards", { p_tender: t.id, p_limit: 8 }),
@@ -61,7 +63,8 @@ export default async function TenderDetail({ params, searchParams }) {
     supabase.rpc("bid_board", { p_match: m.id }),
     supabase.from("tenant_members").select("user_id, role, profiles(full_name, email)").eq("tenant_id", m.tenant_id).in("role", ["admin", "manager", "bid_preparer"]),
     supabase.rpc("bid_outcomes", { p_company: company.id }),
-    supabase.from("company_facts").select("key, period, value, valid_until").eq("company_id", company.id).or("key.like.oem.%,key.like.supply.%,key.like.cred.%"),
+    supabase.from("company_facts").select("key, period, value, valid_until").eq("company_id", company.id).or("key.like.oem.%,key.like.supply.%,key.like.cred.%,key.like.presence.office.%"),
+    supabase.from("experience_items").select("id", { count: "exact", head: true }).eq("company_id", company.id).eq("status", "completed"),
   ]);
   const record = bidChance((outcomes || []).filter((o) => o.match_id !== m.id), t);
   const members = (team || []).map((x) => ({ user_id: x.user_id, name: x.profiles?.full_name || x.profiles?.email || "Member" }));
@@ -130,6 +133,7 @@ export default async function TenderDetail({ params, searchParams }) {
 
       {t.reserved_for && <div className="notice small"><span>⚠ <strong>Reserved for {t.reserved_for}</strong> — the buyer says other bidders are not considered, so Dhandha keeps it out of your matches.</span></div>}
       <FinTests rows={checkFinTests(read?.fields?.fin_tests, facts, t.value_inr)} />
+      <PointsTable table={read?.fields?.points} rows={pointsRows(read?.fields?.points, { facts: [...(facts || []), ...(oemFacts || [])], works: worksDone || 0, incorporated: c.incorporation_date })} />
       <FinTests title="Licences, registrations and team" href="/app/vault/credentials" link="Vault → Credentials" rows={checkCredentials(read?.fields?.credentials, oemFacts || [])} />
       <FinTests title="GeM: OEM and past supplies" href="/app/vault/brands" link="Vault → Brands & supplies" rows={oemCheck({ gem: read?.fields?.gem, title: t.title, oems: oemsFrom(oemFacts || []), supplies: suppliesFrom(oemFacts || []), dueAt: t.due_at })} />
 
