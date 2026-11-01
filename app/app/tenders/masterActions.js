@@ -98,7 +98,7 @@ export async function chooseFormats({ matchId, choices }) {
   if (!["admin", "manager", "bid_preparer"].includes(role)) return { error: "Only admins, managers and bid preparers can choose formats." };
   const { data: m } = await supabase.from("tender_matches").select("id, tender_id, filled_formats").eq("id", matchId).eq("company_id", company.id).single();
   if (!m) return { error: "Tender not found." };
-  const { data: reads } = await supabase.from("tender_reads").select("formats").eq("tender_id", m.tender_id).order("created_at", { ascending: false }).limit(5);
+  const { data: reads } = await supabase.from("tender_reads").select("formats, fields").eq("tender_id", m.tender_id).order("created_at", { ascending: false }).limit(5);
   const withText = (reads || []).find((r) => (r.formats || []).some((f) => f.text)) || reads?.[0];
   // the same renaming as the picker: a repeated title gets its page (or number) so each keeps its own text
   const seen = {};
@@ -118,7 +118,7 @@ export async function chooseFormats({ matchId, choices }) {
       supabase.from("document_types").select("code, name"),
       supabase.from("tenders").select("*").eq("id", m.tender_id).single(),
     ]);
-    tplData = dataFor({ company: c, facts: facts || [], people: people || [], works: works || [], docs: docs || [], docTypes: types || [], tender: t || {} });
+    tplData = dataFor({ company: c, facts: facts || [], people: people || [], works: works || [], docs: docs || [], docTypes: types || [], tender: { ...(t || {}), bid_validity_days: (reads || []).find((r) => r.fields?.bid_validity_days)?.fields?.bid_validity_days } });
   }
   const plan = (choices || []).slice(0, 40).filter((c) => KINDS.includes(c.kind) || (String(c.kind).startsWith("tpl:") && templateById(c.kind.slice(4)))).map((c) => {
     const tpl = String(c.kind).startsWith("tpl:") ? templateById(c.kind.slice(4)) : null;

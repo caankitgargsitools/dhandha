@@ -50,3 +50,20 @@ test("a format with its own text keeps the tender's wording ahead of the standar
   assert.ok(c.indexOf("custom") < c.indexOf("tpl:self_declaration_general"));
   assert.deepEqual(candidates("Financial bid / BOQ", ""), ["price", "manual"]);
 });
+
+test("the wider catalogue: specialist formats, how they are executed, answers reused", async () => {
+  const { templateHint } = await import("../lib/formatTemplates.js");
+  assert.ok(TEMPLATES.length >= 60, String(TEMPLATES.length));
+  assert.equal(matchTemplates("Form G: Affidavit for non-execution of similar works through another contractor on back to back basis")[0].id, "back_to_back_affidavit");
+  assert.ok(matchTemplates("Proforma of Bank Guarantee for EMD").some((t) => t.id === "emd_bank_guarantee"));
+  assert.equal(matchTemplates("Manufacturer's Authorization Form")[0].id, "manufacturer_authorisation");
+  assert.equal(matchTemplates("Declaration of Fidelity and Secrecy")[0].id, "fidelity_secrecy");
+  assert.match(templateHint(templateById("emd_bank_guarantee")), /your bank issues it/);
+  assert.ok(candidates("Annexure 9: Format of Performance Bank Guarantee", "").includes("tpl:performance_bank_guarantee"));
+  assert.ok(candidates("Annexure 2: Power of Attorney", "").length <= 8);
+  // an FRN typed once in one format fills every later format that needs it
+  const d = dataFor({ company, facts: [{ key: "master.frn_of_the_firm", value: "012345N" }, { key: "master.frn_of_the_ca_firm", value: "099999C" }] });
+  assert.match(renderTemplate(templateById("firm_constitution_ca"), d), /FRN\): 012345N/);
+  assert.match(renderTemplate(templateById("turnover_ca_certificate"), d), /FRN: 099999C/);
+  assert.match(renderTemplate(templateById("cover_letter"), dataFor({ company, tender: { bid_validity_days: 120 } })), /valid for 120 days/);
+});
