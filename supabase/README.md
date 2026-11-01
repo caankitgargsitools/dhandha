@@ -114,3 +114,4 @@ Social lead sources:
 91. `pending/68_tender_study.sql` (1 Nov) — tender study: `tender_texts` (full public text of every pre-checked tender), `tender_text_save` (worker key), `doc_job_url` (GeM bid PDF link for the docs worker), GeM harvest `private.gem_harvest_queue` (`gem_harvest_per_run`, default 15) every 15 min 15:45–08:30 IST (cron `gem_harvest`)
 92. `pending/69_session_start_fix.sql` (1 Nov, execute_sql) — "Start today's session" fixed (stale-session test inline)
 93. `pending/70_review_fixes.sql` (1 Nov, execute_sql) — code-review fixes: `format_learn_release`, harvest jobs claimed after customer prefetches (`doc_job_claim`), GeM study jobs not counted by the format harvest
+94. `pending/71_health_watch.sql` (1 Nov, execute_sql) — watchdog `private.health_watch()` every 30 min, phone push to platform admins only when something breaks
