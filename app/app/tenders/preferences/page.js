@@ -5,6 +5,7 @@ import { savePreferences } from "../bidActions";
 import ServicePicker from "@/components/ServicePicker";
 import WordChips from "@/components/WordChips";
 import { loadCatalog } from "@/lib/catalog";
+import { firmSectors, questionsFor } from "@/lib/credentials";
 import { STATES as ALL_STATES } from "@/lib/conditions";
 
 // every state and union territory, A to Z
@@ -13,16 +14,23 @@ const STATES = [...ALL_STATES].sort((a, b) => a.localeCompare(b));
 export default async function Preferences({ searchParams }) {
   const params = await searchParams;
   const { supabase, company, tenant, role } = await getContext();
-  const [{ data: p }, { tree }] = await Promise.all([
+  const [{ data: p }, { tree, index }, { data: creds }] = await Promise.all([
     supabase.from("tender_preferences").select("*").eq("company_id", company.id).maybeSingle(),
     loadCatalog(supabase, tenant.id),
+    supabase.from("company_facts").select("key").eq("company_id", company.id).like("key", "cred.%"),
   ]);
+  // once services are chosen: the credentials tenders in those industries ask for (lib/credentials.js)
+  const credQs = questionsFor(firmSectors((p?.services || []).map((id) => index[id]).filter(Boolean)));
+  const credOpen = credQs.filter((q) => !(creds || []).some((f) => f.key === `cred.${q.key}`)).length;
   const lakhs = (v) => (v ? String(v / 1e5) : "");
   return (
     <div className="stack">
       <Link href="/app/tenders" className="small">Tenders</Link>
       <div className="page-head"><div><h1>What {company.legal_name} does</h1><p>Pick your industries and the exact services you offer. Dhandha uses this to find tenders (and later, leads) for you, then scores each one against your Vault.</p></div></div>
       {params?.welcome && <div className="notice small"><span><strong>Welcome!</strong> Start by telling Dhandha what you do — it takes a minute. Next, fill in your <Link href="/app/vault/profile">company profile</Link>.</span></div>}
+      {credQs.length > 0 && (
+        <div className={`notice small`}><span>{credOpen ? <><strong>{credOpen} question{credOpen === 1 ? "" : "s"} about your firm</strong> — licences, registrations and team numbers that tenders in your industries ask for. Answer once: </> : <>All {credQs.length} credential questions for your industries are answered. </>}<Link href="/app/vault/credentials">Vault → Credentials</Link></span></div>
+      )}
       <FormState action={savePreferences} submit="Save and re-score">
         <fieldset disabled={role === "viewer"} style={{ border: 0, padding: 0, margin: 0 }} className="stack">
           <div className="panel stack-sm">

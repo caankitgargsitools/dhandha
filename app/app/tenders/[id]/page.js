@@ -5,6 +5,7 @@ import GetReady from "@/components/GetReady";
 import FinTests from "@/components/FinTests";
 import { checkFinTests } from "@/lib/finTests";
 import { oemCheck, oemsFrom, suppliesFrom } from "@/lib/oem";
+import { checkCredentials } from "@/lib/credentials";
 import { mandatoryUnmet } from "@/lib/conditions";
 import { notFound } from "next/navigation";
 import { getContext, daysLeft, lakh, fmtDate } from "@/lib/session";
@@ -60,7 +61,7 @@ export default async function TenderDetail({ params, searchParams }) {
     supabase.rpc("bid_board", { p_match: m.id }),
     supabase.from("tenant_members").select("user_id, role, profiles(full_name, email)").eq("tenant_id", m.tenant_id).in("role", ["admin", "manager", "bid_preparer"]),
     supabase.rpc("bid_outcomes", { p_company: company.id }),
-    supabase.from("company_facts").select("key, period, value, valid_until").eq("company_id", company.id).or("key.like.oem.%,key.like.supply.%"),
+    supabase.from("company_facts").select("key, period, value, valid_until").eq("company_id", company.id).or("key.like.oem.%,key.like.supply.%,key.like.cred.%"),
   ]);
   const record = bidChance((outcomes || []).filter((o) => o.match_id !== m.id), t);
   const members = (team || []).map((x) => ({ user_id: x.user_id, name: x.profiles?.full_name || x.profiles?.email || "Member" }));
@@ -128,6 +129,7 @@ export default async function TenderDetail({ params, searchParams }) {
       </div>
 
       <FinTests rows={checkFinTests(read?.fields?.fin_tests, facts, t.value_inr)} />
+      <FinTests title="Licences, registrations and team" href="/app/vault/credentials" link="Vault → Credentials" rows={checkCredentials(read?.fields?.credentials, oemFacts || [])} />
       <FinTests title="GeM: OEM and past supplies" href="/app/vault/brands" link="Vault → Brands & supplies" rows={oemCheck({ gem: read?.fields?.gem, title: t.title, oems: oemsFrom(oemFacts || []), supplies: suppliesFrom(oemFacts || []), dueAt: t.due_at })} />
 
       <GetReady items={prerequisiteList({ found: read?.fields?.prereq || t.prereq || [], fields: read?.fields || {}, tender: t, unmet: mandatoryUnmet(m.reasons), checklist, msme: !!msme, aiLines: read?.fields?.prepare_before })} />
