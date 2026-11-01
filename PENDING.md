@@ -76,6 +76,9 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 51 | **Morning brief on WhatsApp** — today's tenders, follow-ups, hot leads, money due | Claude | Built and working | Done 28 Oct as a phone alert at 09:05 (new tenders, bids closing, follow-ups, tasks, meetings, new leads); on WhatsApp once Dhandha's WhatsApp is set up (step 29) |
 | 52 | **Pricing of Dhandha** — set plans and credits against competitors (notes in CLAUDE.md "Competitors"); suggestion: free tier + ~₹999/mo or ₹9,999/yr all-in + credits | Both | Built and working | To do — one by one, in the order you choose |
 
+## Tender study — questions waiting for you (no rush; work continues)
+Running list in `TENDER_STUDY.md`: findings from reading tenders across industries and questions Q1, Q2, … Answer any time ("Q2: yes").
+
 ## Done (recent)
 - 1 Nov (morning): no owner items done since 31 Oct. Tender winners 28 (5 new). 49 leads for ₹98; 3 new GSC matches; ~6,100 tenders crawled. Still no Vault document uploaded to try the new reading.
 
