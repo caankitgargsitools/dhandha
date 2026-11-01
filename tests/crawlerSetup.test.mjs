@@ -8,7 +8,8 @@ test("cloud-init script carries settings and cannot be broken by odd input", () 
   assert.match(s, /SUPABASE_URL=https:\/\/x\.supabase\.co\n/);
   assert.match(s, /INGEST_KEY=dhk_ABC123rm-rf\/\n/); // shell characters stripped
   assert.match(s, /chmod 600 crawler\.env/);
-  assert.match(s, /--restart unless-stopped --env-file \/opt\/dhandha\/crawler\.env/);
+  assert.match(s, /--restart unless-stopped --memory 1200m --memory-swap 1200m --env-file \/opt\/dhandha\/crawler\.env/);
+  assert.match(s, /\/etc\/cron\.d\/dhandha-update/);
   assert.match(s, /containrrr\/watchtower/);
   // works on Ubuntu (apt) and Oracle Linux (dnf)
   assert.match(s, /apt-get install -y docker\.io/);
