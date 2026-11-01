@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { computeSheet, manpowerCost, travelCost, BOQ_MAX } from "@/lib/costing";
+import { computeSheet, manpowerCost, travelCost, BOQ_MAX, FINANCE } from "@/lib/costing";
 import { Spinner } from "@/components/Progress";
 import { savePrice, saveSheet } from "../../masterActions";
 
@@ -28,6 +28,7 @@ export default function CostPlanner({ matchId, initial, estimate, saved, fresh, 
   }, [s, mode, matchId]);
 
   const set = (k, v) => setS((x) => ({ ...x, [k]: v }));
+  const setFin = (k, v) => setS((x) => ({ ...x, finance: { ...FINANCE, ...x.finance, [k]: v } }));
   const setRow = (sec, i, k, v) => setS((x) => ({ ...x, [sec]: x[sec].map((r, j) => (j === i ? { ...r, [k]: v } : r)) }));
   const addRow = (sec, row) => setS((x) => ({ ...x, [sec]: [...x[sec], row] }));
   const delRow = (sec, i) => setS((x) => ({ ...x, [sec]: x[sec].filter((_, j) => j !== i) }));
@@ -107,6 +108,19 @@ export default function CostPlanner({ matchId, initial, estimate, saved, fresh, 
           ))}
           <div className="row between small"><span>Direct cost</span><strong>{inr(c.direct)}</strong></div>
           {[["overhead_pct", "Overheads", c.overhead], ["contingency_pct", "Contingency", c.contingency]].map(([k, l, v]) => <div key={k} className="row between small"><span>{l} <Num v={s[k]} on={(x) => set(k, x)} w={44} />%</span><span>{inr(v)}</span></div>)}
+          {s.finance ? (
+            <details className="small">
+              <summary className="row between" style={{ cursor: "pointer" }}><span>Working capital ({c.financeDays} days) + guarantees</span><span>{inr(c.working + c.guarantee)}</span></summary>
+              <div className="stack-sm tiny" style={{ marginTop: 6 }}>
+                <label>Buyer pays in <Num v={s.finance.payment_days} on={(v) => setFin("payment_days", v)} w={44} /> days{s.months > 1 && <> · billed every <Num v={s.finance.bill_every_days} on={(v) => setFin("bill_every_days", v)} w={44} /> days</>}</label>
+                <label>Interest on your money <Num v={s.finance.interest_pct} on={(v) => setFin("interest_pct", v)} w={44} />% a year → {inr(c.working)}</label>
+                <label>Performance security <Num v={s.finance.pbg_pct} on={(v) => setFin("pbg_pct", v)} w={44} />% for <Num v={s.finance.pbg_months || ""} on={(v) => setFin("pbg_months", v)} w={44} /> months</label>
+                <label>EMD by bank guarantee ₹ <Num v={s.finance.emd_bg} on={(v) => setFin("emd_bg", v)} w={80} /> for <Num v={s.finance.emd_months} on={(v) => setFin("emd_months", v)} w={36} /> months</label>
+                <label>Bank's guarantee commission <Num v={s.finance.bg_comm_pct} on={(v) => setFin("bg_comm_pct", v)} w={44} />% a year → {inr(c.guarantee)}</label>
+                <span className="faint">Wages and bills are paid before the buyer pays you; this is what that money costs. Set interest to 0 if you use your own money and don't count it.</span>
+              </div>
+            </details>
+          ) : <button className="ghost sm" onClick={() => set("finance", { ...FINANCE })}>+ Working capital and guarantee charges</button>}
           <div className="row between small"><span>Total cost</span><strong>{inr(c.cost)}</strong></div>
           <div className="small">Margin <strong>{s.margin_pct}%</strong>
             <input type="range" min="0" max="40" step="0.5" value={s.margin_pct} onChange={(e) => set("margin_pct", e.target.value)} style={{ width: "100%" }} aria-label="Margin %" />

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { computeSheet, manpowerCost, travelCost, emptySheet, cleanSheet, monthsFrom } from "../lib/costing.js";
+import { financeCost, computeSheet, manpowerCost, travelCost, emptySheet, cleanSheet, monthsFrom } from "../lib/costing.js";
 
 test("manpower carries PF, ESI under the limit, bonus", () => {
   // 20,000 wage: 13 + 3.25 + 8.33 = 24.58% on top
@@ -14,7 +14,7 @@ test("travel: trips x persons x (fare + days x (per diem + stay))", () => {
 });
 
 test("whole sheet: overheads, contingency, margin, GST, vs estimate", () => {
-  const s = { ...emptySheet({ months: 12, value: 1000000 }), boq: [{ qty: 10, rate: 50000 }], other: [{ amount: 100000 }] };
+  const s = { ...emptySheet({ months: 12, value: 1000000 }), finance: null, boq: [{ qty: 10, rate: 50000 }], other: [{ amount: 100000 }] };
   const c = computeSheet(s);
   assert.equal(c.direct, 600000);
   assert.equal(c.cost, 678000);
@@ -35,4 +35,20 @@ test("period to months", () => {
   assert.equal(monthsFrom("2 years"), 24);
   assert.equal(monthsFrom("9 months"), 9);
   assert.equal(monthsFrom(null), 12);
+});
+
+test("working capital and guarantee charges", () => {
+  // 12 monthly bills, paid 45 days after each: money waits 15 (half a billing month) + 45 days
+  const s = { ...emptySheet({ months: 12, finance: { payment_days: 45, pbg_pct: 5, pbg_months: 14, emd_bg: 20000 } }), other: [{ amount: 600000 }] };
+  const c = computeSheet(s);
+  assert.equal(c.financeDays, 60);
+  assert.equal(c.working, Math.round(600000 * 0.12 * 60 / 365 * 100) / 100);
+  const base = 600000 * 1.13 * 1.1;
+  assert.ok(Math.abs(c.guarantee - (0.05 * base * 14 / 12 + 20000 * 6 / 12) * 0.015) < 0.01);
+  assert.ok(Math.abs(c.cost - (678000 + c.working + c.guarantee)) < 0.02);
+  // a one-off supply: only the payment days count; no finance block = nothing added
+  assert.equal(financeCost({ payment_days: 30, interest_pct: 12 }, { direct: 365000, months: 1 }).working, 3600);
+  assert.equal(financeCost(null).total, 0);
+  assert.equal(cleanSheet({ finance: { payment_days: "45", interest_pct: 5000 } }).finance.interest_pct, 1000);
+  assert.equal(cleanSheet({}).finance, undefined);
 });

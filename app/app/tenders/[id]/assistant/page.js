@@ -192,7 +192,7 @@ export default async function TenderAssistant({ params }) {
   // 7. the price — the one thing asked for every tender: typed, or worked out in the cost planner
   const f = read?.fields || {};
   const estimate = Number(t.value_inr || job?.detail?.value_inr || f.value_inr) || null;
-  const sheet = () => m.cost_sheet || emptySheet({ months: monthsFrom(f.completion_period || job?.detail?.period_of_work), value: estimate, scope: f.work_scope || [], travel: !!(t.state && c.state && t.state !== c.state) });
+  const sheet = () => m.cost_sheet || emptySheet({ months: monthsFrom(f.completion_period || job?.detail?.period_of_work), value: estimate, scope: f.work_scope || [], travel: !!(t.state && c.state && t.state !== c.state), finance: { payment_days: f.gem?.payment_days, pbg_pct: f.performance_security_pct, pbg_months: f.gem?.epbg_months } });
   if (m.quoted_price) done.push(`Your price: ₹${Number(m.quoted_price).toLocaleString("en-IN")} + GST${m.price_note ? ` (${m.price_note})` : ""}.`);
   else if (canPrepare && read) {
     steps.push({ id: "price", kind: "price", fresh: !m.cost_sheet, ev: m.tech_eval || null, gem: f.gem?.mse_preference || f.gem?.mii_preference ? f.gem : null, msme: !!msme, cost: m.cost_sheet ? computeSheet(m.cost_sheet).cost : null, quote: m.quoted_price || null, estimate, sheet: sheet(),
