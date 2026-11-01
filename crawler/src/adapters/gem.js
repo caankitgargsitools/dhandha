@@ -106,7 +106,10 @@ export async function gemList(page, base, { csrf, filter, search = "", p = 1 }) 
   }, { p, base, csrf, filter, search });
 }
 
-export async function crawlGem(browser, { maxPages = 20, log = console.log, base = "https://bidplus.gem.gov.in", progress = () => {}, words = (process.env.GEM_SEARCH || "audit,chartered accountant,accounting,accounts,internal audit,GST,taxation,valuation,financial consultant").split(",").map((x) => x.trim()).filter(Boolean) } = {}) {
+// one or two words per industry Dhandha serves (GEM_INDUSTRY_SEARCH overrides; empty turns them off)
+const INDUSTRY_WORDS = "manpower,security services,housekeeping,facility management,hiring of vehicle,catering,event management,printing,medical equipment,drugs,laboratory,civil work,repair and maintenance,electrical work,software,cctv,annual maintenance,consultancy,training,transportation";
+
+export async function crawlGem(browser, { maxPages = 20, industryWords = (process.env.GEM_INDUSTRY_SEARCH ?? INDUSTRY_WORDS).split(",").map((x) => x.trim()).filter(Boolean), log = console.log, base = "https://bidplus.gem.gov.in", progress = () => {}, words = (process.env.GEM_SEARCH || "audit,chartered accountant,accounting,accounts,internal audit,GST,taxation,valuation,financial consultant").split(",").map((x) => x.trim()).filter(Boolean) } = {}) {
   const ctx = await browser.newContext({ locale: "en-IN" });
   const page = await ctx.newPage();
   const out = new Map();
@@ -114,9 +117,11 @@ export async function crawlGem(browser, { maxPages = 20, log = console.log, base
     const { csrf, filter } = await gemSession(page, base);
     if (!csrf) log("  GeM: no security token seen on the page");
     await page.waitForTimeout(1500);
-    // every search word (CA work) in full, plus the first pages of all bids
-    for (const w of [...words, ""]) {
-      const limit = w ? maxPages * 3 : maxPages;
+    // every search word (CA work) in full, the other industries' words a few pages each (customers in every industry,
+    // and the tender study), plus the first pages of all bids
+    const wide = new Set(industryWords);
+    for (const w of [...words, ...industryWords.filter((x) => !words.includes(x)), ""]) {
+      const limit = !w ? maxPages : wide.has(w) && !words.includes(w) ? Math.ceil(maxPages / 4) : maxPages * 3;
       let found = null;
       for (let p = 1; p <= limit; p++) {
         progress({ phase: w ? `search “${w}”` : "latest", page: p, of: found ? Math.min(limit, Math.ceil(found / 10)) : limit });
