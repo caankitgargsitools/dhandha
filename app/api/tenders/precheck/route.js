@@ -42,7 +42,8 @@ export async function POST(request) {
         const { error: re } = await supabase.rpc("precheck_report", { p_key: key, p_job: j.job, p_read: read, p_conditions: rules ? extractConditions(pages, { state: j.state }) : [] });
         if (re) console.error("precheck report", re.message); else done++;
         // a harvest job (fetched only to learn its formats): its downloaded files are cleared and the formats learned
-        if (j.harvest) await supabase.rpc("precheck_report_harvest", { p_key: key, p_job: j.job });
+        // (the function does nothing for a customer's job)
+        await supabase.rpc("precheck_report_harvest", { p_key: key, p_job: j.job });
       } catch (e) { console.error("precheck", j.job, e.message); }
     }
   }
