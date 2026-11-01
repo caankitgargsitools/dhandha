@@ -69,7 +69,7 @@ async function generateBidPackLocked(prev, formData) {
   // a signed pack only when it is complete: no blank left in any format, the price set
   if (kind === "final") {
     const left = (match.filled_formats || []).filter((f) => !["price", "covering_letter"].includes(f.kind))
-      .map((f) => ({ title: f.title, n: (String(f.edited_text || fillPlaceholders(f.filled_text || "", facts || [], { people: people || [], works: works || [] })).match(/\[TO BE FILLED:/gi) || []).length }))
+      .map((f) => ({ title: f.title, n: (String(f.edited_text || fillPlaceholders(f.filled_text || "", facts || [], { people: people || [], works: works || [], company: c, tender: match.tenders })).match(/\[TO BE FILLED:/gi) || []).length }))
       .filter((x) => x.n);
     if (left.length) return { error: `Not ready to sign: ${left.map((x) => `${x.title} (${x.n} blank${x.n === 1 ? "" : "s"})`).slice(0, 5).join(", ")}${left.length > 5 ? ` and ${left.length - 5} more` : ""}. Fill them in the assistant ("Your formats" → Open as a form), then sign.` };
   }

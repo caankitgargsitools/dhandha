@@ -145,15 +145,16 @@ export async function saveAnnexure({ matchId, idx, segments }) {
 // The form for one annexure, rebuilt from what is stored (used when the person opens it again).
 export async function annexureSegments({ matchId, idx }) {
   const { supabase, company } = await getContext();
-  const [{ data: m }, { data: facts }, { data: people }, { data: works }] = await Promise.all([
-    supabase.from("tender_matches").select("filled_formats").eq("id", matchId).eq("company_id", company.id).single(),
+  const [{ data: m }, { data: facts }, { data: people }, { data: works }, { data: c }] = await Promise.all([
+    supabase.from("tender_matches").select("filled_formats, tenders(*)").eq("id", matchId).eq("company_id", company.id).single(),
     supabase.from("company_facts").select("key, period, value").eq("company_id", company.id),
     supabase.from("people").select("*").eq("company_id", company.id).order("created_at"),
     supabase.from("experience_items").select("*").eq("company_id", company.id),
+    supabase.from("companies").select("*").eq("id", company.id).single(),
   ]);
   const p = m?.filled_formats?.[idx];
   if (!p) return { error: "Format not found." };
-  return { title: p.title, segments: buildSegments(p.edited_text || p.filled_text || p.text || "", { facts: facts || [], people: people || [], works: works || [] }) };
+  return { title: p.title, segments: buildSegments(p.edited_text || p.filled_text || p.text || "", { facts: facts || [], people: people || [], works: works || [], company: c, tender: m.tenders }) };
 }
 
 // The chat is kept per tender, so questions and answers stay on screen when the page is opened again.
