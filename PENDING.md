@@ -86,6 +86,7 @@ Running list in `TENDER_STUDY.md`: findings from reading tenders across industri
 - **Answered 1 Nov:** Q5–Q12 yes (all built and live), Q12 = hide.
 - **Parked on the pending list by you (1 Nov):** Q1 — work out bid capacity (A × N × 2) − B for works tenders from the Vault's works and work in hand (F1); Q2 — load each state's minimum wages into the manpower cost sheet (F8). Ask again later.
 - Q3 (reverse-auction floor) and Q4 (points table with your figures) yes — built 1 Nov.
+- **Owner's new item (1 Nov) — Intelligent master page:** one page that knows, from the services the firm picked (What we do) and the kinds of buyers / vendors it works with, which questions, information, certificates and registrations (or combinations of these) its tenders need; it then asks those questions one by one and asks for the documents to upload, so the firm's masters are complete before any tender is prepared. Builds on Vault → Credentials (per-industry questions learned from fetched tenders), Brands & supplies, Facts and Documents. Waiting for your go-ahead on the design; not started.
 
 ## Done (recent)
 - 1 Nov (morning): no owner items done since 31 Oct. Tender winners 28 (5 new). 49 leads for ₹98; 3 new GSC matches; ~6,100 tenders crawled. Still no Vault document uploaded to try the new reading.
