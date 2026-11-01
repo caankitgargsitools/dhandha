@@ -54,13 +54,13 @@ const sessionChannel = (portal) => ({
 });
 
 // Show the captcha picture to a person and wait for the answer; fill it and press the visible button.
-async function captchaFromPerson(page, job, channel = jobChannel(job), label = "The portal asked for a captcha") {
+async function captchaFromPerson(page, job, channel = jobChannel(job), label = "The portal asked for a captcha", waitMs = 9 * 60000) {
   for (let attempt = 1; attempt <= 3; attempt++) {
     const img = await visible(page, CAPTCHA_IMG), input = await visible(page, CAPTCHA_INPUT);
     if (!img || !input) return true;
     const png = await img.screenshot({ type: "png" });
     const seq = await channel.post(attempt === 1 ? `${label}; waiting for it to be typed` : `${label} — the portal did not accept that; a new picture is waiting`, `data:image/png;base64,${png.toString("base64")}`);
-    const until = Date.now() + 9 * 60000;
+    const until = Date.now() + waitMs;
     let answer = null;
     while (Date.now() < until) {
       await sleep(2000);
@@ -284,13 +284,28 @@ async function openSession(browser, req) {
     await rpc("session_update", { p_portal: portal, p_state: "live", p_step: asked ? "Live — fetches go through without a captcha while the portal keeps the session" : "Live — the portal did not ask for a captcha" });
     s.live = true;
     await saveCookies(portal, s);
+    winnersQueue.add(portal); // tender winners come after every portal of the session is live
   } catch (e) {
     log(`session ${portal} failed: ${e.message}`);
     await rpc("session_update", { p_portal: portal, p_state: "failed", p_error: e.message === "stopped" ? "Stopped." : e.message.split("\n")[0] }).catch(() => {});
     await dropSession(portal);
     return;
   }
-  await winnersInSession(site, s, ch, say);
+}
+
+// After the session's portals are open (nothing left to claim), the winners pages one portal at a time, each captcha
+// waiting 2 minutes at most — so the session itself is not held up and an unattended one does not block fetching.
+const winnersQueue = new Set();
+async function winnersPass() {
+  for (const portal of winnersQueue) {
+    winnersQueue.delete(portal);
+    const s = sessions.get(portal), site = GEPNIC.find((x) => x.portal === portal);
+    if (!s || !s.live || !site || s.page.isClosed()) continue;
+    const say = (step) => rpc("session_update", { p_portal: portal, p_step: step }).catch(() => {});
+    await winnersInSession(site, s, sessionChannel(portal), say);
+    return true; // one portal per turn: waiting jobs and new session requests go first
+  }
+  return false;
 }
 
 // Tender winners: a portal's "Results of Tenders" list only shows after its captcha is typed. The crawler's own runs
@@ -308,7 +323,7 @@ async function winnersInSession(site, s, ch, say) {
     await s.page.goto(site.base + RESULTS_LIST, { waitUntil: "domcontentloaded", timeout: 60000 });
     if (await hasCaptcha(s.page)) {
       if (winnersAsked.get(portal) === today) { await rpc("session_update", { p_portal: portal, p_state: "live", p_step: "Live — tender winners could not be read today" }).catch(() => {}); s.last = Date.now(); return; }
-      await captchaFromPerson(s.page, null, ch, "Tender winners: the results page asks for a captcha");
+      await captchaFromPerson(s.page, null, ch, "Tender winners (optional): the results page asks for a captcha", 2 * 60000);
       winnersAsked.set(portal, today);
     }
     await rpc("session_update", { p_portal: portal, p_state: "live", p_step: "Live — reading tender winners" });
@@ -498,6 +513,7 @@ try {
       errors = 0;
       if (job) { await runJob(browser, job); did++; lastPortal = job.portal; continue; }
       if (between) continue; // back to the next captcha-session portal
+      if (await winnersPass()) continue;
       if (!did && Date.now() - start < waitFirst * 1000) { await sleep(5000); continue; }
       if (args.includes("--forever") && Date.now() < stopAt) { await keepAlive(); await sleep(3000); continue; }
       break;

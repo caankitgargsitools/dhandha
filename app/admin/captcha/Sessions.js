@@ -12,6 +12,8 @@ export default function Sessions({ initial }) {
   const [rows, setRows] = useState(initial);
   const [busy, setBusy] = useState(null);
   const [err, setErr] = useState("");
+  // answers sent but not yet acted on by the portal: the box goes away at once (the portal takes 20–60 s to answer)
+  const [sent, setSent] = useState({});
   const [, tick] = useState(0);
   const db = useRef(null);
   const load = useCallback(async () => {
@@ -30,15 +32,17 @@ export default function Sessions({ initial }) {
     if (error) setErr(error.message);
     setBusy(null); load();
   }
-  async function answer(portal, value) {
-    setBusy(portal); setErr("");
+  async function answer(portal, value, seq) {
+    setSent((x) => ({ ...x, [portal]: seq }));
+    setErr("");
     const { error } = await db.current.rpc("answer_session_captcha", { p_portal: portal, p_answer: value });
-    if (error) setErr(error.message);
-    setBusy(null); load();
+    if (error) { setErr(error.message); setSent((x) => { const y = { ...x }; delete y[portal]; return y; }); }
+    load();
   }
   db.current ||= createClient();
   const live = rows.filter((r) => r.state === "live").length;
-  const waiting = rows.filter((r) => r.state === "captcha");
+  const checking = (r) => r.state === "captcha" && sent[r.portal] === r.captcha_seq;
+  const waiting = rows.filter((r) => r.state === "captcha" && !checking(r));
 
   return (
     <div className="stack">
@@ -51,13 +55,13 @@ export default function Sessions({ initial }) {
       {waiting.length > 0 && (
         <div className="grid-2">
           {waiting.map((r) => (
-            <form key={r.portal + r.captcha_seq} className="panel stack-sm" onSubmit={(e) => { e.preventDefault(); answer(r.portal, new FormData(e.currentTarget).get("a")); }}>
+            <form key={r.portal + r.captcha_seq} className="panel stack-sm" onSubmit={(e) => { e.preventDefault(); answer(r.portal, new FormData(e.currentTarget).get("a"), r.captcha_seq); }}>
               <strong>{r.portal}</strong>
               <span className="tiny faint">{r.step}</span>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={r.captcha_image} alt={`Captcha from ${r.portal}`} style={{ maxWidth: "100%", background: "#fff", borderRadius: 6, minHeight: 40, imageRendering: "pixelated" }} />
               <div className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
-                <input name="a" autoComplete="off" autoCapitalize="off" spellCheck={false} required maxLength={40} aria-label={`Captcha for ${r.portal}`} style={{ flex: 1, width: "auto" }} />
+                <input name="a" autoFocus={r === waiting[0]} autoComplete="off" autoCapitalize="off" spellCheck={false} required maxLength={40} aria-label={`Captcha for ${r.portal}`} style={{ flex: 1, width: "auto" }} />
                 <button className="sm" disabled={busy === r.portal} aria-busy={busy === r.portal}>Send</button>
               </div>
             </form>
@@ -69,7 +73,7 @@ export default function Sessions({ initial }) {
           <thead><tr><th>Portal</th><th>State</th><th>Live for</th><th>Fetches carried</th><th>What we have learned</th><th>Re-verify by</th><th /></tr></thead>
           <tbody>
             {rows.map((r) => {
-              const [cls, label] = CHIP[r.state] || CHIP.idle;
+              const [cls, label] = checking(r) ? ["info", "Sent — the portal is checking it"] : CHIP[r.state] || CHIP.idle;
               const l = r.learned || {};
               const age = r.live_since && r.state === "live" ? (Date.now() - Date.parse(r.live_since)) / 60000 : null;
               const learned = l.per_action ? "Asks a captcha for every fetch" : l.ended > 0 ? `Usually about ${fmt(Number(l.median_min))} (shortest ${fmt(Number(l.min_min))}; ${l.ended} session${l.ended === 1 ? "" : "s"} seen)` : l.longest_open_min ? `Still learning — longest so far ${fmt(Number(l.longest_open_min))}` : "Still learning";
