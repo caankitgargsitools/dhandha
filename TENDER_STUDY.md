@@ -65,7 +65,7 @@ with questions for the owner. Questions never block the work — they wait here 
 | Q4 | CA-firm points (F6): work out empanelment points for bank-audit tenders free from Key people? | Yes / Later | |
 | Q5 | Fetch and read **every attachment** of a GeM bid (ATC, scope of work, RFP) — free, a little more storage (F10)? | Yes / No | **Yes** (1 Nov) — built |
 | Q6 | Build the free **GeM bid-details parser** that drives eligibility, deposits and the price step (F11)? | Yes / No | **Yes** (1 Nov) — built |
-| Q7 | Show **MSE / Make-in-India "match L1"** scenarios and the share of the order in the price step (F12)? | Yes / Later | |
+| Q7 | Show **MSE / Make-in-India "match L1"** scenarios and the share of the order in the price step (F12)? | Yes / Later | **Yes** (1 Nov) — built: `matchL1` + `PreferencePanel.js` |
 | Q8 | Add **working capital** (wages first, payment days) and guarantee charges to the cost planner (F14)? | Yes / Later | |
 | Q9 | Check **railway / PSU financial tests** (aggregate turnover, liquidity, net worth, profit each year) from the Vault (F16)? | Yes / Later | |
 | Q10 | Keep **OEM partners** and product-wise supply quantities per year in the Vault for resellers (F18)? | Yes / Later | |
