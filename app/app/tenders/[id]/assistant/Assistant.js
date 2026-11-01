@@ -12,6 +12,8 @@ import CostPlanner from "./CostPlanner";
 import { MasterAnswer, WorkAnswer, PersonAnswer, FormatPicker } from "./Questions";
 import AnnexureEditor from "./AnnexureEditor";
 import EvalPanel from "./EvalPanel";
+import OutsideEdit from "./OutsideEdit";
+import { syncOutside } from "../../outsideActions";
 import { Spinner, TimedProgress } from "@/components/Progress";
 import { forceFiling, techMarking, askAssistant, saveAnnexure, annexureSegments, saveChat } from "../../assistantActions";
 
@@ -22,7 +24,7 @@ const form = (o) => { const f = new FormData(); for (const [k, v] of Object.entr
 // The chat (each question with its answer) is kept per tender in tender_chat, so it stays when the page is opened again.
 // Tabs: the chat, the tender summary (brief) and the fetched documents. The chat scrolls inside its own box, so the
 // page itself never jumps while answering.
-export default function Assistant({ matchId, tenderId, portal, files = [], history = [], balance = Infinity, done, steps, brief, formats, redo, canAnswer, canPrepare }) {
+export default function Assistant({ matchId, tenderId, portal, files = [], history = [], balance = Infinity, done, steps, brief, formats, google = null, redo, canAnswer, canPrepare }) {
   const router = useRouter();
   // the portal's BOQ spreadsheet among the fetched documents, for "Use the BOQ from the tender documents"
   const boqDocs = files.filter((x) => x.url && /boq/i.test(x.file_name) && /\.xlsx?$/i.test(x.file_name));
@@ -61,6 +63,22 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
     autoRead.current = true;
     run(null, () => readTender({}, form({ match_id: matchId, mode: current.aiReady ? "ai" : "basic" })), (r) => r.message, { label: "Reading every page of the tender…", seconds: current.aiReady ? 60 : 15 });
   }, [current?.kind]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // formats being filled in Google Docs / Sheets: brought back when the person returns to this page
+  const linked = (formats || []).some((f) => f.gdoc);
+  useEffect(() => {
+    if (!linked || !canPrepare) return;
+    let last = 0;
+    const pull = () => {
+      if (document.visibilityState !== "visible" || Date.now() - last < 15000) return;
+      last = Date.now();
+      syncOutside({ matchId }).then((r) => { if (r?.changed) { say("bot", `Brought back what you filled in Google: ${r.changed} format${r.changed === 1 ? "" : "s"} updated.`); router.refresh(); } }).catch(() => {});
+    };
+    pull();
+    window.addEventListener("focus", pull);
+    document.addEventListener("visibilitychange", pull);
+    return () => { window.removeEventListener("focus", pull); document.removeEventListener("visibilitychange", pull); };
+  }, [linked, matchId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const keep = (entries) => { if (canAnswer) saveChat({ matchId, entries }).catch(() => {}); };
   const say = (who, msg, extra) => {
@@ -163,6 +181,7 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
                   <summary className="small" style={{ cursor: f.text ? "pointer" : "default" }}><strong>{f.title}</strong> <span className={`chip ${/^Ready/.test(f.status) ? "ok" : /blank|Waiting/.test(f.status) ? "warn" : "mute"}`}>{f.status}</span></summary>
                   {f.text && <pre style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", fontSize: 13, margin: "8px 0 0" }}>{f.text}</pre>}
                   {f.editable && f.idx != null && <button className="ghost sm" style={{ marginTop: 8 }} onClick={() => openFormat(f.idx)}>Open as a form</button>}
+                  {f.editable && f.idx != null && <OutsideEdit matchId={matchId} f={f} google={google} onMessage={(m, error) => say("bot", m, error ? { error: true } : undefined)} />}
                 </details>
               ))}
             </div>

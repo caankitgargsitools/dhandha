@@ -26,6 +26,7 @@ export default async function AdminLayout({ children }) {
       { href: "/admin/mca", label: "New companies", icon: "building" },
       { href: "/admin/data", label: "Data marketplace", icon: "people" },
       { href: "/admin/taxonomy", label: "Industries & services", icon: "briefcase", tag: newTax ? String(newTax) : undefined },
+      { href: "/admin/formats", label: "Format catalogue", icon: "log" },
       { href: "/admin/ai", label: "AI engines", icon: "sparkle" },
       { href: "/admin/voice", label: "Dhandha AI lessons", icon: "sparkle", tag: newLessons ? String(newLessons) : undefined },
       { href: "/admin/pricing", label: "Pricing", icon: "rupee" },

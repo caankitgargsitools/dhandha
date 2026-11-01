@@ -1,4 +1,5 @@
 "use server";
+import { pullFromGoogle } from "@/lib/outsideEdit";
 import { revalidatePath } from "next/cache";
 import { fillPlaceholders } from "@/lib/masters";
 import { withLock } from "@/lib/locks";
@@ -22,6 +23,13 @@ async function generateBidPackLocked(prev, formData) {
 
   const { data: match } = await supabase.from("tender_matches").select("id, tender_id, company_id, filled_formats, reasons, eligible, forced_at, quoted_price, price_note, cost_sheet, tenders(*)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
   if (!match) return { error: "Tender not found for this company." };
+  // formats being filled in Google Docs / Sheets: take what is saved there now
+  if ((match.filled_formats || []).some((f) => f.gdoc?.id)) {
+    try {
+      const r = await pullFromGoogle({ supabase, tenant, company, plan: match.filled_formats, tender: match.tenders });
+      if (r.changed) { match.filled_formats = r.plan; await supabase.from("tender_matches").update({ filled_formats: r.plan }).eq("id", matchId); }
+    } catch {}
+  }
   // a mandatory condition that is not met: no bid file until the person says it is met or chooses to file anyway
   if (mandatoryUnmet(match.reasons).length && !match.forced_at) return { error: "A mandatory condition of this tender is not met. Open the tender assistant: confirm you meet it, or choose “File anyway”." };
 
