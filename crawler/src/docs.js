@@ -221,6 +221,7 @@ const SESSION_IDLE_MS = 45 * 60000, LIVE_IDLE_MS = 24 * 3600000;
 const KEEPALIVE_MS = 4 * 60000;
 const EXPIRED_RX = /session\s+(?:has\s+)?(?:expired|timed?\s*out)|session\s+time\s*out|invalid\s+session/i;
 const MAX_IDLE_SESSIONS = 8; // non-live sessions kept open at once; the least recently used close first
+const MAX_OPEN_PAGES = Math.max(2, Number(env.MAX_OPEN_PAGES || 5)); // all portal pages, live or not
 const sessions = new Map(); // portal -> { ctx, page, last, live, touched }
 const event = (portal, e, cookies = null) => rpc("session_event", { p_portal: portal, p_event: e, p_runner: RUNNER, p_cookies: cookies }).catch((x) => log("session_event", x.message));
 const saveCookies = async (portal, s) => event(portal, "cookies", await s.ctx.cookies().catch(() => null));
@@ -234,6 +235,13 @@ async function evictIdle(keep = null) {
   }
   const idle = [...sessions].filter(([p, s]) => p !== keep && !s.live).sort((a, b) => a[1].last - b[1].last);
   for (const [p] of idle.slice(0, Math.max(0, idle.length - MAX_IDLE_SESSIONS))) await dropSession(p);
+  // memory cap (the server is small and shared): at most MAX_OPEN_PAGES portal pages open at once. A live session past
+  // the cap is put away — its cookies are saved first and sessionFor() restores them when the portal is needed again.
+  const open = [...sessions].filter(([p]) => p !== keep).sort((a, b) => a[1].last - b[1].last);
+  for (const [p, x] of open.slice(0, Math.max(0, open.length - (MAX_OPEN_PAGES - 1)))) {
+    if (x.live) await saveCookies(p, x);
+    await dropSession(p);
+  }
 }
 async function sessionFor(browser, portal) {
   await evictIdle(portal);
@@ -296,7 +304,7 @@ async function openSession(browser, req) {
 // After the session's portals are open (nothing left to claim), the winners pages one portal at a time, each captcha
 // waiting 2 minutes at most — so the session itself is not held up and an unattended one does not block fetching.
 const winnersQueue = new Set();
-const SESSION_PARALLEL = Math.max(1, Math.min(5, Number(env.SESSION_PARALLEL || 4)));
+const SESSION_PARALLEL = Math.max(1, Math.min(5, Number(env.SESSION_PARALLEL || 2)));
 async function winnersPass() {
   for (const portal of winnersQueue) {
     winnersQueue.delete(portal);
@@ -481,7 +489,8 @@ const args = process.argv.slice(2);
 const waitFirst = Number(args[args.indexOf("--wait") + 1]) || (args.includes("--wait") ? 90 : 0);
 // --forever --hours 5.75: keep watching for jobs (checks every 3 s), then exit so the next run takes over
 const stopAt = args.includes("--hours") ? Date.now() + Number(args[args.indexOf("--hours") + 1]) * 3600000 : Infinity;
-const browser = await chromium.launch();
+// low-memory Chromium: the server also runs other services
+const browser = await chromium.launch({ args: ["--disable-dev-shm-usage", "--disable-gpu", "--renderer-process-limit=4", "--js-flags=--max-old-space-size=256"] });
 // docker stop / a new image: the job being fetched is marked failed with a clear reason (doc_job_update cannot put a
 // job back in the queue) instead of waiting 10 minutes for "stopped responding"; then the browser closes.
 let current = null, stopping = false;
