@@ -175,23 +175,6 @@ create or replace function private.format_learn_kick() returns bigint language s
     timeout_milliseconds := 60000);
 $$;
 
--- pre-check claim also hands the tender's particulars (to clean its formats) and whether it is a harvest job
-create or replace function public.precheck_claim(p_key text, p_limit integer default 4) returns jsonb
-language plpgsql security definer set search_path = '' as $$
-declare out jsonb;
-begin
-  if not private.outreach_key_ok(p_key) then raise exception 'bad worker key'; end if;
-  with c as (
-    select j.id from public.tender_doc_jobs j join public.tenders t on t.id = j.tender_id
-    where j.status = 'fetched' and (j.prechecked_at is null or j.prechecked_at < now() - interval '30 minutes')
-      and t.prechecked_at is null and not exists (select 1 from public.tender_reads r where r.tender_id = j.tender_id)
-    order by j.updated_at limit least(greatest(p_limit, 1), 10) for update of j skip locked
-  ), u as (update public.tender_doc_jobs j set prechecked_at = now() from c where j.id = c.id returning j.id, j.tender_id, j.files, j.detail)
-  select coalesce(jsonb_agg(jsonb_build_object('job', u.id, 'tender', u.tender_id, 'state', t.state, 'files', u.files, 'harvest', u.detail->>'purpose' = 'harvest')), '[]') into out
-  from u join public.tenders t on t.id = u.tender_id;
-  return out;
-end $$;
-
 -- after a pre-check: a harvest job's downloaded files are dropped (status collected) and the formats are learned
 create or replace function public.precheck_report_harvest(p_key text, p_job uuid) returns void
 language plpgsql security definer set search_path = '' as $$
@@ -199,7 +182,7 @@ begin
   if not private.outreach_key_ok(p_key) then raise exception 'bad worker key'; end if;
   update public.tender_doc_jobs set status = 'collected', step = 'Formats added to the catalogue; files cleared', updated_at = now()
   where id = p_job and detail->>'purpose' = 'harvest' and status = 'fetched';
-  perform private.format_learn_kick();
+  if found then perform private.format_learn_kick(); end if;
 end $$;
 
 grant execute on function public.format_learn_claim(text, int), public.format_learn(text, jsonb), public.precheck_report_harvest(text, uuid) to anon, authenticated;
