@@ -7,7 +7,8 @@ import { requiredDocs } from "@/lib/bidpack";
 import { missingMasters, fillPlaceholders, isReference } from "@/lib/masters";
 import { buildSegments, blanksLeft } from "@/lib/annexure";
 import { computeSheet } from "@/lib/costing";
-import { candidates, CHOICES } from "@/lib/formatLibrary";
+import { candidates, choiceLabel } from "@/lib/formatLibrary";
+import { dataFor, renderTemplate, templateById } from "@/lib/formatTemplates";
 import { emptySheet, monthsFrom } from "@/lib/costing";
 import Assistant from "./Assistant";
 import { summarise, adviceLine, priceToWin } from "@/lib/pastResults";
@@ -40,7 +41,7 @@ export default async function TenderAssistant({ params }) {
     supabase.from("people").select("*").eq("company_id", company.id).order("created_at"),
     supabase.from("bid_packs").select("id, kind, created_at").eq("match_id", m.id).order("created_at", { ascending: false }).limit(1),
     supabase.from("tender_doc_jobs").select("id, status, step, detail, error, created_at").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
-    supabase.from("documents").select("type_code, valid_until").eq("company_id", company.id).eq("status", "active"),
+    supabase.from("documents").select("type_code, valid_until, title, number").eq("company_id", company.id).eq("status", "active"),
     supabase.from("document_types").select("code, name"),
     supabase.from("tender_chat").select("who, body, error").eq("match_id", id).order("id", { ascending: false }).limit(300),
     supabase.from("wallets").select("balance").eq("tenant_id", m.tenant_id).maybeSingle(),
@@ -113,11 +114,16 @@ export default async function TenderAssistant({ params }) {
   let formatsView = null;
   if (!plan.length) {
     const fmts = read?.formats?.length ? read.formats : STANDARD;
+    const tplData = dataFor({ company: c, facts: facts || [], people: peopleRows || [], works: workRows || [], docs: docs || [], docTypes: types || [], tender: t });
     steps.push({ id: "choose", kind: "choose_formats", say: `The tender asks for ${fmts.length} format${fmts.length === 1 ? "" : "s"}. For each one I've picked the best fit from my templates — change any you like, then confirm.`,
-      formats: fmts.map((f) => ({ title: f.title, page: f.page || null, options: (f.kind ? [f.kind, "custom", "manual"] : candidates(f.title, f.text)).map((k) => ({ kind: k, label: CHOICES[k] })) })) });
+      formats: fmts.map((f) => ({ title: f.title, page: f.page || null, options: (f.kind ? [f.kind, "custom", "manual"] : candidates(f.title, f.text, { constitution: c.constitution })).map((k) => {
+        const tpl = k.startsWith("tpl:") ? templateById(k.slice(4)) : null;
+        return { kind: k, label: choiceLabel(k, f.text), when: tpl?.when || null, preview: tpl ? renderTemplate(tpl, tplData).slice(0, 2500) : null };
+      }) })) });
   } else {
-    const n = (k) => plan.filter((p) => p.kind === k).length;
-    done.push(`Formats chosen: ${plan.length - n("custom") - n("manual") - n("price")} from my templates${n("custom") ? `, ${n("custom")} in the tender's own wording` : ""}${n("manual") ? `, ${n("manual")} you'll fill yourself` : ""}${n("price") ? ", the price bid on the portal" : ""}.`);
+    const n = (k) => plan.filter((p) => p.kind === k && !p.tpl).length;
+    const std = plan.filter((p) => p.tpl).length;
+    done.push(`Formats chosen: ${plan.length - n("custom") - n("manual") - n("price")} from my templates${std ? ` (${std} standard versions, filled free)` : ""}${n("custom") ? `, ${n("custom")} in the tender's own wording` : ""}${n("manual") ? `, ${n("manual")} you'll fill yourself` : ""}${n("price") ? ", the price bid on the portal" : ""}.`);
     // 5. master questions: only what the chosen formats need and the masters don't have, one at a time
     for (const q of missingMasters(c, ["covering_letter", ...plan.map((p) => p.kind)], { facts: facts || [], counts: { works, people } })) steps.push(q);
     // 6. formats kept in the tender's own wording: filled from the masters by AI; blanks it could not fill become master questions

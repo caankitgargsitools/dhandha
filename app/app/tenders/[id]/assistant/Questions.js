@@ -66,28 +66,41 @@ export function PersonAnswer({ busy, send, skip }) {
   );
 }
 
-// The format picker: each of the tender's formats with the best template pre-selected and the alternatives.
+// The format picker: each of the tender's formats with the best choice pre-selected and the alternatives —
+// several standard versions where the tender only names the format, each with a preview of how it will read.
 export function FormatPicker({ step, busy, send }) {
   const [pick, setPick] = useState(() => Object.fromEntries(step.formats.map((f) => [f.title, f.options[0].kind])));
+  const [open, setOpen] = useState(null);
   const list = step.formats.map((f) => ({ title: f.title, page: f.page, kind: pick[f.title] }));
   const ai = list.filter((x) => x.kind === "custom").length;
+  const free = list.filter((x) => String(x.kind).startsWith("tpl:")).length;
   return (
     <div className="stack-sm">
-      {step.formats.map((f) => (
-        <div key={f.title} style={{ borderTop: "1px solid var(--line-soft)", paddingTop: 8 }}>
-          <div className="small"><strong>{f.title}</strong>{f.page ? <span className="faint"> · p. {f.page}</span> : null}</div>
-          <div className="row" style={{ gap: 6, marginTop: 4 }}>
-            {f.options.map((o, i) => (
-              <label key={o.kind} className={`chip ${pick[f.title] === o.kind ? "ok" : "mute"}`} style={{ cursor: "pointer", fontWeight: pick[f.title] === o.kind ? 700 : 400 }}>
-                <input type="radio" name={f.title} checked={pick[f.title] === o.kind} onChange={() => setPick({ ...pick, [f.title]: o.kind })} style={{ display: "none" }} />
-                {o.label}{i === 0 ? " (best fit)" : ""}
-              </label>
-            ))}
+      {step.formats.map((f) => {
+        const chosen = f.options.find((o) => o.kind === pick[f.title]);
+        return (
+          <div key={f.title} style={{ borderTop: "1px solid var(--line-soft)", paddingTop: 8 }}>
+            <div className="small"><strong>{f.title}</strong>{f.page ? <span className="faint"> · p. {f.page}</span> : null}</div>
+            <div className="row" style={{ gap: 6, marginTop: 4 }}>
+              {f.options.map((o, i) => (
+                <label key={o.kind} className={`chip ${pick[f.title] === o.kind ? "ok" : "mute"}`} style={{ cursor: "pointer", fontWeight: pick[f.title] === o.kind ? 700 : 400 }} title={o.when || undefined}>
+                  <input type="radio" name={f.title} checked={pick[f.title] === o.kind} onChange={() => setPick({ ...pick, [f.title]: o.kind })} style={{ display: "none" }} />
+                  {o.label}{i === 0 ? " (best fit)" : ""}
+                </label>
+              ))}
+            </div>
+            {chosen?.preview && (
+              <div style={{ marginTop: 4 }}>
+                <button type="button" className="ghost sm" onClick={() => setOpen(open === f.title ? null : f.title)}>{open === f.title ? "Hide preview" : "Preview this version"}</button>
+                {chosen.when && <span className="tiny faint" style={{ marginLeft: 8 }}>{chosen.when}</span>}
+                {open === f.title && <pre className="small" style={{ whiteSpace: "pre-wrap", fontFamily: "inherit", background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 8, padding: 10, margin: "6px 0 0", maxHeight: 320, overflow: "auto" }}>{chosen.preview.replace(/⟦\/?table[^⟧]*⟧/g, "").replace(/\|/g, " · ")}</pre>}
+              </div>
+            )}
           </div>
-        </div>
-      ))}
+        );
+      })}
       <div className="row" style={{ gap: 8 }}>
-        <button disabled={busy} onClick={() => send(`Use these ${list.length} formats${ai ? ` (${ai} in the tender's own wording)` : ""}`, list)}>Confirm formats</button>
+        <button disabled={busy} onClick={() => send(`Use these ${list.length} formats${free ? ` (${free} standard, filled free)` : ""}${ai ? ` (${ai} by AI)` : ""}`, list)}>Confirm formats</button>
       </div>
     </div>
   );

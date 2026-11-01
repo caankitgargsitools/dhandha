@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { dataFor, renderTemplate, templateById } from "@/lib/formatTemplates";
 import { getContext } from "@/lib/session";
 import { checkField } from "@/lib/masters";
 import { cleanSheet, computeSheet } from "@/lib/costing";
@@ -102,12 +103,29 @@ export async function chooseFormats({ matchId, choices }) {
   const text = Object.fromEntries((withText?.formats || []).map((f) => [f.title, f.text || ""]));
   const old = Object.fromEntries((m.filled_formats || []).map((f) => [f.title, f]));
   const KINDS = ["covering_letter", "bidder_info", "turnover", "similar_works", "key_personnel", "non_blacklisting", "mse", "custom", "price", "manual"];
-  const plan = (choices || []).slice(0, 40).filter((c) => KINDS.includes(c.kind)).map((c) => {
-    const o = old[c.title], same = o?.kind === c.kind;
+  // a standard version from the catalogue: rendered from the Vault now, free, then edited like any other format
+  const wantsTpl = (choices || []).some((c) => String(c.kind).startsWith("tpl:"));
+  let tplData = null;
+  if (wantsTpl) {
+    const [{ data: c }, { data: facts }, { data: people }, { data: works }, { data: docs }, { data: types }, { data: t }] = await Promise.all([
+      supabase.from("companies").select("*").eq("id", company.id).single(),
+      supabase.from("company_facts").select("key, period, value").eq("company_id", company.id),
+      supabase.from("people").select("*").eq("company_id", company.id).order("created_at"),
+      supabase.from("experience_items").select("*").eq("company_id", company.id),
+      supabase.from("documents").select("type_code, title, number, valid_until").eq("company_id", company.id).eq("status", "active"),
+      supabase.from("document_types").select("code, name"),
+      supabase.from("tenders").select("*").eq("id", m.tender_id).single(),
+    ]);
+    tplData = dataFor({ company: c, facts: facts || [], people: people || [], works: works || [], docs: docs || [], docTypes: types || [], tender: t || {} });
+  }
+  const plan = (choices || []).slice(0, 40).filter((c) => KINDS.includes(c.kind) || (String(c.kind).startsWith("tpl:") && templateById(c.kind.slice(4)))).map((c) => {
+    const tpl = String(c.kind).startsWith("tpl:") ? templateById(c.kind.slice(4)) : null;
+    const kind = tpl ? "custom" : c.kind;
+    const o = old[c.title], same = o?.kind === kind && (o?.tpl || null) === (tpl?.id || null);
     return {
-      title: String(c.title).slice(0, 200), page: c.page || null, kind: c.kind, text: text[c.title] || "",
-      filled_text: c.kind === "custom" && o?.kind === "custom" ? o.filled_text : undefined,
-      engine: c.kind === "custom" ? o?.engine : "library", missing: [],
+      title: String(c.title).slice(0, 200), page: c.page || null, kind, text: text[c.title] || "", ...(tpl ? { tpl: tpl.id, stamp: !!tpl.stamp } : {}),
+      filled_text: tpl ? renderTemplate(tpl, tplData) : kind === "custom" && o?.kind === "custom" && !o?.tpl ? o.filled_text : undefined,
+      engine: tpl ? `template:${tpl.id}` : kind === "custom" ? o?.engine : "library", missing: [],
       // the same format with the same choice keeps what the user typed into it and its review mark
       ...(same && o.edited_text ? { edited_text: o.edited_text } : {}), ...(same && o.reviewed ? { reviewed: o.reviewed } : {}),
     };
