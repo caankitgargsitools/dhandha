@@ -2,6 +2,8 @@ import Link from "next/link";
 import { changeText, realChange } from "@/lib/tenderChanges";
 import { prerequisiteList } from "@/lib/prereq";
 import GetReady from "@/components/GetReady";
+import FinTests from "@/components/FinTests";
+import { checkFinTests } from "@/lib/finTests";
 import { mandatoryUnmet } from "@/lib/conditions";
 import { notFound } from "next/navigation";
 import { getContext, daysLeft, lakh, fmtDate } from "@/lib/session";
@@ -42,7 +44,7 @@ export default async function TenderDetail({ params, searchParams }) {
     supabase.from("companies").select("*").eq("id", company.id).single(),
     supabase.from("documents").select("type_code, number, period, valid_until, title, drive_url").eq("company_id", company.id).eq("status", "active"),
     supabase.from("document_types").select("code, name"),
-    supabase.from("company_facts").select("key, period").eq("company_id", company.id).eq("key", "fin.turnover"),
+    supabase.from("company_facts").select("key, period, value").eq("company_id", company.id).in("key", ["fin.turnover", "fin.net_worth", "fin.profit_after_tax"]),
     supabase.from("brand_assets").select("kind").eq("company_id", company.id),
     supabase.from("bid_packs").select("*").eq("match_id", m.id).order("created_at", { ascending: false }),
     supabase.from("tender_changes").select("*").eq("tender_id", t.id).order("seen_at", { ascending: false }),
@@ -76,7 +78,7 @@ export default async function TenderDetail({ params, searchParams }) {
   });
   const gaps = [
     ...PROFILE_NEEDED.filter(([k]) => !c[k]).map(([, l]) => ({ label: l, href: "/app/vault/profile" })),
-    ...((facts || []).length < 3 ? [{ label: "Turnover for the last 3 years", href: "/app/vault/facts" }] : []),
+    ...((facts || []).filter((f) => f.key === "fin.turnover").length < 3 ? [{ label: "Turnover for the last 3 years", href: "/app/vault/facts" }] : []),
   ];
   const kinds = new Set((brand || []).map((b) => b.kind));
   const signed = await Promise.all((packs || []).map(async (p) => ({ ...p, url: (await supabase.storage.from("bids").createSignedUrl(p.storage_path, 3600)).data?.signedUrl })));
@@ -122,6 +124,8 @@ export default async function TenderDetail({ params, searchParams }) {
           <div key={l} className="panel ledger"><div className="kpi-label">{l}</div><div className="kpi" style={{ fontSize: 22 }}>{v}</div></div>
         ))}
       </div>
+
+      <FinTests rows={checkFinTests(read?.fields?.fin_tests, facts, t.value_inr)} />
 
       <GetReady items={prerequisiteList({ found: read?.fields?.prereq || t.prereq || [], fields: read?.fields || {}, tender: t, unmet: mandatoryUnmet(m.reasons), checklist, msme: !!msme, aiLines: read?.fields?.prepare_before })} />
 
