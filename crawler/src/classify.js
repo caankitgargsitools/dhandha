@@ -5,8 +5,14 @@ const PACKS = [
   ["goods_supply", /\b(supply of|procurement of|purchase of|rate contract for supply|delivery of)\b/i],
   ["construction", /\b(construction|road|bridge|drain|building|repair|renovation|civil work|pipeline|sewer|footpath|culvert|resurfacing|widening|strengthening|boundary wall|electrification|water supply)\b/i],
 ];
+// Audits that are engineering / technical work, not a CA's (tender study F27: 13 of 20 "CA audit" bids were these)
+const NOT_CA_AUDIT = /\b(energy|fire|safety|structural|cyber|security|electrical|water|environment(al)?|green|information security|IS|IT|social|third[- ]party|quality|technical|road safety|accessibility|hygiene|clinical|medical|vapt|penetration)\s+(&\s*\w+\s+)?audit/i;
+
 export function industryPack(title) {
-  for (const [pack, re] of PACKS) if (re.test(title)) return pack;
+  for (const [pack, re] of PACKS) {
+    if (pack === "ca_audit" && NOT_CA_AUDIT.test(title) && !/chartered accountant|ca firm|statutory audit|internal audit|concurrent audit|accounting/i.test(title)) continue;
+    if (re.test(title)) return pack;
+  }
   return null;
 }
 
