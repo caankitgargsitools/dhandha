@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { getContext } from "@/lib/session";
 import { pdfPages } from "@/lib/pdftext";
-import { readTenderText } from "@/lib/tenderRules";
+import { readTenderText, formatId } from "@/lib/tenderRules";
 import { aiReadTender } from "@/lib/tenderAi";
 import { aiTiers } from "@/lib/ai";
 import { aiDocument } from "@/lib/tenderPdf";
@@ -102,10 +102,19 @@ async function readTenderLocked({ supabase, tenant, user, m, matchId, mode, file
     if (Array.isArray(d.required_docs) && d.required_docs.length) docs = [...new Set([...docs, ...d.required_docs])];
     if (Array.isArray(d.formats) && d.formats.length) {
       // keep the wording the free reader captured, matched by identifier ("Annexure C") or title
-      const idOf = (t) => (String(t).match(/^(annexure|annex|appendix|form|format|schedule|proforma)\s*[-.]?\s*([A-Z0-9IVX]{1,5})\b/i) || []).slice(1).join(" ").toLowerCase();
+      const idOf = (t) => formatId(t);
       formats = d.formats.slice(0, 40).map((f) => {
         const hit = rules.formats.find((r) => (idOf(r.title) && idOf(r.title) === idOf(f.title)) || r.title.toLowerCase() === String(f.title).toLowerCase());
         return { title: f.title, page: f.page || hit?.page || null, text: hit?.text || "" };
+      });
+      // no text found by heading: take it from the page the AI named (up to the next format's page, two pages at most)
+      formats.forEach((f, i) => {
+        if (f.text || !f.page || !pages[f.page - 1]) return;
+        const nextPage = formats.slice(i + 1).find((x) => x.page && x.page > f.page)?.page || f.page + 1;
+        let text = pages.slice(f.page - 1, Math.min(nextPage - 1, f.page + 1)).join("\n");
+        const id = formatId(f.title);
+        if (id) { const at = text.split("\n").findIndex((l) => formatId(l.trim()) === id); if (at > 0) text = text.split("\n").slice(at).join("\n"); }
+        f.text = text.slice(0, 12000).trim();
       });
     }
     if (Array.isArray(d.risks) && d.risks.length) risks = d.risks.slice(0, 15);

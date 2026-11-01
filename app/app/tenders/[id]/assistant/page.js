@@ -8,7 +8,7 @@ import { missingMasters, fillPlaceholders, isReference } from "@/lib/masters";
 import { buildSegments, blanksLeft } from "@/lib/annexure";
 import { computeSheet } from "@/lib/costing";
 import { candidates, choiceLabel } from "@/lib/formatLibrary";
-import { dataFor, renderTemplate, templateById } from "@/lib/formatTemplates";
+import { dataFor, renderTemplate, templateById, templateHint } from "@/lib/formatTemplates";
 import { emptySheet, monthsFrom } from "@/lib/costing";
 import Assistant from "./Assistant";
 import { summarise, adviceLine, priceToWin } from "@/lib/pastResults";
@@ -115,11 +115,11 @@ export default async function TenderAssistant({ params }) {
   if (!plan.length) {
     const seen = {};
     const fmts = (read?.formats?.length ? read.formats : STANDARD).map((f) => { seen[f.title] = (seen[f.title] || 0) + 1; return seen[f.title] > 1 ? { ...f, title: `${f.title} (${f.page ? `p. ${f.page}` : seen[f.title]})` } : f; });
-    const tplData = dataFor({ company: c, facts: facts || [], people: peopleRows || [], works: workRows || [], docs: docs || [], docTypes: types || [], tender: t });
+    const tplData = dataFor({ company: c, facts: facts || [], people: peopleRows || [], works: workRows || [], docs: docs || [], docTypes: types || [], tender: { ...t, bid_validity_days: read?.fields?.bid_validity_days } });
     steps.push({ id: "choose", kind: "choose_formats", say: `The tender asks for ${fmts.length} format${fmts.length === 1 ? "" : "s"}. For each one I've picked the best fit from my templates — change any you like, then confirm.`,
       formats: fmts.map((f) => ({ title: f.title, page: f.page || null, options: (f.kind ? [f.kind, "custom", "manual"] : candidates(f.title, f.text, { constitution: c.constitution })).map((k) => {
         const tpl = k.startsWith("tpl:") ? templateById(k.slice(4)) : null;
-        return { kind: k, label: choiceLabel(k, f.text), when: tpl?.when || null, preview: tpl ? renderTemplate(tpl, tplData).slice(0, 2500) : null };
+        return { kind: k, label: choiceLabel(k, f.text), when: tpl ? templateHint(tpl) : null, preview: tpl ? renderTemplate(tpl, tplData).slice(0, 2500) : null };
       }) })) });
   } else {
     const n = (k) => plan.filter((p) => p.kind === k && !p.tpl).length;

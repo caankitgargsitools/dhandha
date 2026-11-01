@@ -38,3 +38,16 @@ test("contract forms and guarantees are not part of the bid by default", () => {
   assert.deepEqual(candidates("Annexure 14: Financial Proposal Format", ""), ["price", "manual"]);
   assert.deepEqual(candidates("Form FIN-2: Summary of costs", ""), ["price", "manual"]);
 });
+
+test("format identifiers match however the tender writes them", async () => {
+  const { formatId, readTenderText } = await import("../lib/tenderRules.js");
+  assert.equal(formatId("Annexure-I Technical bid form"), "annexure 1");
+  assert.equal(formatId("ANNEX 01"), "annexure 1");
+  assert.equal(formatId("Form T-3"), formatId("Format T3"));
+  assert.equal(formatId("Annexure B"), "annexure b");
+  assert.equal(formatId("Schedule of payment"), null);
+  const r = readTenderText(["INDEX\nAnnexure-I Bid Form ........ 3\nAnnexure-II Undertaking ........ 4", "Annexure-I Bid Form\nTo, The Commissioner. We offer...\nSchedule of payment will be as follows: monthly", "Annexure-II Undertaking\nI hereby undertake ..."]);
+  const titles = r.formats.map((f) => f.title);
+  assert.equal(titles.length, 2, titles.join(" | "));
+  assert.match(r.formats[0].text, /Schedule of payment will be as follows/);
+});
