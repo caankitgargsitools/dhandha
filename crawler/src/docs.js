@@ -390,7 +390,44 @@ async function runProbe(browser, pr) {
   log(`probe ${pr.id} ${pr.url}: ${out.error || out.status}`);
 }
 
+// GeM: the bid document is a public PDF at the tender's own link (showbidDocument/<id>) — no captcha, no session.
+// Used for customers' GeM tenders and for the format / tender study harvest.
+async function runGemJob(browser, job) {
+  current = job;
+  const ctx = await browser.newContext({ acceptDownloads: true });
+  try {
+    await update(job, { status: "running", step: "Downloading the GeM bid document" });
+    const url = await rpc("doc_job_url", { p_job: job.id });
+    if (!url || !/^https:\/\/bidplus\.gem\.gov\.in\/show/i.test(url)) { await update(job, { status: "failed", error: "This GeM bid has no document link." }); return; }
+    const get = async () => {
+      const r = await ctx.request.get(url, { timeout: 60000 });
+      const body = r.ok() ? await r.body() : null;
+      return body && body.subarray(0, 4).toString() === "%PDF" ? body : null;
+    };
+    let data = await get();
+    if (!data) { // GeM sometimes wants its own cookies first
+      const page = await ctx.newPage();
+      await page.goto("https://bidplus.gem.gov.in/all-bids", { waitUntil: "domcontentloaded", timeout: 60000 }).catch(() => {});
+      await page.close().catch(() => {});
+      data = await get();
+    }
+    if (!data) { await update(job, { status: "failed", error: "GeM did not give the bid document. Download it from GeM and upload here." }); return; }
+    if (data.length > MAX_BYTES) { await update(job, { status: "failed", error: "The GeM bid document is too large to fetch here." }); return; }
+    const name = `${String(job.tender_ref || "GeM-bid").replace(/[^\w-]+/g, "-")}.pdf`;
+    const list = await upload(job, [{ name, data }]);
+    await update(job, { status: "fetched", step: "Fetched the GeM bid document", files: list });
+    log(`job ${job.id}: GeM ${job.tender_ref} ${Math.round(data.length / 1024)} KB`);
+  } catch (e) {
+    log(`job ${job.id} (GeM) failed: ${e.message}`);
+    await update(job, { status: "failed", error: e.message.split("\n")[0] }).catch(() => {});
+  } finally {
+    current = null;
+    await ctx.close().catch(() => {});
+  }
+}
+
 async function runJob(browser, job) {
+  if (/^gem$/i.test(job.portal)) return runGemJob(browser, job);
   const site = GEPNIC.find((s) => s.portal === job.portal);
   if (!site || site.skip) { await update(job, { status: "failed", error: `Fetching documents from ${job.portal} is not supported yet. Download them from the portal and upload here.` }); return; }
   const sess = await sessionFor(browser, job.portal);
