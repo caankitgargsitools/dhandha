@@ -63,7 +63,7 @@ async function captchaFromPerson(page, job, channel = jobChannel(job), label = "
     const until = Date.now() + waitMs;
     let answer = null;
     while (Date.now() < until) {
-      await sleep(2000);
+      await sleep(1000); // the answer is picked up within a second of being sent
       const s = await channel.poll();
       if (s.stop) throw new Error("stopped");
       if (s.answer && s.seq === seq) { answer = s.answer; break; }
@@ -296,7 +296,7 @@ async function openSession(browser, req) {
 // After the session's portals are open (nothing left to claim), the winners pages one portal at a time, each captcha
 // waiting 2 minutes at most — so the session itself is not held up and an unattended one does not block fetching.
 const winnersQueue = new Set();
-const SESSION_PARALLEL = Math.max(1, Math.min(5, Number(env.SESSION_PARALLEL || 3)));
+const SESSION_PARALLEL = Math.max(1, Math.min(5, Number(env.SESSION_PARALLEL || 4)));
 async function winnersPass() {
   for (const portal of winnersQueue) {
     winnersQueue.delete(portal);
