@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { readTender } from "../../readActions";
@@ -29,7 +29,12 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
   const [log, setLog] = useState(history);
   const [tab, setTab] = useState("chat");
   const [skipped, setSkipped] = useState(() => new Set());
-  const [busy, setBusy] = useState(false);
+  const [busyOwn, setBusy] = useState(false);
+  // the page's fresh data after an answer: until it arrives the old question stays locked (no double answers)
+  const [refreshing, startRefresh] = useTransition();
+  const busy = busyOwn || refreshing;
+  const [answered, setAnswered] = useState(() => new Set());
+  useEffect(() => { setAnswered(new Set()); }, [steps]);
   const [working, setWorking] = useState(null); // { label, seconds } of what is running, for the progress bar
   const [text, setText] = useState("");
   const [ask, setAsk] = useState("");
@@ -39,7 +44,7 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
   const [repricing, setRepricing] = useState(false); // the price, opened again after it was saved
   const box = useRef(null);
   const anchor = useRef(null);
-  const current = steps.find((s) => !skipped.has(s.id));
+  const current = steps.find((s) => !skipped.has(s.id) && !answered.has(s.id));
   const waiting = steps.filter((s) => skipped.has(s.id));
 
   // scroll inside the chat box only (never the page): new messages → bottom; a new question → its top
@@ -76,14 +81,19 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
     else if (mine === null) say("bot", "Reading the documents…");
     setBusy(true);
     setWorking(eta || { label: "Working…" });
+    const step = current?.id;
     try {
       const r = await fn();
       if (r?.error) say("bot", r.error, { error: true });
-      else { say("bot", typeof ok === "function" ? ok(r) : ok, r?.url ? { url: r.url } : undefined); setText(""); }
-    } catch (e) { say("bot", `Something went wrong: ${e.message}`, { error: true }); }
+      else {
+        say("bot", typeof ok === "function" ? ok(r) : ok, r?.url ? { url: r.url } : undefined); setText("");
+        // an answered question leaves the screen at once, before the page's fresh data arrives
+        if (mine && step && !["draft", "read", "fetch"].includes(current?.kind)) setAnswered((a) => new Set([...a, step]));
+      }
+    } catch (e) { say("bot", /unexpected response/i.test(e.message) ? "The connection dropped — refreshing to show where we are." : `Something went wrong: ${e.message}`, { error: true }); }
     setBusy(false);
     setWorking(null);
-    router.refresh();
+    startRefresh(() => router.refresh());
   }
   // ask anything, at any point: about the tender, or about the question on screen (Claude, from the documents)
   async function askNow(e) {

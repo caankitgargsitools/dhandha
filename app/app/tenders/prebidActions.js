@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { withLock } from "@/lib/locks";
 import { getContext } from "@/lib/session";
 import { runJson, aiTiers } from "@/lib/ai";
 import { tenderPdfFor, vaultFor } from "@/lib/tenderPdf";
@@ -37,7 +38,7 @@ export async function draftPrebidFree(matchId) {
 }
 
 // paid AI reads the whole tender and the Vault for restrictive or unclear clauses (5 credits)
-export async function draftPrebidAi(matchId) {
+async function draftPrebidAiLocked(matchId) {
   const { supabase, tenant, company, role } = await getContext();
   if (!preparer(role)) return { error: "Only admins, managers and bid preparers draft queries." };
   if (!aiTiers().some((t) => !t.free)) return { error: "Paid AI is not switched on for this site (your company data never goes to free AI)." };
@@ -68,4 +69,9 @@ export async function savePrebid(matchId, queries) {
     .map((q) => ({ clause: String(q.clause || "").slice(0, 160), page: String(q.page || "").slice(0, 20), says: String(q.says || "").slice(0, 400), query: String(q.query).slice(0, 800), why: String(q.why || "").slice(0, 400), source: q.source === "ai" || q.source === "free" ? q.source : "you" }));
   const e = await save(supabase, company.id, matchId, clean);
   return e ? { error: e.message } : { ok: true };
+}
+
+export async function draftPrebidAi(matchId) {
+  const { supabase, company } = await getContext();
+  return withLock(supabase, { company: company.id, action: "prebid_ai", ref: matchId, seconds: 180 }, () => draftPrebidAiLocked(matchId));
 }

@@ -12,8 +12,8 @@ export default function TenderBrief({ t, m, read, detail = {}, checklist = [], f
   const left = daysLeft(t.due_at);
   const scope = (f.work_scope?.length ? f.work_scope : [detail.work_description || t.title]).filter(Boolean);
   const tiles = [
-    ["Estimated value", (f.value_inr || t.value_inr || detail.value_inr) ? lakh(f.value_inr || t.value_inr || detail.value_inr) : "Not stated"],
-    ["EMD", (f.emd_inr || t.emd_inr || detail.emd_inr) ? `${lakh(f.emd_inr || t.emd_inr || detail.emd_inr)}${msmeExempt ? " · MSE exempt" : ""}` : "Nil"],
+    ["Estimated value", (t.value_inr || detail.value_inr || f.value_inr) ? lakh(t.value_inr || detail.value_inr || f.value_inr) : "Not stated"],
+    ["EMD", (f.emd_inr || t.emd_inr || detail.emd_inr) ? `${lakh(f.emd_inr || t.emd_inr || detail.emd_inr)}${msmeExempt ? " · MSE exempt" : ""}` : f.emd_inr === 0 || t.emd_inr === 0 ? "Nil" : "Not found — check the NIT"],
     ["Tender fee", (f.tender_fee_inr || detail.fee_inr) ? lakh(f.tender_fee_inr || detail.fee_inr) : "Nil / not stated"],
     ["Completion period", f.completion_period || detail.period_of_work || "—"],
     ["Bid validity", f.bid_validity_days ? `${f.bid_validity_days} days` : detail.bid_validity || "—"],

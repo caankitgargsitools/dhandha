@@ -1,5 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { fillPlaceholders } from "@/lib/masters";
+import { withLock } from "@/lib/locks";
 import { getContext } from "@/lib/session";
 import { buildBidPack } from "@/lib/bidpack";
 import { mandatoryUnmet } from "@/lib/conditions";
@@ -12,7 +14,7 @@ async function download(supabase, path) {
   return new Uint8Array(await data.arrayBuffer());
 }
 
-export async function generateBidPack(prev, formData) {
+async function generateBidPackLocked(prev, formData) {
   const { supabase, tenant, company, role, isAdmin, user } = await getContext();
   const matchId = String(formData.get("match_id"));
   const kind = formData.get("kind") === "final" ? "final" : "draft";
@@ -64,6 +66,13 @@ export async function generateBidPack(prev, formData) {
     if (!ctx.signatureBytes) return { error: "Could not read the stored signature." };
   }
 
+  // a signed pack only when it is complete: no blank left in any format, the price set
+  if (kind === "final") {
+    const left = (match.filled_formats || []).filter((f) => !["price", "covering_letter"].includes(f.kind))
+      .map((f) => ({ title: f.title, n: (String(f.edited_text || fillPlaceholders(f.filled_text || "", facts || [], { people: people || [], works: works || [] })).match(/\[TO BE FILLED:/gi) || []).length }))
+      .filter((x) => x.n);
+    if (left.length) return { error: `Not ready to sign: ${left.map((x) => `${x.title} (${x.n} blank${x.n === 1 ? "" : "s"})`).slice(0, 5).join(", ")}${left.length > 5 ? ` and ${left.length - 5} more` : ""}. Fill them in the assistant ("Your formats" → Open as a form), then sign.` };
+  }
   let pack;
   try { pack = await buildBidPack(ctx); } catch (e) { return { error: `Could not build the PDF: ${e.message}` }; }
 
@@ -81,7 +90,7 @@ export async function generateBidPack(prev, formData) {
   await supabase.from("bid_packs").insert({ tenant_id: tenant.id, company_id: company.id, match_id: match.id, tender_id: match.tender_id, kind, storage_path: path, annexures: pack.annexures, pages: pack.pages, created_by: user.id });
   if (kind === "final") {
     await supabase.rpc("log_signature_use", { p_company: company.id, p_label: `Bid pack: ${pack.annexures.length} documents`, p_context: `${match.tenders.portal} ${match.tenders.tender_ref}`, p_otp_ref: `TOTP ${new Date().toISOString()}` });
-    await supabase.from("tender_matches").update({ status: "preparing" }).eq("id", match.id);
+    await supabase.from("tender_matches").update({ status: "preparing" }).eq("id", match.id).in("status", ["new", "shortlisted"]);
   }
   const { data: signed } = await supabase.storage.from("bids").createSignedUrl(path, 3600);
   revalidatePath(`/app/tenders/${match.id}`);
@@ -157,4 +166,9 @@ export async function muteTenderWord(formData) {
   const rules = rulesFor(p.services || [], p.custom_keywords || [], [...(p.muted || []), word], index);
   await supabase.rpc("mute_tender_word", { p_company: company.id, p_word: word, p_rules: rules });
   revalidatePath("/app/tenders");
+}
+
+export async function generateBidPack(prev, formData) {
+  const { supabase, company } = await getContext();
+  return withLock(supabase, { company: company.id, action: "bid_pack", ref: formData.get("match_id"), seconds: 180 }, () => generateBidPackLocked(prev, formData));
 }

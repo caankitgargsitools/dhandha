@@ -164,7 +164,7 @@ export default async function TenderAssistant({ params }) {
 
   // 7. the price — the one thing asked for every tender: typed, or worked out in the cost planner
   const f = read?.fields || {};
-  const estimate = Number(f.value_inr || t.value_inr || job?.detail?.value_inr) || null;
+  const estimate = Number(t.value_inr || job?.detail?.value_inr || f.value_inr) || null;
   const sheet = () => m.cost_sheet || emptySheet({ months: monthsFrom(f.completion_period || job?.detail?.period_of_work), value: estimate, scope: f.work_scope || [], travel: !!(t.state && c.state && t.state !== c.state) });
   if (m.quoted_price) done.push(`Your price: ₹${Number(m.quoted_price).toLocaleString("en-IN")} + GST${m.price_note ? ` (${m.price_note})` : ""}.`);
   else if (canPrepare && read) {
