@@ -11,11 +11,11 @@ export default function PointsTable({ table, rows }) {
       <div className="table-wrap"><table style={{ fontSize: 13 }}>
         <thead><tr><th>Parameter</th><th className="right">Max</th><th className="right">Cut-off</th><th>Your Vault</th></tr></thead>
         <tbody>{rows.map((r, i) => (
-          <tr key={i}><td>{r.name}{r.about && <div className="tiny faint">{r.about}</div>}</td><td className="right num">{r.max}</td><td className="right num">{r.cutoff}</td>
+          <tr key={i}><td>{r.name}{r.about && <div className="tiny faint">{r.about}</div>}</td><td className="right num">{r.max}</td><td className="right num">{r.cutoff}{r.cutoff >= r.max && <div className="tiny" style={{ color: "var(--blood)" }}>pass / fail</div>}</td>
             <td className="small">{r.have || (r.state === "ask" ? <span style={{ color: "var(--marigold)" }}>Not in the Vault</span> : <span className="faint">Judged on your write-up</span>)}</td></tr>
         ))}</tbody>
       </table></div>
-      <div className="tiny faint">Each parameter must reach its cut-off. How many marks each figure earns is in the buyer&apos;s file (“View File” on GeM).{missing > 0 && <> {missing} figure{missing === 1 ? " is" : "s are"} missing — add them in <Link href="/app/vault/credentials">Credentials</Link>, Facts or Experience.</>}</div>
+      <div className="tiny faint">Each parameter must reach its own cut-off, whatever the total; where the cut-off equals the maximum it is a pass / fail condition. How many marks each figure earns is in the buyer&apos;s file (“View File” on GeM).{missing > 0 && <> {missing} figure{missing === 1 ? " is" : "s are"} missing — add them in <Link href="/app/vault/credentials">Credentials</Link>, Facts or Experience.</>}</div>
     </div>
   );
 }

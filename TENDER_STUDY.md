@@ -1,6 +1,6 @@
 # Tender study — what tenders ask for that Dhandha does not handle yet
 
-Started 1 Nov 2026 on the owner's request (first round 1 Nov: 77 GeM bids read across CA audit, IT, supply and services / works): read as many tenders as possible, across every industry, department and
+Started 1 Nov 2026 on the owner's request (round 1, 1 Nov: 77 GeM bids across CA audit, IT, supply and services / works; round 2, 1 Nov: 229 more GeM bids by industry): read as many tenders as possible, across every industry, department and
 kind of tender; find conditions, formats, evaluation and price methods Dhandha does not yet handle; list them here
 with questions for the owner. Questions never block the work — they wait here (and in PENDING.md) until answered.
 
@@ -55,6 +55,38 @@ with questions for the owner. Questions never block the work — they wait here 
 | F26 | GeM, all | **GeM extends the closing date itself** by 3–7 days (up to 3 times) when fewer than N bids arrive | Part: corrigendum alerts from re-crawls | Re-read the GeM end date in the last hours and alert on change | New |
 | F27 | Dhandha itself | **Industry tagging is too broad**: 13 of 20 "CA audit" bids were energy / fire / structural / cyber audits; 15 of 20 "IT services" bids were manpower outsourcing | Bug | Tighten `industry_pack` on the crawler side (same blockers as the CA pack) and use `sectorOf` for the catalogue | Fixing |
 
+
+**Round 2 (1 Nov, 229 GeM bids read by 4 readers: 52 supply / works / PSU, 61 manpower / security / facility, 88 audit / consultancy / revenue, 28 IT).**
+
+| # | Found in | What the tender asks for or how it works | Dhandha today | Proposal | Status |
+|---|---|---|---|---|---|
+| F28 | GeM banks, PSUs, bank security | **The order is split between bidders**: "Splitting Applied: Yes" (50:30:20 among 3, 60:40, 70:30 for 10+ guards); L2 / L3 get their share only if they accept L1's rate. Seen in 5 bids | No | Read the split; price step shows "come 2nd and match L1 → X % of the order" | Q13 |
+| F29 | GeM PSU / refinery, NTPC, SAIL, DVC | **Limited / single / invitation-only bids**: "Limited Tender Applicable Yes", seller list masked (*****) or named; "only enlisted suppliers of EIL / T.EN invited by email". 9 bids | No: shown to everyone | Hide unless the firm is on the list or says it is enlisted with that buyer; masked list → chip "Invitation only" | Q14 |
+| F30 | GeM goods and services (LIC, defence) | **GeM checks turnover from the seller's GeM profile** (no upload; years with data only — 2 of 3 count). An out-of-date profile fails silently. 9 of 52 | No | "Get ready": update the GeM profile turnover; compare the Vault the way GeM does | Q15 |
+| F31 | GeM custom bids of GAIL, IOCL, BPCL, EIL | **The attached tender documents override the GeM page** ("Tender document shall prevail", "Total Quantity on page 1 may be ignored"); real EMD / CPBG / quantity are in Vol-I/II. 5 of 52 | No | When said, the attachments' figures win over the GeM fields, with a note | Q16 |
+| F32 | GeM banks, defence | **Vendor-code papers with the bid** (PAN, GSTIN, cancelled cheque, bank-certified EFT mandate) and a GST-paid screenshot with each invoice. 6 bids | No | Cancelled cheque + EFT mandate as Vault documents, attached automatically; billing reminder | Q17 |
+| F33 | BEML, LIC, Defence | **Price clauses that change what you are paid**: price-fall clause, risk purchase, diesel price variation only on remote readings, ₹1,000 / day demurrage, ground rent 1 % a week (max 10 %) on rejected stores | Part: "clauses to watch" by AI only | Free rules listing them in plain words in the brief | Q18 |
+| F34 | BPCL, MRPL, Defence, PSU AMC | **Evaluation price ≠ quoted price; GST traps**: loading on guaranteed power (BkW); concessional GST 0 % must be quoted; "GST at actuals or quoted %, whichever lower"; reverse charge (RCM) on some services. 8 bids | No | Price-step warnings: quote GST at X %, loading applies, RCM → quote without GST; check the rate against HSN/SAC | Q19 |
+| F35 | BPCL via Technip, others | **Password-protected documents after a signed secrecy declaration** by a cut-off date; pre-bid meetings on a Teams link | No | First step of the bid plan + calendar entry with the link | Q20 |
+| F36 | GeM manpower / security / sanitation | **The buyer prints the wage sheet per office**: daily wage (₹918, ₹933), PF / ESI / EDLI / admin per day, bonus, extra allowances, working days, months, overtime, head-count; a minimum service charge (3.85 %) in 12; both Labour Codes and old laws apply. 31 of 61 | Part: fixed PF 13 %, ESI 3.25 %, bonus 8.33 % | Fill the cost planner from these lines per office; covers most of Q2 | Q21 |
+| F37 | Security, manpower (banks, insurers) | **Experience and size counted in people**: contracts of 10 / 25 / 250 people; 50 armed + 200 unarmed guards on own rolls; 40 % of required staff on payroll for a year. 7 | No | "People deployed" on each work in Experience; staff strength by type in the Vault; free check | Q22 |
+| F38 | Security, manpower | **Profile of each person supplied**: gender, 8-hour duty, qualification, ex-servicemen yes / optional, age limits (22–60), 3–6 years' experience, lady frisker. 8+ | No | "People you must supply" box in the brief; warn when ex-servicemen are compulsory | Q23 |
+| F39 | Manpower / facility (ICAR, ministries, insurers) | **Existing workers must be retained** (list uploaded; cost of taking them over is yours; none dropped without consent). 10 | No | Brief + Get ready line; price those posts at the listed pay | Q24 |
+| F40 | Manpower, railway facility | **Wage-rise risk and attendance penalties**: wage revisions paid back (3) or "no claim" (1); half-day cut for lateness; RBI frisking fines passed on; No-Dues bond on stamp paper before the deposit is returned | No | Label "wage rises paid back / yours"; buffer in the cost planner when yours; penalties in clauses to watch | Q25 |
+| F41 | Canteen, parking, mess, land lease; audit bids | **Highest offer wins (H1, revenue bids)** above a buyer minimum (₹8.4 lakh – ₹5.63 crore); ordinary bids also carry a "Minimum Floor Price defined by Buyer" (₹58,333) that rejects lower quotes. 9 | No: price step assumes lowest wins | Detect H1 and the floor; turn the price step round; block quotes below the floor | Q26 |
+| F42 | ESIC, banks, ministries | **Page-numbered, indexed technical bid** with a checklist giving page numbers; wrong references rejected. 3 | No | Page numbers + index in every bid file; fill the checklist with them | Q27 |
+| F43 | GeM QCBS audit / consultancy | **Points table with a cut-off for each parameter** (a cut-off equal to the max is a pass / fail gate); weights 70:30, 80:20, 60:40, 30:70. 17 of 88 | Have (built for Q4, 1 Nov): table read free with each parameter's Vault figure; cut-off = max now marked pass / fail | — | Have |
+| F44 | Audit, consultancy, cyber audit | **The buyer's own Excel price sheet must be uploaded**, with format rules that disqualify ("one year only", "yearly for 3 years", "line total incl. GST"). 21 of 88 | Part: attachments fetched (xlsx included) | Pre-fill the buyer's sheet from the cost planner; read the format rules and warn | Q28 |
+| F45 | CA firms (financial statements, FAR, internal audit) | **Unpaid post-audit support** for 12 (once 24) months inside the lump-sum fee. 5 of 88 | No | Cost line (hours / month × rate) and a brief line | Q29 |
+| F46 | NTPC, PSU energy / water audits | **Strict bid security**: EMD up to ₹1 lakh only by SBI Collect; BG only as e-BG through NeSL in NTPC format; DD / physical BG refused; surety bond allowed; valid 45 days beyond bid validity | Part: payment modes in Get ready | Refused modes, e-BG / SBI Collect, and the valid-till date in the deposits register | Q30 |
+| F47 | GeM services, CA / cyber audits | **Undertakings without a template yet**: financial standing (not under liquidation) (14), consortium joint responsibility (4), NDA (2), nil deviation (2), price reasonability with past orders (1) | No | Add 5 templates; GeM generic clause names → filled Get ready items | Q31 |
+| F48 | Assam, Gujarat, Chhattisgarh, Kerala | **Local roots**: "bidder should be native (Assam)", "office in Gujarat for the last 3 years", marks per branch in the state. 4 | Part: office in a state (yes / no) | Office opening dates and home state in the Vault; free checks | Q32 |
+| F49 | GeM, all | **Reverse-auction notices stored as new tenders**: 358 GeM rows with an /R/ number (6 already matches); only qualified bidders of the parent bid may join; validity +30 days | Bug: shown as matches | Keep RA notices out of matches; link to the parent bid; alert firms that bid on it (calendar + push) | Q33 |
+| F50 | GeM, all | **Buyer terms that break GeM's own rules** (14 "null & void" kinds: brand named, physical documents, samples, works on GeM, ATC overriding the bid; MeitY category rules). Seen breaking in 4 of 26 | No | Flag the clause in the brief; draft a pre-bid query / grievance email; a failed restriction becomes "unclear", not "not eligible" | Q34 |
+| F51 | Dhandha itself | **Reader gaps**: "ONLY M/S X IS ELIGIBLE … PAC" missed by reserved-for; `req_similar_years` defaults to 7 so GeM's years never land; turnover written only in the buyer terms (CA-certified ₹50 lakh) left empty | Bug | Reserved-for wording fixed 1 Nov (and the Siemens bid hidden); years / ATC turnover next | Fixing |
+| F52 | GeM IT hardware (banks, MHA, Defence) | **Hidden warranty costs** (faulty disks kept, whole-device replacement, asset tags, service centre in each consignee state, printer warranty to page count) and **product certificates** (OEM malicious-code certificate, EPR under E-waste Rules 2022, BIS CRS, STQC, AERB, 7 years of product life) | No | Warranty-cost block in the cost planner; product certificates per product in Brands & supplies; malicious-code template | Q35 |
+| F53 | GAIL Gas, SBI VAPT, IAF; inStem, Defence | **How the price is built**: lump sum above GeM's floor spread over the SOR (minimum-wage items fixed); VAPT sized by IPs / apps / assets; price basis Ex-works / FOR / FOB / CIP; remote site 600 km from a railhead | No | "Spread over SOR" helper; sizing fields into BOQ lines; freight / insurance / remote-site lines | Q36 |
+
 ## Questions for the owner (answer any time; work continues)
 
 | # | Question | Options | Answer |
@@ -71,3 +103,27 @@ with questions for the owner. Questions never block the work — they wait here 
 | Q10 | Keep **OEM partners** and product-wise supply quantities per year in the Vault for resellers (F18)? | Yes / Later | **Yes** (1 Nov) — built: Vault → Brands & supplies, `lib/oem.js` |
 | Q11 | Store **ICAI firm details** (FRN date, CAs, partners, DISA/CISA, staff, C&AG empanelment) and check CA-firm criteria automatically (F19)? | Yes / Later | **Yes, and for every business** (1 Nov) — built: `lib/credentials.js` (33 credentials in 10 industries), Vault → Credentials asked from the chosen services, ordered by what fetched tenders ask (`credential_stats`). Next: surface frequent eligibility lines no credential covers, to add new ones |
 | Q12 | **Hide bids reserved for a named vendor** from matches automatically (F20)? | Yes / No | **Yes, hide** (1 Nov) — built: `tenders.reserved_for`, `tender_fits` refuses it for other firms |
+| Q13 | Show the **order-split share** in the price step (come 2nd, match L1, get X %) (F28)? | Yes / No / Pending | |
+| Q14 | **Hide limited / invitation-only bids** unless the firm is listed or enlisted with that buyer (masked list → "Invitation only" chip) (F29)? | Yes / No / Pending | |
+| Q15 | Remind once a year to **update turnover in the GeM seller profile**, and check it the way GeM does (F30)? | Yes / No / Pending | |
+| Q16 | When a bid says its **tender documents prevail**, use their figures over the GeM page automatically (F31)? | Yes / No / Pending | |
+| Q17 | Keep a **cancelled cheque and bank EFT mandate** in the Vault and attach them for vendor-code bids (F32)? | Yes / No / Pending | |
+| Q18 | List **price-fall, risk-purchase, price-variation and penalty clauses** in plain words in the brief (F33, F40)? | Yes / No / Pending | |
+| Q19 | Warn in the price step about **bid loading, concessional GST, "lower of" GST and reverse charge** (F34)? | Yes / No / Pending | |
+| Q20 | Put **secrecy-declaration cut-offs and meeting links** in the bid plan and calendar (F35)? | Yes / No / Pending | |
+| Q21 | **Fill the manpower cost sheet from the bid's own wage lines** per office (covers most of Q2) (F36)? | Yes / No / Pending | |
+| Q22 | Store **people deployed per work and staff strength by type** in the Vault and check head-count rules (F37)? | Yes / No / Pending | |
+| Q23 | Show the **required staff profile** (age, gender, ex-servicemen, experience) in the brief (F38)? | Yes / No / Pending | |
+| Q24 | Flag **"retain existing workers"** in the brief and price those posts at their pay (F39)? | Yes / No / Pending | |
+| Q25 | Add a **wage-rise buffer** when the bidder bears revised wages (F40)? | Yes / No / Pending | |
+| Q26 | Support **"highest offer wins" (H1 / revenue) bids and buyer floor prices** in the price step (F41)? | Yes / No / Pending | |
+| Q27 | **Page numbers and an index** in every bid file, and fill the checklist's page column (F42)? | Yes / No / Pending | |
+| Q28 | **Pre-fill the buyer's Excel price sheet** from the cost planner and warn on its format rules (F44)? | Yes / No / Pending | |
+| Q29 | Add **post-audit support months** to CA fee costing (F45)? | Yes / No / Pending | |
+| Q30 | Show **refused payment forms (DD / physical BG), e-BG via NeSL / SBI Collect** and the **EMD valid-till date** (F46)? | Yes / No / Pending | |
+| Q31 | Add the **5 missing undertaking templates** (financial standing, consortium, NDA, nil deviation, price reasonability) (F47)? | Yes / No / Pending | |
+| Q32 | Record **office opening dates and home state** to check "native / office for N years" rules (F48)? | Yes / No / Pending | |
+| Q33 | **Keep reverse-auction notices out of matches** and alert only firms that bid on the parent tender (F49)? | Yes / No / Pending | |
+| Q34 | **Flag buyer clauses that break GeM rules** and draft the query / grievance (F50)? | Yes / No / Pending | |
+| Q35 | **IT hardware**: warranty-cost block in the price step + product certificates (EPR, CRS, STQC, malicious code) (F52)? | Yes / No / Pending | |
+| Q36 | **Price-building helpers**: spread over SOR, VAPT sizing, freight / insurance / remote-site lines (F53)? | Yes / No / Pending | |

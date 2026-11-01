@@ -138,6 +138,7 @@ test("a bid reserved for one named vendor (real GeM wording)", () => {
   const head = "Bid Details GEM/2026/B/8000001 Bid End Date/Time 10-11-2026 12:00:00\n";
   assert.equal(parseGemFields(head + "THIS IS AN OEM TENDER. Bidders to note that this GeM bid is reserved only for proprietary vendor M/s. CELLCOMM SOLUTIONS LIMIT ED Other bidders are not acceptable.").reserved_for, "M/s. CELLCOMM SOLUTIONS LIMIT ED");
   assert.equal(parseGemFields(head + "Reserved for Make In India products Yes. Reserved for MSE Yes").reserved_for, undefined);
+  assert.equal(parseGemFields(head + "ONLY M/S SIEMENS LIMITED, PUNE IS ELIGIBLE FOR THIS BID, SINCE CASE IS PAC").reserved_for, "M/S SIEMENS LIMITED, PUNE");
 });
 
 test("reverse-auction floor", async () => {
