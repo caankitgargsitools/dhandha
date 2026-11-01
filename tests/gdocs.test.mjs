@@ -45,3 +45,14 @@ test("which editor suits a format", () => {
   assert.equal(prefersSheet("Name: x\n⟦table A|B⟧\n1|2\n3|4\n⟦/table⟧"), true);
   assert.equal(blocks("plain").length, 1);
 });
+
+test("Word's saved HTML, multi-paragraph cells, section breaks and Google's padded CSV come back cleanly", () => {
+  assert.equal(fromDocHtml(`<body><p class=MsoNormal><b>Name:</b>\r\n<span>Sharma &amp; Co.</span> declares\r\nthat it is not blacklisted</p><table><tr><td><p>Work</p></td></tr><tr><td><p>GST</p><p>audit</p></td></tr></table></body>`),
+    "Name: Sharma & Co. declares that it is not blacklisted\n⟦table Work⟧\nGST audit\n⟦/table⟧");
+  const xml = `<w:document><w:body><w:p><w:r><w:t>Part one</w:t></w:r><w:pPr><w:sectPr/></w:pPr></w:p><w:p><w:r><w:t>Part two</w:t></w:r></w:p><w:sectPr/></w:body></w:document>`;
+  assert.equal(fromDocxXml(xml), "Part one\nPart two");
+  const two = "⟦table A|B⟧\n1|2\n⟦/table⟧\n⟦table P|Q|R|S⟧\n⟦/table⟧\n";
+  const t = withSheetTables(two, parseCsv("A,B,,\n3,4,,\n,,,\nP,Q,R,S\nw,x,y,z\n"));
+  assert.match(t, /^⟦table A\|B⟧\n3\|4\n⟦\/table⟧/);
+  assert.match(t, /⟦table P\|Q\|R\|S⟧\nw\|x\|y\|z/);
+});

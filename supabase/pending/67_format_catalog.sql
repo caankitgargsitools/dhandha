@@ -142,7 +142,9 @@ begin
   -- harvest jobs nobody got to in 6 hours are dropped
   update public.tender_doc_jobs set status = 'failed', error = 'Harvest not fetched in time', updated_at = now()
   where detail->>'purpose' = 'harvest' and status = 'queued' and created_at < now() - interval '6 hours';
-  select count(*) into open_now from public.tender_doc_jobs where detail->>'purpose' = 'harvest' and status in ('queued', 'running', 'captcha');
+  -- GeM study jobs (gem_harvest_queue, 68) have their own count and do not hold this harvest back
+  select count(*) into open_now from public.tender_doc_jobs j join public.tenders t on t.id = j.tender_id
+  where j.detail->>'purpose' = 'harvest' and j.status in ('queued', 'running', 'captcha') and t.portal not ilike '%gem%';
   if n <= 0 or open_now >= n then return 0; end if;
   for r in
     select x.id from (

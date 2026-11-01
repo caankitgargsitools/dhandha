@@ -511,7 +511,7 @@ try {
       // waiting job (people's jobs are claimed first) runs, so customers are not held up for the whole session
       if (!afterSession && Date.now() - lastSessionCheck > 10000) {
         lastSessionCheck = Date.now();
-        // several portals open at once (SESSION_PARALLEL, default 3): their captchas come together, so the person types
+        // several portals open at once (SESSION_PARALLEL, default 2): their captchas come together, so the person types
         // them one after another instead of waiting minutes for each slow portal to load
         const reqs = [];
         for (let k = 0; k < SESSION_PARALLEL; k++) {

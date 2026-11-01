@@ -3,6 +3,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { openOutside, syncOutside, uploadFilled } from "../../outsideActions";
 
+const MAX_UPLOAD = 3.5 * 1024 * 1024;
+
 // Fill a big format where people are comfortable: Google Docs / Google Sheets (in the workspace's own Drive; what is
 // saved there comes back when they return to this page), or Word / Excel (download, fill, upload the file back).
 export default function OutsideEdit({ matchId, f, google, onMessage }) {
@@ -32,12 +34,13 @@ export default function OutsideEdit({ matchId, f, google, onMessage }) {
   const upload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // server actions take at most 4 MB (next.config.js bodySizeLimit); a bigger file would fail without a message
+    if (file.size > MAX_UPLOAD) { e.target.value = ""; return say("That file is over 3.5 MB. Save it without pictures (or as .docx / .xlsx) and upload again.", true); }
     const fd = new FormData();
     fd.append("match_id", matchId); fd.append("idx", String(f.idx)); fd.append("file", file);
     setBusy("upload");
-    const r = await uploadFilled(fd);
-    setBusy(null);
-    e.target.value = "";
+    let r;
+    try { r = await uploadFilled(fd); } catch { r = { error: "The upload did not go through. Try again." }; } finally { setBusy(null); e.target.value = ""; }
     if (r?.error) return say(r.error, true);
     say(r.message);
     router.refresh();
