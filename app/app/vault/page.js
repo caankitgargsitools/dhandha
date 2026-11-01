@@ -7,7 +7,7 @@ const PROFILE = ["legal_name", "constitution", "pan", "gstin", "incorporation_da
 // Business Vault home: every part of the company's master data as a card, with how complete it is.
 export default async function Vault() {
   const { supabase, company } = await getContext();
-  const [{ data: c }, { data: docs }, { count: facts }, { count: works }, { count: people }, { data: brand }, { data: pref }] = await Promise.all([
+  const [{ data: c }, { data: docs }, { count: facts }, { count: works }, { count: people }, { data: brand }, { data: pref }, { count: creds }] = await Promise.all([
     supabase.from("companies").select("*").eq("id", company.id).single(),
     supabase.from("documents").select("valid_until").eq("company_id", company.id).eq("status", "active"),
     supabase.from("company_facts").select("id", { count: "exact", head: true }).eq("company_id", company.id),
@@ -15,6 +15,7 @@ export default async function Vault() {
     supabase.from("people").select("id", { count: "exact", head: true }).eq("company_id", company.id),
     supabase.from("brand_assets").select("kind").eq("company_id", company.id),
     supabase.from("tender_preferences").select("services, custom_keywords").eq("company_id", company.id).maybeSingle(),
+    supabase.from("company_facts").select("id", { count: "exact", head: true }).eq("company_id", company.id).like("key", "cred.%"),
   ]);
   const filled = PROFILE.filter((k) => c?.[k]).length;
   const expiring = (docs || []).filter((d) => d.valid_until && daysLeft(d.valid_until) <= 30).length;
@@ -27,6 +28,7 @@ export default async function Vault() {
     { href: "/app/vault/facts", icon: "facts", title: "Facts", text: "Turnover, net worth and every answer given to a tender — asked once.", status: `${facts || 0} saved`, ok: (facts || 0) > 0 },
     { href: "/app/vault/experience", icon: "briefcase", title: "Experience", text: "Completed and ongoing works, for similar-work criteria.", status: `${works || 0} works`, ok: (works || 0) > 0 },
     { href: "/app/vault/people", icon: "people", title: "Key people", text: "Engineers, partners and staff named in bids.", status: `${people || 0} people`, ok: (people || 0) > 0 },
+    { href: "/app/vault/credentials", icon: "shield", title: "Credentials", text: "Licences, registrations, empanelments and team numbers tenders in your industry ask for.", status: `${creds || 0} answered`, ok: (creds || 0) > 0 },
     { href: "/app/vault/brands", icon: "tender", title: "Brands & supplies", text: "For resellers: brands you may sell and what you supplied each year (GeM checks both).", status: "Optional", ok: true },
     { href: "/app/brand", icon: "pen", title: "Letterhead & signature", text: "Printed on every bid; the signature only with the admin's code.", status: ["letterhead", "signature", "seal"].filter((k) => kinds.has(k)).join(", ") || "Not uploaded", ok: kinds.has("letterhead") && kinds.has("signature") },
   ];

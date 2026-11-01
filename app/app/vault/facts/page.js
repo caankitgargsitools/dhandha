@@ -16,7 +16,7 @@ const SUGGESTED = [
 export default async function Facts() {
   const { supabase, company, isAdmin, role } = await getContext();
   const { data: all } = await supabase.from("company_facts").select("*").eq("company_id", company.id).order("key").order("period");
-  const facts = (all || []).filter((f) => !/^(oem|supply)\./.test(f.key)); // kept on Brands & supplies
+  const facts = (all || []).filter((f) => !/^(oem|supply|cred)\./.test(f.key)); // kept on Brands & supplies / Credentials
   return (
     <div className="stack">
       <div>

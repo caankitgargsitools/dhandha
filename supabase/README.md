@@ -116,3 +116,4 @@ Social lead sources:
 93. `pending/70_review_fixes.sql` (1 Nov, execute_sql) — code-review fixes: `format_learn_release`, harvest jobs claimed after customer prefetches (`doc_job_claim`), GeM study jobs not counted by the format harvest
 94. `pending/71_health_watch.sql` (1 Nov, execute_sql) — watchdog `private.health_watch()` every 30 min, phone push to platform admins only when something breaks
 95. `pending/72_security_fixes.sql` (1 Nov, execute_sql) — security review: spend_credits quantity check, invite-confirmed accounts join only their invite workspaces, tender_matches insert closed + keys fixed, lead-same-company trigger on 17 tables, cron functions not callable from outside
+96. `pending/73_credential_stats.sql` (1 Nov, execute_sql) — `credential_stats(p_rx)`: how many fetched tenders (newest reading) ask for each credential, optionally only titles matching an industry's words

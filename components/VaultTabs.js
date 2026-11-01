@@ -9,6 +9,7 @@ export const VAULT_PAGES = [
   ["/app/vault/facts", "Facts"],
   ["/app/vault/experience", "Experience"],
   ["/app/vault/people", "Key people"],
+  ["/app/vault/credentials", "Credentials"],
   ["/app/vault/brands", "Brands & supplies"],
   ["/app/brand", "Letterhead & signature"],
 ];
