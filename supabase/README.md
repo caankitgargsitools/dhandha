@@ -121,3 +121,5 @@ Social lead sources:
 98. `pending/75_study_fixes.sql` (1 Nov night, execute_sql) — pre-check readings replace the default 7 in `req_similar_years`; GeM reverse-auction notices (GEM/…/R/…) never fit matches, open ones hidden
 99. `pending/76_ingest_speed.sql` (1 Nov evening, execute_sql) — database overload fix: `ingest_tenders` skips matching for unchanged tenders and notes key use without waiting (skip locked); study harvests paused while it recovered
 100. `pending/77_session_portals_fast.sql` (2 Nov, execute_sql) — captcha page portal list by a loose index scan (3 s → 0.06 s); harvests back on; authenticator statement_timeout 60s
+101. `pending/78_shared_tender_security.sql` (2 Nov, execute_sql) — readings only fill gaps in shared tender figures; conditions merged, never replaced; tender-docs files readable only by matched workspaces
+102. `pending/79_eligibility_lines.sql` (2 Nov, execute_sql) — `eligibility_lines()` for Admin → Eligibility to learn
