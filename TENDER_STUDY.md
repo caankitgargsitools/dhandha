@@ -103,27 +103,27 @@ with questions for the owner. Questions never block the work — they wait here 
 | Q10 | Keep **OEM partners** and product-wise supply quantities per year in the Vault for resellers (F18)? | Yes / Later | **Yes** (1 Nov) — built: Vault → Brands & supplies, `lib/oem.js` |
 | Q11 | Store **ICAI firm details** (FRN date, CAs, partners, DISA/CISA, staff, C&AG empanelment) and check CA-firm criteria automatically (F19)? | Yes / Later | **Yes, and for every business** (1 Nov) — built: `lib/credentials.js` (33 credentials in 10 industries), Vault → Credentials asked from the chosen services, ordered by what fetched tenders ask (`credential_stats`). Next: surface frequent eligibility lines no credential covers, to add new ones |
 | Q12 | **Hide bids reserved for a named vendor** from matches automatically (F20)? | Yes / No | **Yes, hide** (1 Nov) — built: `tenders.reserved_for`, `tender_fits` refuses it for other firms |
-| Q13 | Show the **order-split share** in the price step (come 2nd, match L1, get X %) (F28)? | Yes / No / Pending | |
-| Q14 | **Hide limited / invitation-only bids** unless the firm is listed or enlisted with that buyer (masked list → "Invitation only" chip) (F29)? | Yes / No / Pending | |
-| Q15 | Remind once a year to **update turnover in the GeM seller profile**, and check it the way GeM does (F30)? | Yes / No / Pending | |
-| Q16 | When a bid says its **tender documents prevail**, use their figures over the GeM page automatically (F31)? | Yes / No / Pending | |
-| Q17 | Keep a **cancelled cheque and bank EFT mandate** in the Vault and attach them for vendor-code bids (F32)? | Yes / No / Pending | |
-| Q18 | List **price-fall, risk-purchase, price-variation and penalty clauses** in plain words in the brief (F33, F40)? | Yes / No / Pending | |
-| Q19 | Warn in the price step about **bid loading, concessional GST, "lower of" GST and reverse charge** (F34)? | Yes / No / Pending | |
-| Q20 | Put **secrecy-declaration cut-offs and meeting links** in the bid plan and calendar (F35)? | Yes / No / Pending | |
-| Q21 | **Fill the manpower cost sheet from the bid's own wage lines** per office (covers most of Q2) (F36)? | Yes / No / Pending | |
-| Q22 | Store **people deployed per work and staff strength by type** in the Vault and check head-count rules (F37)? | Yes / No / Pending | |
-| Q23 | Show the **required staff profile** (age, gender, ex-servicemen, experience) in the brief (F38)? | Yes / No / Pending | |
-| Q24 | Flag **"retain existing workers"** in the brief and price those posts at their pay (F39)? | Yes / No / Pending | |
-| Q25 | Add a **wage-rise buffer** when the bidder bears revised wages (F40)? | Yes / No / Pending | |
-| Q26 | Support **"highest offer wins" (H1 / revenue) bids and buyer floor prices** in the price step (F41)? | Yes / No / Pending | |
-| Q27 | **Page numbers and an index** in every bid file, and fill the checklist's page column (F42)? | Yes / No / Pending | |
-| Q28 | **Pre-fill the buyer's Excel price sheet** from the cost planner and warn on its format rules (F44)? | Yes / No / Pending | |
-| Q29 | Add **post-audit support months** to CA fee costing (F45)? | Yes / No / Pending | |
-| Q30 | Show **refused payment forms (DD / physical BG), e-BG via NeSL / SBI Collect** and the **EMD valid-till date** (F46)? | Yes / No / Pending | |
-| Q31 | Add the **5 missing undertaking templates** (financial standing, consortium, NDA, nil deviation, price reasonability) (F47)? | Yes / No / Pending | |
-| Q32 | Record **office opening dates and home state** to check "native / office for N years" rules (F48)? | Yes / No / Pending | |
-| Q33 | **Keep reverse-auction notices out of matches** and alert only firms that bid on the parent tender (F49)? | Yes / No / Pending | |
-| Q34 | **Flag buyer clauses that break GeM rules** and draft the query / grievance (F50)? | Yes / No / Pending | |
-| Q35 | **IT hardware**: warranty-cost block in the price step + product certificates (EPR, CRS, STQC, malicious code) (F52)? | Yes / No / Pending | |
-| Q36 | **Price-building helpers**: spread over SOR, VAPT sizing, freight / insurance / remote-site lines (F53)? | Yes / No / Pending | |
+| Q13 | Show the **order-split share** in the price step (come 2nd, match L1, get X %) (F28)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q14 | **Hide limited / invitation-only bids** unless the firm is listed or enlisted with that buyer (masked list → "Invitation only" chip) (F29)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q15 | Remind once a year to **update turnover in the GeM seller profile**, and check it the way GeM does (F30)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q16 | When a bid says its **tender documents prevail**, use their figures over the GeM page automatically (F31)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q17 | Keep a **cancelled cheque and bank EFT mandate** in the Vault and attach them for vendor-code bids (F32)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q18 | List **price-fall, risk-purchase, price-variation and penalty clauses** in plain words in the brief (F33, F40)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q19 | Warn in the price step about **bid loading, concessional GST, "lower of" GST and reverse charge** (F34)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q20 | Put **secrecy-declaration cut-offs and meeting links** in the bid plan and calendar (F35)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q21 | **Fill the manpower cost sheet from the bid's own wage lines** per office (covers most of Q2) (F36)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q22 | Store **people deployed per work and staff strength by type** in the Vault and check head-count rules (F37)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q23 | Show the **required staff profile** (age, gender, ex-servicemen, experience) in the brief (F38)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q24 | Flag **"retain existing workers"** in the brief and price those posts at their pay (F39)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q25 | Add a **wage-rise buffer** when the bidder bears revised wages (F40)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q26 | Support **"highest offer wins" (H1 / revenue) bids and buyer floor prices** in the price step (F41)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q27 | **Page numbers and an index** in every bid file, and fill the checklist's page column (F42)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q28 | **Pre-fill the buyer's Excel price sheet** from the cost planner and warn on its format rules (F44)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q29 | Add **post-audit support months** to CA fee costing (F45)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q30 | Show **refused payment forms (DD / physical BG), e-BG via NeSL / SBI Collect** and the **EMD valid-till date** (F46)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q31 | Add the **5 missing undertaking templates** (financial standing, consortium, NDA, nil deviation, price reasonability) (F47)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q32 | Record **office opening dates and home state** to check "native / office for N years" rules (F48)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q33 | **Keep reverse-auction notices out of matches** and alert only firms that bid on the parent tender (F49)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q34 | **Flag buyer clauses that break GeM rules** and draft the query / grievance (F50)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q35 | **IT hardware**: warranty-cost block in the price step + product certificates (EPR, CRS, STQC, malicious code) (F52)? | Yes / No / Pending | **Yes** (2 Nov) — building |
+| Q36 | **Price-building helpers**: spread over SOR, VAPT sizing, freight / insurance / remote-site lines (F53)? | Yes / No / Pending | **Yes** (2 Nov) — building |
