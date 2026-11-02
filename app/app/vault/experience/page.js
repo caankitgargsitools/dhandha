@@ -26,6 +26,7 @@ export default async function Experience() {
               <div><label htmlFor="value_inr">Value (₹)</label><input id="value_inr" name="value_inr" inputMode="decimal" /></div>
               <div><label htmlFor="start_date">Start</label><input id="start_date" name="start_date" type="date" /></div>
               <div><label htmlFor="end_date">Completion</label><input id="end_date" name="end_date" type="date" /></div>
+              <div><label htmlFor="people_deployed">People deployed</label><input id="people_deployed" name="people_deployed" inputMode="numeric" placeholder="Manpower / guards on the contract" /></div>
               <div>
                 <label htmlFor="status">Status</label>
                 <select id="status" name="status" defaultValue="completed"><option value="completed">Completed</option><option value="ongoing">Ongoing</option></select>
@@ -49,6 +50,7 @@ export default async function Experience() {
                     <div><label htmlFor={`value_inr-${i.id}`}>Value (₹)</label><input id={`value_inr-${i.id}`} name="value_inr" inputMode="decimal" defaultValue={i.value_inr ?? ""} /></div>
                     <div><label htmlFor={`start_date-${i.id}`}>Start</label><input id={`start_date-${i.id}`} name="start_date" type="date" defaultValue={day(i.start_date)} /></div>
                     <div><label htmlFor={`end_date-${i.id}`}>Completion</label><input id={`end_date-${i.id}`} name="end_date" type="date" defaultValue={day(i.end_date)} /></div>
+                    <div><label htmlFor={`people_deployed-${i.id}`}>People deployed</label><input id={`people_deployed-${i.id}`} name="people_deployed" inputMode="numeric" defaultValue={i.people_deployed ?? ""} /></div>
                     <div>
                       <label htmlFor={`status-${i.id}`}>Status</label>
                       <select id={`status-${i.id}`} name="status" defaultValue={i.status === "ongoing" ? "ongoing" : "completed"}><option value="completed">Completed</option><option value="ongoing">Ongoing</option></select>
@@ -56,7 +58,7 @@ export default async function Experience() {
                   </div>
                 }>
                   <td>{i.client}</td>
-                  <td>{i.work_name}{i.category && <div className="muted small">{i.category}</div>}</td>
+                  <td>{i.work_name}{(i.category || i.people_deployed) && <div className="muted small">{[i.category, i.people_deployed ? `${i.people_deployed} people deployed` : null].filter(Boolean).join(" · ")}</div>}</td>
                   <td>{i.value_inr ? `₹${inr(i.value_inr)}` : "—"}</td>
                   <td className="small">{i.start_date ? new Date(i.start_date).toLocaleDateString("en-IN") : "?"} – {i.end_date ? new Date(i.end_date).toLocaleDateString("en-IN") : "…"}</td>
                   <td><span className={`chip ${i.status === "completed" ? "ok" : "info"}`}>{i.status}</span></td>

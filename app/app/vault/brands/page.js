@@ -1,6 +1,6 @@
 import { getContext } from "@/lib/session";
 import FormState from "../../FormState";
-import { oemsFrom, suppliesFrom } from "@/lib/oem";
+import { oemsFrom, suppliesFrom, PRODUCT_CERTS } from "@/lib/oem";
 import { saveOem, saveSupply, removeEntry } from "./actions";
 
 const fy = () => { const d = new Date(), y = d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; return `FY ${y - 1}-${String(y).slice(2)}`; };
@@ -24,7 +24,7 @@ export default async function Brands() {
           {oems.length ? (
             <div className="table-wrap"><table style={{ fontSize: 13 }}>
               <thead><tr><th>Brand</th><th>Products</th><th>Authorisation</th><th></th></tr></thead>
-              <tbody>{oems.map((o) => <tr key={o.id}><td><strong>{o.brand}</strong></td><td className="small">{o.products || "—"}</td><td className="small">{o.auth_no || "—"}{o.valid_until && <div className="tiny faint">valid till {String(o.valid_until).slice(0, 10)}</div>}</td><td><Remove id={o.id} /></td></tr>)}</tbody>
+              <tbody>{oems.map((o) => <tr key={o.id}><td><strong>{o.brand}</strong></td><td className="small">{o.products || "—"}{!!o.certs?.length && <div className="tiny faint">{o.certs.map((k) => PRODUCT_CERTS.find((c) => c.key === k)?.label.split(" (")[0]).filter(Boolean).join(" · ")}</div>}</td><td className="small">{o.auth_no || "—"}{o.valid_until && <div className="tiny faint">valid till {String(o.valid_until).slice(0, 10)}</div>}</td><td><Remove id={o.id} /></td></tr>)}</tbody>
             </table></div>
           ) : <p className="muted small">No brands yet.</p>}
           {edit && (
@@ -35,6 +35,9 @@ export default async function Brands() {
                 <div><label htmlFor="auth_no">Authorisation no. / dealer code</label><input id="auth_no" name="auth_no" /></div>
                 <div><label htmlFor="valid_until">Valid till</label><input id="valid_until" name="valid_until" type="date" /></div>
               </div>
+              <fieldset className="row" style={{ border: 0, padding: 0, margin: 0, flexWrap: "wrap", gap: 12 }}><legend className="small muted">Product certificates you hold for this brand</legend>
+                {PRODUCT_CERTS.map((c) => <label key={c.key} className="small row" style={{ gap: 4 }}><input type="checkbox" name="certs" value={c.key} />{c.label}</label>)}
+              </fieldset>
             </FormState>
           )}
           <div className="tiny faint">Upload the authorisation letter itself in Vault → Documents.</div>

@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { getContext } from "@/lib/session";
-import { slugKey } from "@/lib/oem";
+import { slugKey, PRODUCT_CERTS } from "@/lib/oem";
 
 const s = (v) => String(v ?? "").trim().slice(0, 300);
 const blocked = (role) => role === "viewer" || role === "disabled";
@@ -14,7 +14,7 @@ export async function saveOem(prev, formData) {
   if (!brand) return { error: "The brand name is needed." };
   const { error } = await supabase.from("company_facts").upsert({
     tenant_id: tenant.id, company_id: company.id, key: `oem.${slugKey(brand)}`, period: "",
-    value: JSON.stringify({ brand, products: s(formData.get("products")), auth_no: s(formData.get("auth_no")) }),
+    value: JSON.stringify({ brand, products: s(formData.get("products")), auth_no: s(formData.get("auth_no")), certs: formData.getAll("certs").map(String).filter((k) => PRODUCT_CERTS.some((c) => c.key === k)) }),
     unit: "oem", valid_until: s(formData.get("valid_until")) || null, source: "user",
   }, { onConflict: "company_id,key,period" });
   if (error) return { error: error.message };
