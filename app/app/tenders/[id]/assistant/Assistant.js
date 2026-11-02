@@ -152,7 +152,7 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
         </div>
       )}
       <div style={{ display: tab === "chat" ? "flex" : "none", flexDirection: "column" }}>
-      <div ref={box} style={{ height: "min(62vh, 640px)", overflowY: "auto", overscrollBehavior: "contain", padding: "18px 18px 8px", display: "flex", flexDirection: "column", gap: 10 }} aria-live="polite">
+      <div ref={box} style={{ height: "min(62vh, 640px)", overflowY: "auto", padding: "18px 18px 8px", display: "flex", flexDirection: "column", gap: 10 }} aria-live="polite">
         <Bubble>Namaste! I'll prepare this tender with you. I'll ask only what I can't find in your Vault, and save every answer so the next tender asks less.</Bubble>
         {done.map((d, i) => <Bubble key={`d${i}`}>{d}</Bubble>)}
         {redo && (redo.read || redo.tech || redo.price) && (
