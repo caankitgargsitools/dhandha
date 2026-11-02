@@ -26,3 +26,13 @@ test("latest sign-off per step", () => {
   assert.equal(s.finance.decision, "changes");
   assert.equal(s.management, undefined);
 });
+
+test("secrecy declaration leads the plan; an online pre-bid meeting's link is on its step (Q20)", async () => {
+  const { planTasks, istDate } = await import("../lib/bidPlan.js");
+  const now = new Date("2026-11-02T06:00:00Z");
+  const t = planTasks("2026-11-20T11:30:00Z", "2026-11-10", now, { secrecy: { by: "05.11.2026 15:00" }, meeting_links: ["https://teams.microsoft.com/l/x"] });
+  assert.equal(t[0].title, "Email the signed secrecy declaration");
+  assert.equal(t[0].due_at, istDate("05.11.2026 15:00").toISOString());
+  assert.equal(t[0].due_at, "2026-11-05T09:30:00.000Z");
+  assert.ok(t.some((x) => /Meeting link: https:\/\/teams/.test(x.details)));
+});

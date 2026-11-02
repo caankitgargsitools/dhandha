@@ -28,3 +28,11 @@ test("AI answer checked and table text", () => {
   assert.equal(q[0].page, "7");
   assert.match(queriesText(q, { firm: "Garg & Co", tender: "Road" }), /^Pre-bid queries — Road\nFrom: Garg & Co\n\n1\. 4\.2 \(page 7\)/);
 });
+
+test("buyer terms that break GeM's rules become queries to withdraw them (Q34)", async () => {
+  const { freeQueries } = await import("../lib/prebid.js");
+  const q = freeQueries({ terms: { gem_rule_breaks: [{ kind: "local_only", label: "Only bidders from Karnataka", text: "Only local suppliers from Karnataka are eligible" }] } });
+  assert.equal(q.length, 1);
+  assert.match(q[0].query, /withdrawn or brought in line with GeM/);
+  assert.match(q[0].why, /state/);
+});

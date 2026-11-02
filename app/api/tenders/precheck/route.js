@@ -47,6 +47,9 @@ export async function POST(request) {
         // a GeM bid reserved for one named vendor: hidden from every other firm (owner, Q12)
         const reserved = rules?.fields?.gem?.reserved_for;
         if (reserved) await supabase.rpc("tender_reserved_set", { p_key: key, p_tender: j.tender, p_vendor: reserved });
+        // an invitation-only bid (limited / single tender, "only enlisted vendors of X"): hidden from firms not invited (Q14)
+        const invite = rules?.fields?.terms?.invite;
+        if (invite) await supabase.rpc("tender_invite_set", { p_key: key, p_tender: j.tender, p_invite: invite });
         // a harvest job (fetched only to learn its formats): its downloaded files are cleared and the formats learned
         // (the function does nothing for a customer's job)
         await supabase.rpc("precheck_report_harvest", { p_key: key, p_job: j.job });

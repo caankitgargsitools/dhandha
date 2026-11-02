@@ -131,6 +131,7 @@ export default async function TenderDetail({ params, searchParams }) {
         ))}
       </div>
 
+      {t.invite_only && <div className="notice small"><span>✉ <strong>Invitation only</strong> — {t.invite_only.kind === "enlisted" ? `only vendors enlisted with ${t.invite_only.with} may bid` : t.invite_only.masked ? "the buyer invited a list of sellers (names hidden on GeM); bid only if you received the invitation" : `only the listed sellers may bid${t.invite_only.names?.length ? `: ${t.invite_only.names.slice(0, 5).join(", ")}` : ""}`}.</span></div>}
       {t.reserved_for && <div className="notice small"><span>⚠ <strong>Reserved for {t.reserved_for}</strong> — the buyer says other bidders are not considered, so Dhandha keeps it out of your matches.</span></div>}
       <FinTests rows={checkFinTests(read?.fields?.fin_tests, facts, t.value_inr)} />
       <PointsTable table={read?.fields?.points} rows={pointsRows(read?.fields?.points, { facts: [...(facts || []), ...(oemFacts || [])], works: worksDone || 0, incorporated: c.incorporation_date })} />
@@ -275,6 +276,16 @@ export default async function TenderDetail({ params, searchParams }) {
           )}
           <div className="panel stack-sm">
             <div className="panel-head" style={{ marginBottom: 0 }}><h3>EMD &amp; deposits</h3><Link className="small" href="/app/tenders/deposits">All deposits</Link></div>
+            {(() => { // how the bid security may be paid and how long it must stay valid (study Q30)
+              const e = read?.fields?.terms?.emd_terms; if (!e) return null;
+              const validity = read?.fields?.bid_validity_days || read?.fields?.gem?.validity_days || null;
+              const till = e.beyond_days && validity && t.due_at ? new Date(new Date(t.due_at).getTime() + (validity + e.beyond_days) * 864e5) : null;
+              return <div className="tiny" style={{ background: "var(--line-soft)", borderRadius: 8, padding: "6px 8px" }}>
+                {e.refused.length > 0 && <div>Not accepted: {e.refused.join(", ")}</div>}
+                {e.ways.length > 0 && <div>Pay by: {e.ways.join(" / ")}</div>}
+                {e.beyond_days && <div>Keep it valid {e.beyond_days} days beyond the bid validity{till ? <> — till about <strong>{fmtDate(till)}</strong></> : ""}</div>}
+              </div>;
+            })()}
             {(deposits || []).map((d) => <div key={d.id} className="row between small"><span>{DKINDS[d.kind]} · {lakh(d.amount)}{d.reference ? <span className="tiny faint"> · {d.reference}</span> : null}</span><span className={`chip ${DSTATUS[d.status][0]}`}>{DSTATUS[d.status][1]}</span></div>)}
             {!(deposits || []).length && <p className="small muted" style={{ margin: 0 }}>{t.emd_inr ? `EMD for this tender: ${lakh(t.emd_inr)}${msme && t.mse_emd_exempt ? " (you may be exempt as an MSE)" : ""}. ` : ""}Record it when you pay, so the refund is tracked.</p>}
             {canMake && <details><summary className="small">Add a deposit</summary><div style={{ marginTop: 8 }}><DepositForm matchId={m.id} emd={t.emd_inr} /></div></details>}

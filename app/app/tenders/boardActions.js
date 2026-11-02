@@ -7,9 +7,10 @@ const msg = (e) => String(e?.message || e).replace(/^.*?ERROR:\s*/, "");
 
 export async function makeBidPlan(matchId) {
   const { supabase, company } = await getContext();
-  const { data: m } = await supabase.from("tender_matches").select("id, tenders(due_at, prebid_on)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
+  const { data: m } = await supabase.from("tender_matches").select("id, tender_id, tenders(due_at, prebid_on)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
   if (!m?.tenders) return { error: "Tender not found." };
-  const tasks = planTasks(m.tenders.due_at, m.tenders.prebid_on);
+  const { data: rd } = await supabase.from("tender_reads").select("fields").eq("tender_id", m.tender_id).order("created_at", { ascending: false }).limit(1);
+  const tasks = planTasks(m.tenders.due_at, m.tenders.prebid_on, new Date(), rd?.[0]?.fields?.terms || null);
   if (!tasks.length) return { error: "This tender has closed." };
   const { error } = await supabase.rpc("bid_plan_make", { p_match: matchId, p_tasks: tasks });
   revalidatePath(`/app/tenders/${matchId}`);
