@@ -72,8 +72,8 @@ const sessionChannel = (portal) => ({
 // Show the captcha picture to a person and wait for the answer; fill it and press the visible button.
 // A person waits on their own fetch for up to 9 minutes; background fetches (prefetch, study) give up after 2, so one
 // unanswered captcha does not hold the single worker — and every other waiting job — for long.
-async function captchaFromPerson(page, job, channel = jobChannel(job), label = "The portal asked for a captcha", waitMs = job?.auto ? 2 * 60000 : 9 * 60000) {
-  for (let attempt = 1; attempt <= 3; attempt++) {
+async function captchaFromPerson(page, job, channel = jobChannel(job), label = "The portal asked for a captcha", waitMs = job?.auto ? 2 * 60000 : 9 * 60000, { attempts = 3, beforeSubmit = null } = {}) {
+  for (let attempt = 1; attempt <= attempts; attempt++) {
     const img = await visible(page, CAPTCHA_IMG), input = await visible(page, CAPTCHA_INPUT);
     if (!img || !input) return true;
     const png = await img.screenshot({ type: "png" });
@@ -88,6 +88,7 @@ async function captchaFromPerson(page, job, channel = jobChannel(job), label = "
     }
     if (!answer) throw new Error("Nobody typed the captcha in time");
     await input.fill(answer);
+    if (beforeSubmit) await beforeSubmit(page).catch(() => {});
     const btn = await input.evaluateHandle((el) => {
       const f = el.closest("form") || document;
       const all = [...f.querySelectorAll("input[type=submit], button[type=submit], input[type=button][value*=Submit i], input#Search, input[name=Search], input[value*=Submit i], input[value*=Search i], input[value*=Download i]")];
@@ -99,7 +100,7 @@ async function captchaFromPerson(page, job, channel = jobChannel(job), label = "
     await page.waitForTimeout(2000);
     if (!(await hasCaptcha(page))) { channel.accepted(); return true; }
   }
-  throw new Error("The portal did not accept the captcha three times");
+  throw new Error(attempts > 1 ? "The portal did not accept the captcha three times" : "The portal did not accept the captcha");
 }
 
 // Organisation list → this tender's organisation → the tender's row → its detail page.
@@ -347,7 +348,16 @@ async function winnersInSession(site, s, ch, say) {
     await s.page.goto(site.base + RESULTS_LIST, { waitUntil: "domcontentloaded", timeout: 60000 });
     if (await hasCaptcha(s.page)) {
       if (winnersAsked.get(portal) === today) { await rpc("session_update", { p_portal: portal, p_state: "live", p_step: "Live — tender winners could not be read today" }).catch(() => {}); s.last = Date.now(); return; }
-      await captchaFromPerson(s.page, null, ch, "Tender winners (optional): the results page asks for a captcha", 2 * 60000);
+      // the results form also has Tender ID / Keyword boxes; an empty search is refused and the captcha shown again
+      // (probe 85, 2 Nov), which looked like a rejected captcha. "of" is in nearly every title, so all results come back.
+      // One picture a portal a day: a refusal skips the winners rather than asking again.
+      await captchaFromPerson(s.page, null, ch, "Tender winners (optional): the results page asks for a captcha", 2 * 60000, {
+        attempts: 1,
+        beforeSubmit: async (page) => {
+          const kw = await page.$("input[name=Keyword]"), id = await page.$("input[name=TenderId]");
+          if (kw && !(await kw.inputValue()) && !(id && (await id.inputValue()))) await kw.fill("of");
+        },
+      });
       winnersAsked.set(portal, today);
     }
     await rpc("session_update", { p_portal: portal, p_state: "live", p_step: "Live — reading tender winners" });
