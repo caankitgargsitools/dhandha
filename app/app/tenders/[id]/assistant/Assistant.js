@@ -232,8 +232,8 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
           })()}
           {current.kind === "yes_no" && (
             <div className="row" style={{ gap: 8 }}>
-              <button disabled={busy} onClick={() => run("Yes", () => answerQuestion({ key: current.key, value: "yes", label: current.label, matchId }), "Noted and saved to your Vault. Every tender that asks this now counts it as met.")}>Yes</button>
-              <button className="ghost" disabled={busy} onClick={() => run("No", () => answerQuestion({ key: current.key, value: "no", label: current.label, matchId }), "Noted. Tenders that require this will show a warning, and you decide whether to file; you can change the answer in Vault → Facts any time.")}>No</button>
+              <button disabled={busy} onClick={() => run(current.meet || "Yes", () => answerQuestion({ key: current.key, value: "yes", label: current.label, matchId }), `Noted and saved to your Vault. Every tender that asks this now counts it as met.${current.needs ? ` Keep ${current.needs} ready — it's on the Get ready list.` : ""}`)}>{current.meet || "Yes"}</button>
+              <button className="ghost" disabled={busy} onClick={() => run(current.fail || "No", () => answerQuestion({ key: current.key, value: "no", label: current.label, matchId }), "Noted. Tenders that require this will show a warning, and you decide whether to file; you can change the answer in Vault → Facts any time.")}>{current.fail || "No"}</button>
               <button className="ghost" disabled={busy} onClick={skip}>Skip</button>
             </div>
           )}

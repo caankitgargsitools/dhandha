@@ -99,6 +99,8 @@ async function readTenderLocked({ supabase, tenant, user, m, matchId, mode, file
     for (const k of ["work_scope", "highlights"]) if (Array.isArray(d[k])) fields[k] = d[k].map(String).slice(0, 12);
     if (typeof d.mse_emd_exempt === "boolean") fields.mse_emd_exempt = d.mse_emd_exempt;
     if (Array.isArray(d.other_eligibility)) fields.other_eligibility = d.other_eligibility.slice(0, 15);
+    // the same conditions as plain questions, with the answer that qualifies (shown with outcome buttons)
+    if (Array.isArray(d.condition_questions)) fields.condition_questions = d.condition_questions.filter((q) => q && typeof q.condition === "string" && typeof q.question === "string").slice(0, 15).map((q) => ({ condition: q.condition.slice(0, 300), question: q.question.slice(0, 240), qualifies_if: /^no$/i.test(q.qualifies_if) ? "no" : /^yes$/i.test(q.qualifies_if) ? "yes" : null }));
     if (Array.isArray(d.prepare_before)) fields.prepare_before = d.prepare_before.map(String).slice(0, 12);
     if (Array.isArray(d.required_docs) && d.required_docs.length) docs = [...new Set([...docs, ...d.required_docs])];
     if (Array.isArray(d.formats) && d.formats.length) {
@@ -140,7 +142,7 @@ async function readTenderLocked({ supabase, tenant, user, m, matchId, mode, file
   // yes/no conditions (branch in a state, GST there, ISO, contractor class, years in business) become questions
   const ctx = { state: m.tenders.state };
   const found = extractConditions(pages, ctx);
-  const conditions = [...found, ...conditionsFromLines(fields.other_eligibility, ctx, found)];
+  const conditions = [...found, ...conditionsFromLines(fields.other_eligibility, ctx, found, fields.condition_questions)];
   await supabase.rpc("set_tender_conditions", { p_tender: m.tender_id, p_conditions: conditions });
   const { data: after } = await supabase.from("tender_matches").select("pending").eq("id", matchId).single();
   revalidatePath(`/app/tenders/${matchId}`);

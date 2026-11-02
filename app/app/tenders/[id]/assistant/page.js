@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getContext, lakh, fmtDate, daysLeft } from "@/lib/session";
 import { aiTiers } from "@/lib/ai";
-import { checkConditions, mandatoryUnmet } from "@/lib/conditions";
+import { checkConditions, mandatoryUnmet, askOf } from "@/lib/conditions";
 import { requiredDocs } from "@/lib/bidpack";
 import { missingMasters, fillPlaceholders, isReference } from "@/lib/masters";
 import { buildSegments, blanksLeft } from "@/lib/annexure";
@@ -99,7 +99,8 @@ export default async function TenderAssistant({ params }) {
   if (read) done.push("You approved the brief — preparing the bid.");
 
   for (const x of cond.met) done.push(`✓ ${x.label} — you told me yes earlier (saved in your Vault).`);
-  for (const x of cond.pending) steps.push({ id: `q:${x.key}`, kind: "yes_no", key: x.key, label: x.label, say: x.question, quote: x.quote, page: x.page });
+  // each condition as a plain question; the buttons say the outcome ("No — we qualify ✓"), never a bare Yes / No
+  for (const x of cond.pending) { const a = askOf(x); steps.push({ id: `q:${x.key}`, kind: "yes_no", key: x.key, label: x.label, say: a.question, meet: a.meet, fail: a.fail, needs: a.needs, quote: x.quote, page: x.page }); }
 
   // a mandatory condition that is not met never silently rejects the tender: the person is warned and decides —
   // "we do meet it" (the Vault is corrected), file anyway (recorded), or not for us. Nothing goes further until then.

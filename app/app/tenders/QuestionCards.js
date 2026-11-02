@@ -1,4 +1,5 @@
 "use client";
+import { askOf } from "@/lib/conditions";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -30,15 +31,15 @@ export default function QuestionCards({ questions, canAnswer }) {
       {list.map((q) => (
         <div key={q.key} className="row between" style={{ gap: 12, borderTop: "1px solid var(--line-soft)", paddingTop: 10, flexWrap: "wrap" }}>
           <div style={{ minWidth: 0, flex: "1 1 320px" }}>
-            <strong>{q.question}</strong>
+            <strong>{askOf(q).question}</strong>
             <div className="tiny faint">
               Needed by {q.tenders.length} tender{q.tenders.length === 1 ? "" : "s"}: {q.tenders.slice(0, 2).map((t, i) => <span key={t.match_id}>{i ? "; " : ""}<Link href={`/app/tenders/${t.match_id}/assistant`}>{t.title.slice(0, 60)}</Link></span>)}{q.tenders.length > 2 ? ` and ${q.tenders.length - 2} more` : ""}
             </div>
           </div>
           {canAnswer && (
             <div className="row" style={{ gap: 6 }}>
-              <button className="sm" disabled={busy === q.key} onClick={() => answer(q, "yes")}>Yes</button>
-              <button className="sm ghost" disabled={busy === q.key} onClick={() => answer(q, "no")}>No</button>
+              <button className="sm" disabled={busy === q.key} onClick={() => answer(q, "yes")}>{askOf(q).meet}</button>
+              <button className="sm ghost" disabled={busy === q.key} onClick={() => answer(q, "no")}>{askOf(q).fail}</button>
               <button className="sm ghost" disabled={busy === q.key} onClick={() => setHidden((h) => new Set(h).add(q.key))}>Skip</button>
             </div>
           )}
