@@ -20,7 +20,8 @@ function expiryChip(d, tracks) {
 // adding a document reads it (AI for statements and scans can take a minute)
 export const maxDuration = 300;
 
-export default async function Documents() {
+export default async function Documents({ searchParams }) {
+  const sp = await searchParams;
   const { supabase, tenant, company, isAdmin, role } = await getContext();
   const [{ data: types }, { data: docs }, { data: drive }] = await Promise.all([
     supabase.from("document_types").select("*").order("sort"),
@@ -45,13 +46,13 @@ export default async function Documents() {
       {driveOn && <p className="notice info small">Files you upload here go straight into your Google Drive ({drive.google_email}), in a folder for {company.legal_name}. Dhandha can only see files it put there.</p>}
 
       {role !== "viewer" && (
-        <div className="panel">
+        <div className="panel" id="add">
           <h3>Add a document</h3>
           <FormState action={addDocument} submit="Add document and read it">
             <div className="form-grid">
               <div>
                 <label htmlFor="type_code">Type</label>
-                <select id="type_code" name="type_code" required defaultValue="">
+                <select id="type_code" name="type_code" required defaultValue={sp?.type && (types || []).some((t) => t.code === sp.type) ? sp.type : ""}>
                   <option value="" disabled>Select type</option>
                   {categories.map((cat) => (
                     <optgroup key={cat} label={cat}>

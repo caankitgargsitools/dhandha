@@ -35,6 +35,10 @@ export default async function Vault() {
   return (
     <div className="stack">
       <div className="page-head"><div><h1>Business Vault</h1><p>Everything about {company.legal_name} that tenders and leads need, kept in one place. Fill it once; every bid uses it.</p></div></div>
+      <Link href="/app/vault/masters" className="panel row between" style={{ color: "inherit", textDecoration: "none", borderLeft: "4px solid var(--primary)", gap: 12 }}>
+        <span><strong>Tender-ready checklist</strong><div className="small muted">Everything tenders for your work ask for — from what you do and who you sell to — asked one at a time, with uploads.</div></span>
+        <span className="btn sm">Open</span>
+      </Link>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 14 }}>
         {cards.map((x) => (
           <Link key={x.href} href={x.href} className="panel stack-sm" style={{ color: "inherit", textDecoration: "none" }}>
