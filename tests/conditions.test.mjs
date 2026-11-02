@@ -53,3 +53,26 @@ test("mandatoryUnmet: preferred states are a preference, unanswered questions ar
   ]);
   assert.deepEqual(unmet, ["Turnover below the minimum"]);
 });
+
+test("conditions written in the negative are asked plainly, with outcome buttons (owner, 2 Nov)", async () => {
+  const { plainCondition, askOf, conditionsFromLines } = await import("../lib/conditions.js");
+  const gp = plainCondition("Firm independent; has not prepared accounts/records of the GP units assigned (affidavit/undertaking).");
+  assert.equal(gp.question, "Has your firm prepared accounts/records of the GP units assigned?");
+  assert.equal(gp.ok, "no");
+  assert.equal(gp.meet, "No — we qualify ✓");
+  assert.equal(gp.fail, "Yes — we don't qualify ✗");
+  assert.equal(gp.needs, "an affidavit / undertaking");
+  assert.equal(plainCondition("The bidder should not have been blacklisted by any Government department.").question, "Has your firm ever been blacklisted by any Government department?");
+  assert.equal(plainCondition("There should be no pending litigation with the department.").question, "Is there any pending litigation with the department?");
+  const plain = plainCondition("The firm must have a valid labour licence.");
+  assert.equal(plain.ok, null);
+  assert.equal(plain.meet, "We meet this ✓");
+  // the AI reader's own plain question wins, with its qualifying answer
+  const [c] = conditionsFromLines(["Bidder must not be a related party of the client."], {}, [], [{ condition: "Bidder must not be a related party of the client.", question: "Is your firm related to the client?", qualifies_if: "no" }]);
+  assert.match(c.question, /\[ok:no\]$/);
+  assert.deepEqual([askOf(c).question, askOf(c).meet], ["Is your firm related to the client?", "No — we qualify ✓"]);
+  // a condition saved before this change is rephrased when shown
+  assert.equal(askOf({ question: "Does your firm meet this condition: “Bidder shall not have been debarred.”?", quote: "Bidder shall not have been debarred." }).question, "Has your firm ever been debarred?");
+  // the shared yes/no rules stay as they are
+  assert.equal(askOf({ question: "Do you have a branch or office in Bihar?" }).meet, "Yes — we qualify ✓");
+});
