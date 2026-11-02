@@ -27,7 +27,7 @@ const DOC_RX = /\.(pdf|xls|xlsx|doc|docx|zip|rar|dwg|jpg|jpeg)\b/i;
 const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 async function rpc(fn, body) {
-  const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+  const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/${fn}`, { signal: AbortSignal.timeout(120000),
     method: "POST",
     headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, "content-type": "application/json" },
     body: JSON.stringify({ p_key: env.INGEST_KEY, ...body }),
