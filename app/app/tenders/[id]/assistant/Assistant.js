@@ -95,7 +95,10 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
   };
   // roughly how long the slow steps take, for a progress bar instead of a bare spinner
   // run() answers the question on screen; other() is for actions that are not an answer (read again, edit a format)
-  const run = (mine, fn, ok, eta) => { if (mine) askedNow(); return other(mine, fn, ok, eta); };
+  // the question goes into the chat with the answer at once; while the answer is saved it is not shown a second time
+  // below (posting), and comes back only if saving fails
+  const [posting, setPosting] = useState(null);
+  const run = (mine, fn, ok, eta) => { if (mine) { askedNow(); setPosting(current?.id || null); } return other(mine, fn, ok, eta); };
   async function other(mine, fn, ok, eta) {
     if (mine) say("me", mine);
     else if (mine === null) say("bot", "Reading the documents…");
@@ -113,6 +116,7 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
     } catch (e) { say("bot", /unexpected response/i.test(e.message) ? "The connection dropped — refreshing to show where we are." : `Something went wrong: ${e.message}`, { error: true }); }
     setBusy(false);
     setWorking(null);
+    setPosting(null);
     startRefresh(() => router.refresh());
   }
   // ask anything, at any point: about the tender, or about the question on screen (Claude, from the documents)
@@ -195,7 +199,7 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
         )}
         <div ref={anchor} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {current?.kind === "brief" && brief}
-        {current ? (
+        {current && posting === current.id ? null : current ? (
           <Bubble>
             {current.kind === "mandatory" && (
               <div className="stack-sm">

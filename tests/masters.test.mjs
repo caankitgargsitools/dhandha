@@ -67,3 +67,26 @@ test("partner details kept as facts stay with their partner", () => {
   assert.equal(fillP(t, facts), "A 111111 / B [TO BE FILLED: ICAI Membership Reg. No.]");
   assert.equal(fillP(t, [...facts, { key: "master.icai_membership_reg_no_of_partner_2", value: "222222" }]), "A 111111 / B 222222");
 });
+
+test("the same question in other words finds the saved answer; a real difference is asked (owner, 2 Nov)", async () => {
+  const { sameQuestion } = await import("../lib/masters.js");
+  const facts = [
+    { key: "master.number_of_employees", value: "45" },
+    { key: "master.labour_licence_number", value: "LL/123" },
+    { key: "master.average_annual_turnover_last_3_years", value: "2.1 Cr" },
+    { key: "master.year_of_establishment_of_the_firm", value: "2009" },
+    { key: "master.office_in_uttar_pradesh", value: "Lucknow" },
+  ];
+  assert.equal(matchFact("No. of staff on the rolls of the company", facts)?.value, "45");
+  assert.equal(matchFact("Total manpower (employees) of the bidder", facts), null); // "total" is a qualifier the saved one lacks
+  assert.equal(matchFact("Labour License No.", facts)?.value, "LL/123");
+  assert.equal(matchFact("Please mention the Regn. No. of Labour Licence", facts)?.value, "LL/123");
+  assert.equal(matchFact("Year in which the agency was incorporated", facts)?.value, "2009");
+  assert.equal(matchFact("Average annual turnover of last 3 years", facts)?.value, "2.1 Cr");
+  assert.equal(matchFact("Average annual turnover of last 5 years", facts), null); // different number → ask
+  assert.equal(matchFact("Total turnover of last 3 years", facts), null); // total ≠ average → ask
+  assert.equal(matchFact("Office in Uttar Pradesh", facts)?.value, "Lucknow");
+  assert.equal(matchFact("Office in Bihar", facts), null); // different state → ask
+  assert.equal(sameQuestion("Number of employees", "Total number of employees"), 0); // a qualifier on one side only
+  assert.ok(sameQuestion("PF registration code", "EPF Regn. Code No.") >= 0.5);
+});
