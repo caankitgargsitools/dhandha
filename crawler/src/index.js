@@ -57,7 +57,7 @@ function plan() {
 // Matched tenders still missing value / EMD on this portal (their detail pages are opened first).
 async function detailWanted(portal) {
   try {
-    const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/detail_wanted`, { method: "POST", headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, "content-type": "application/json" }, body: JSON.stringify({ p_key: env.INGEST_KEY, p_portal: portal }) });
+    const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/detail_wanted`, { signal: AbortSignal.timeout(120000), method: "POST", headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, "content-type": "application/json" }, body: JSON.stringify({ p_key: env.INGEST_KEY, p_portal: portal }) });
     return new Set(r.ok ? await r.json() : []);
   } catch { return new Set(); }
 }
@@ -77,7 +77,13 @@ async function runOnce() {
       if (budgetMs && Date.now() - t0 > budgetMs) { progress.skip(s.name, "time budget used up — next run starts here"); return; }
       await progress.begin(s.name);
       try {
-        const r = await s.run({ browser, update: (info) => progress.update(s.name, info) });
+        // one portal may not hold up the crawl forever (a frozen page or database once hung a run for 10 hours)
+        const stepMs = Number(env.STEP_MAX_MIN || 90) * 60000;
+        let timer;
+        const r = await Promise.race([
+          s.run({ browser, update: (info) => progress.update(s.name, info) }),
+          new Promise((_, no) => { timer = setTimeout(() => no(new Error(`gave up after ${stepMs / 60000} min — next run tries again`)), stepMs); }),
+        ]).finally(() => clearTimeout(timer));
         log(s.name, r.note);
         await progress.end(s.name, r);
       } catch (e) {

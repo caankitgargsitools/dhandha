@@ -30,7 +30,7 @@ export function sendTenders(source, rows, env = process.env, { post = postTender
 
 async function postTenders(source, batch, env) {
   const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/ingest_tenders`, {
-    method: "POST",
+    method: "POST", signal: AbortSignal.timeout(120000), // a frozen database must not hang the crawl
     headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, "content-type": "application/json" },
     body: JSON.stringify({ p_key: env.INGEST_KEY, p_source: source, p_rows: batch }),
   });
@@ -45,7 +45,7 @@ export function sendAwards(source, rows, env = process.env, { post = postAwards,
 
 async function postAwards(source, batch, env) {
   const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/ingest_awards`, {
-    method: "POST",
+    method: "POST", signal: AbortSignal.timeout(120000), // a frozen database must not hang the crawl
     headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, "content-type": "application/json" },
     body: JSON.stringify({ p_key: env.INGEST_KEY, p_source: source, p_rows: batch }),
   });

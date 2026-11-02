@@ -10,7 +10,7 @@ export function createProgress(env, steps, { runner = env.RUNNER_NAME || "crawle
   const post = (status, done) => {
     chain = chain.then(async () => {
       try {
-        const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/crawler_progress`, {
+        const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/crawler_progress`, { signal: AbortSignal.timeout(120000),
           method: "POST",
           headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, "content-type": "application/json" },
           body: JSON.stringify({ p_key: env.INGEST_KEY, p_runner: runner, p_status: status, p_state: state, p_done: done || null }),
