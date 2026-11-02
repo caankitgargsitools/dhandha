@@ -4,6 +4,7 @@ import { getContext } from "@/lib/session";
 import { pdfPages } from "@/lib/pdftext";
 import { readTenderText, formatId } from "@/lib/tenderRules";
 import { gemReadFields, gemLines } from "@/lib/gemFields";
+import { termLines, termRisks } from "@/lib/bidTerms";
 import { aiReadTender } from "@/lib/tenderAi";
 import { aiTiers } from "@/lib/ai";
 import { aiDocument } from "@/lib/tenderPdf";
@@ -123,8 +124,18 @@ async function readTenderLocked({ supabase, tenant, user, m, matchId, mode, file
     if (Array.isArray(d.risks) && d.risks.length) risks = d.risks.slice(0, 15);
     // a GeM bid's labelled fields are exact: they win over the AI's reading, and their lines lead "Get ready"
     if (fields.gem) {
-      Object.assign(fields, gemReadFields(fields.gem));
+      // …unless the bid says its attached documents prevail: then the GeM page only fills what the reading left empty
+      const g = gemReadFields(fields.gem);
+      if (fields.terms?.docs_prevail) { for (const [k, v] of Object.entries(g)) if (fields[k] === undefined || fields[k] === null) fields[k] = v; }
+      else Object.assign(fields, g);
       fields.prepare_before = [...gemLines(fields.gem), ...(fields.prepare_before || []).filter((l) => !gemLines(fields.gem).includes(l))].slice(0, 20);
+    }
+    // the free reader's bid terms (clauses, EMD rules, staff, secrecy…) stay alongside the AI's reading
+    if (fields.terms) {
+      const tl = termLines(fields.terms, { bidValidityDays: fields.bid_validity_days || null });
+      fields.prepare_before = [...(fields.prepare_before || []), ...tl.filter((l) => !(fields.prepare_before || []).includes(l))].slice(0, 24);
+      const have = new Set((risks || []).map((r) => r.label));
+      risks = [...(risks || []), ...termRisks(fields.terms).filter((r) => !have.has(r.label))].slice(0, 22);
     }
     summary = d.summary.join("\n");
     engine = ai.engine;

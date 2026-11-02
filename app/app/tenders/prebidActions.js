@@ -29,7 +29,8 @@ export async function draftPrebidFree(matchId) {
   if (!preparer(role)) return { error: "Only admins, managers and bid preparers draft queries." };
   const { m, firm } = await load(supabase, company.id, matchId);
   if (!m) return { error: "Tender not found." };
-  const free = freeQueries({ tender: m.tenders, reasons: m.reasons || [], firm });
+  const { data: rd } = await supabase.from("tender_reads").select("fields").eq("tender_id", m.tender_id).order("created_at", { ascending: false }).limit(1);
+  const free = freeQueries({ tender: m.tenders, reasons: m.reasons || [], firm, terms: rd?.[0]?.fields?.terms || null });
   const kept = (m.prebid_queries || []).filter((q) => q.source !== "free");
   const all = [...free, ...kept];
   if (!all.length) return { error: "No gaps found in your eligibility for this tender — try “Read the tender with AI” for unclear clauses." };

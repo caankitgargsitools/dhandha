@@ -123,3 +123,4 @@ Social lead sources:
 100. `pending/77_session_portals_fast.sql` (2 Nov, execute_sql) — captcha page portal list by a loose index scan (3 s → 0.06 s); harvests back on; authenticator statement_timeout 60s
 101. `pending/78_shared_tender_security.sql` (2 Nov, execute_sql) — readings only fill gaps in shared tender figures; conditions merged, never replaced; tender-docs files readable only by matched workspaces
 102. `pending/79_eligibility_lines.sql` (2 Nov, execute_sql) — `eligibility_lines()` for Admin → Eligibility to learn
+103. `pending/80_bid_terms.sql` (2 Nov, execute_sql) — `tenders.invite_only`, `private.firm_invited`, `tender_fits` hides invitation-only bids from firms not invited, `tender_invite_set` (worker key, from the pre-check); trigger `t_ra_notice_alert` (GeM reverse auction → alert firms preparing / submitted on the parent bid)
