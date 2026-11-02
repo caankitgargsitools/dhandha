@@ -87,7 +87,7 @@ Running list in `TENDER_STUDY.md`: findings from reading tenders across industri
 - **Answered 1 Nov:** Q5–Q12 yes (all built and live), Q12 = hide.
 - **Parked on the pending list by you (1 Nov):** Q1 — work out bid capacity (A × N × 2) − B for works tenders from the Vault's works and work in hand (F1); Q2 — load each state's minimum wages into the manpower cost sheet (F8). Ask again later.
 - Q3 (reverse-auction floor) and Q4 (points table with your figures) yes — built 1 Nov.
-- **Round 2 of the study (1 Nov, 229 bids): Q13–Q36 all answered Yes (2 Nov)** — being built in batches (Claude).
+- **Round 2 of the study (1 Nov, 229 bids): Q13–Q36 all answered Yes (2 Nov)** — all built and live (2 Nov; see TENDER_STUDY.md). Only Q1 (bid capacity) and Q2 (state minimum wages) stay parked for you.
 - **Intelligent master page — built 2 Nov:** Vault → Tender-ready checklist (`/app/vault/masters`): from your services and the kinds of buyers you sell to, every detail, document, licence and registration your tenders need, asked one at a time, with uploads (read automatically). Try it and tell me what to add.
 
 ## Done (recent)
