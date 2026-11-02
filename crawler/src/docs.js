@@ -26,15 +26,30 @@ const CAPTCHA_INPUT = "input#captchaText, input[name*=aptcha i]:not([type=hidden
 const DOC_RX = /\.(pdf|xls|xlsx|doc|docx|zip|rar|dwg|jpg|jpeg)\b/i;
 const norm = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
-async function rpc(fn, body) {
-  const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/${fn}`, { signal: AbortSignal.timeout(120000),
-    method: "POST",
-    headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, "content-type": "application/json" },
-    body: JSON.stringify({ p_key: env.INGEST_KEY, ...body }),
-  });
-  if (!r.ok) throw new Error(`${fn} ${r.status} ${(await r.text()).slice(0, 200)}`);
-  const t = await r.text();
-  return t ? JSON.parse(t) : null;
+// A database that is briefly slow (statement timeout 57014, 502–504, a network hiccup) is tried twice more after a short
+// pause, so a fetch that already has its documents is not failed by one slow moment (2 Nov: a restart's warm-up).
+async function rpc(fn, body, tries = 3) {
+  for (let i = 1; ; i++) {
+    try {
+      const r = await fetch(`${env.SUPABASE_URL}/rest/v1/rpc/${fn}`, { signal: AbortSignal.timeout(120000),
+        method: "POST",
+        headers: { apikey: env.SUPABASE_PUBLISHABLE_KEY, "content-type": "application/json" },
+        body: JSON.stringify({ p_key: env.INGEST_KEY, ...body }),
+      });
+      if (!r.ok) {
+        const text = (await r.text()).slice(0, 200);
+        const e = new Error(`${fn} ${r.status} ${text}`);
+        e.retry = /57014|statement timeout/.test(text) || [502, 503, 504].includes(r.status);
+        throw e;
+      }
+      const t = await r.text();
+      return t ? JSON.parse(t) : null;
+    } catch (e) {
+      const transient = e.retry || e.name === "TimeoutError" || e.name === "TypeError"; // TypeError = network failure
+      if (!transient || i >= tries) throw e;
+      await new Promise((ok) => setTimeout(ok, 3000 * i));
+    }
+  }
 }
 const update = (job, o) => rpc("doc_job_update", { p_job: job.id, p_status: o.status ?? null, p_step: o.step ?? null, p_captcha_image: o.image ?? null, p_detail: o.detail ?? null, p_files: o.files ?? null, p_error: o.error ?? null });
 
