@@ -146,3 +146,21 @@ test("reverse-auction floor", async () => {
   assert.deepEqual(raFloor({ cost: 100000, minMargin: 3, quote: 112000 }), { floor: 103000, room: 9000, roomPct: 8 });
   assert.equal(raFloor({ cost: 0 }), null);
 });
+
+test("order split, the buyer's wage sheet, floor price, highest offer wins (study round 2)", async () => {
+  const { splitShare, wageSheetLines } = await import("../lib/gemFields.js");
+  const head = "Bid Details GEM/2026/B/9000001 Bid End Date/Time 10-11-2026 12:00:00\n";
+  const g = parseGemFields(head + "Splitting Applied Yes / Total number of Bidders / Sellers Amongst Whom the Order is to be Split 3 / Split Criteria based on which quantity will be distributed 50:30:20 " +
+    "1 Asha R Kamath 576101,LIC ROAD UDUPI 11 Minimum daily wage (INR) exclusive of GST : 918 Bonus (INR per day) : 0 EDLI (INR per day) : 0 EPF Admin Charge (INR per day) : 9.18 Optional Allowances 1 (INR per day) : 0 Optional Allowances 2 (INR per day) : 0 Optional Allowances 3 (INR per day) : 0 ESI (INR per day) : 29.83 Number of working days in a month : 26 Provident Fund (INR per day) : 110.16 Tenure/ Duration of Employment (in months) : 36 " +
+    "Floor Price This bid has been created/published with floor price(minimum value) selected by the Buyer. Item Category Revenue Based Services - H1 Evaluation - Canteen Operation");
+  assert.deepEqual(g.split, { bidders: 3, ratio: [50, 30, 20] });
+  assert.equal(splitShare(g, 2), 30);
+  assert.equal(splitShare(g, 4), null);
+  assert.deepEqual(g.wages[0], { people: 11, daily_wage: 918, bonus: 0, edli: 0, pf_admin: 9.18, esi: 29.83, pf: 110.16, allowances: 0, days: 26, months: 36 });
+  const ws = wageSheetLines(g);
+  assert.deepEqual(ws.manpower[0], { role: "staff as per the buyer's wage sheet", count: 11, months: 36, monthly_wage: 23868 });
+  assert.equal(ws.statutory.pf_pct, 13); // (110.16 + 9.18) / 918
+  assert.equal(ws.statutory.esi_pct, 3.25);
+  assert.equal(g.floor_price, true);
+  assert.equal(g.highest_wins, true);
+});

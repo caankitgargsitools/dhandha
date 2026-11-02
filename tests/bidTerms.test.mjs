@@ -36,3 +36,16 @@ test("money clauses, staff profile, retained workers, post-audit support, EMD te
   assert.ok(termRisks(x).some((r) => /May break GeM rules: Only bidders from Karnataka/.test(r.label)));
   assert.equal(findBidTerms("Supply of chairs as per specification."), null);
 });
+
+test("GST traps, IT warranty costs, price basis, price-sheet rules (Q19, Q35, Q36, Q28)", () => {
+  const x = findBidTerms("Bidders shall quote the concessional rate of GST at 0% as MRPL is eligible. GST will be reimbursed at actuals or the quoted rate, whichever is lower. Bids shall be loaded with the guaranteed shaft power. Faulty hard disks will be retained by the bank. A service centre is required in each consignee state. Asset tags with the company logo on every unit. Prices FOR destination. The unit is 600 km from the nearest railhead. Loading and unloading shall be done by the firm. Quoted rates for one year only; an amount for more than one year will be disqualified.");
+  assert.equal(x.gst.concessional_pct, 0);
+  assert.equal(x.gst.lower_of, true);
+  assert.ok(x.gst.loading);
+  assert.deepEqual(x.hardware.map((h) => h.kind), ["disks_retained", "service_centres", "asset_tags"]);
+  assert.equal(x.price_basis, "FOR destination");
+  assert.equal(x.remote_km, 600);
+  assert.equal(x.loading_unloading, true);
+  assert.match(x.price_sheet_rules[0], /one year only/);
+  assert.equal(findBidTerms("Server AMC: GST under reverse charge (RCM) applicable.").gst.reverse_charge, true);
+});

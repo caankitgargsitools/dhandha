@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { computeSheet, manpowerCost, travelCost, BOQ_MAX, FINANCE } from "@/lib/costing";
+import { spreadOverSor } from "@/lib/priceNotes";
 import { Spinner } from "@/components/Progress";
 import { savePrice, saveSheet } from "../../masterActions";
 
@@ -76,6 +77,7 @@ export default function CostPlanner({ matchId, initial, estimate, saved, fresh, 
             <table className="small" style={{ width: "100%" }}><thead><tr><th>Item</th><th>Unit</th><th>Qty</th><th>Rate ₹</th><th className="right">Amount</th><th /></tr></thead><tbody>
               {s.boq.map((r, i) => <tr key={i}><td><input value={r.item} onChange={(e) => setRow("boq", i, "item", e.target.value)} style={cell} /></td><td><input value={r.unit} onChange={(e) => setRow("boq", i, "unit", e.target.value)} style={{ ...cell, maxWidth: 60 }} /></td><td><Num v={r.qty} on={(v) => setRow("boq", i, "qty", v)} w={60} /></td><td><Num v={r.rate} on={(v) => setRow("boq", i, "rate", v)} /></td><td className="right num">{inr(Number(r.qty) * Number(r.rate))}</td><td><X on={() => delRow("boq", i)} /></td></tr>)}
             </tbody></table>
+            <BoqTools rows={s.boq} onRows={(rows) => set("boq", rows)} />
           </Section>
           <Section title={`Manpower (${s.months} months; PF ${s.statutory.pf_pct}%, ESI ${s.statutory.esi_pct}% up to ₹${s.statutory.esi_wage_limit}, bonus ${s.statutory.bonus_pct}%)`} total={c.manpower} onAdd={() => addRow("manpower", { role: "", count: 1, months: "", monthly_wage: "" })}>
             <table className="small" style={{ width: "100%" }}><thead><tr><th>Role</th><th>People</th><th>Months</th><th>Wage ₹/month</th><th className="right">Cost to you</th><th /></tr></thead><tbody>
@@ -228,3 +230,32 @@ function Section({ title, total, children, onAdd }) {
 }
 const Num = ({ v, on, w = 90 }) => <input inputMode="decimal" value={v ?? ""} onChange={(e) => on(e.target.value.replace(/[^\d.]/g, ""))} style={{ ...cell, maxWidth: w }} />;
 const X = ({ on }) => <button type="button" className="ghost sm" onClick={on} aria-label="Remove line" style={{ padding: "2px 8px" }}>×</button>;
+
+// Q28 / Q36: download the priced BOQ (CSV, opens in Excel, to copy into the buyer's own sheet) and spread a lump sum
+// over the schedule of rates (minimum-wage lines keep their rate)
+function BoqTools({ rows, onRows }) {
+  const [total, setTotal] = useState("");
+  const [msg, setMsg] = useState("");
+  const priced = rows.filter((r) => String(r.item || "").trim() && Number(r.qty) && Number(r.rate));
+  if (!priced.length) return null;
+  const cell = (v) => { const t = String(v ?? ""); return /^[=+\-@]/.test(t) ? `'${t}` : /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t; };
+  const download = () => {
+    const lines = [["Sl", "Item", "Unit", "Qty", "Rate", "Amount"], ...priced.map((r, i) => [i + 1, r.item, r.unit, r.qty, r.rate, Math.round(Number(r.qty) * Number(r.rate) * 100) / 100])];
+    const blob = new Blob([lines.map((l) => l.map(cell).join(",")).join("\r\n")], { type: "text/csv" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "priced-boq.csv"; a.click(); URL.revokeObjectURL(a.href);
+  };
+  const spread = () => {
+    const out = spreadOverSor(rows, Number(String(total).replace(/[,₹\s]/g, "")));
+    if (!out) return setMsg("The lump sum must be more than the fixed (minimum-wage) lines.");
+    onRows(out); setMsg("Rates raised in proportion; minimum-wage lines kept as they were.");
+  };
+  return (
+    <div className="row" style={{ gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 6 }}>
+      <button type="button" className="ghost sm" onClick={download}>Download priced BOQ (Excel / CSV)</button>
+      <span className="tiny faint">Spread a lump sum over these rates:</span>
+      <input value={total} onChange={(e) => setTotal(e.target.value)} inputMode="numeric" placeholder="₹ total" style={{ width: 120 }} aria-label="Lump sum to spread" />
+      <button type="button" className="ghost sm" disabled={!total} onClick={spread}>Spread</button>
+      {msg && <span className="tiny faint">{msg}</span>}
+    </div>
+  );
+}
