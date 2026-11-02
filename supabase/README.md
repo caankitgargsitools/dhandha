@@ -120,3 +120,4 @@ Social lead sources:
 97. `pending/74_reserved_bids.sql` (1 Nov, execute_sql) — `tenders.reserved_for`, `private.firm_named`, `tender_fits` refuses a bid reserved for another named vendor, `tender_reserved_set` (worker key, from the pre-check)
 98. `pending/75_study_fixes.sql` (1 Nov night, execute_sql) — pre-check readings replace the default 7 in `req_similar_years`; GeM reverse-auction notices (GEM/…/R/…) never fit matches, open ones hidden
 99. `pending/76_ingest_speed.sql` (1 Nov evening, execute_sql) — database overload fix: `ingest_tenders` skips matching for unchanged tenders and notes key use without waiting (skip locked); study harvests paused while it recovered
+100. `pending/77_session_portals_fast.sql` (2 Nov, execute_sql) — captcha page portal list by a loose index scan (3 s → 0.06 s); harvests back on; authenticator statement_timeout 60s
