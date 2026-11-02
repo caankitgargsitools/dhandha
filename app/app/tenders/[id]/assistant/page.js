@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getContext, lakh, fmtDate, daysLeft } from "@/lib/session";
 import { aiTiers } from "@/lib/ai";
 import { checkConditions, mandatoryUnmet, askOf } from "@/lib/conditions";
+import { priceNotes, starterLines } from "@/lib/priceNotes";
 import { requiredDocs } from "@/lib/bidpack";
 import { missingMasters, fillPlaceholders, isReference } from "@/lib/masters";
 import { buildSegments, blanksLeft } from "@/lib/annexure";
@@ -193,10 +194,13 @@ export default async function TenderAssistant({ params }) {
   // 7. the price — the one thing asked for every tender: typed, or worked out in the cost planner
   const f = read?.fields || {};
   const estimate = Number(t.value_inr || job?.detail?.value_inr || f.value_inr) || null;
-  const sheet = () => m.cost_sheet || emptySheet({ months: monthsFrom(f.completion_period || job?.detail?.period_of_work), value: estimate, scope: f.work_scope || [], travel: !!(t.state && c.state && t.state !== c.state), finance: { payment_days: f.gem?.payment_days, pbg_pct: f.performance_security_pct, pbg_months: f.gem?.epbg_months } });
+  // the bid's own cost lines to start from: the buyer's wage sheet, wage-rise buffer, post-audit support, warranty,
+  // freight / insurance / remote site (lib/priceNotes.js)
+  const start = starterLines({ gem: f.gem, terms: f.terms, months: monthsFrom(f.completion_period || job?.detail?.period_of_work) });
+  const sheet = () => m.cost_sheet || emptySheet({ months: start.months || monthsFrom(f.completion_period || job?.detail?.period_of_work), value: estimate, scope: f.work_scope || [], travel: !!(t.state && c.state && t.state !== c.state), finance: { payment_days: f.gem?.payment_days, pbg_pct: f.performance_security_pct, pbg_months: f.gem?.epbg_months }, manpower: start.manpower, other: start.other, statutory: start.statutory });
   if (m.quoted_price) done.push(`Your price: ₹${Number(m.quoted_price).toLocaleString("en-IN")} + GST${m.price_note ? ` (${m.price_note})` : ""}.`);
   else if (canPrepare && read) {
-    steps.push({ id: "price", kind: "price", fresh: !m.cost_sheet, ev: m.tech_eval || null, gem: f.gem?.mse_preference || f.gem?.mii_preference ? f.gem : null, ra: !!f.gem?.bid_to_ra, msme: !!msme, cost: m.cost_sheet ? computeSheet(m.cost_sheet).cost : null, quote: m.quoted_price || null, estimate, sheet: sheet(),
+    steps.push({ id: "price", kind: "price", fresh: !m.cost_sheet, ev: m.tech_eval || null, gem: f.gem?.mse_preference || f.gem?.mii_preference ? f.gem : null, ra: !!f.gem?.bid_to_ra, notes: priceNotes({ gem: f.gem, terms: f.terms }), msme: !!msme, cost: m.cost_sheet ? computeSheet(m.cost_sheet).cost : null, quote: m.quoted_price || null, estimate, sheet: sheet(),
       say: `Last, your price. Type it if you know it, or let's work out the cost together — items, manpower with PF/ESI/bonus, travel and stay, overheads and margin — and I'll suggest a quote.${pastLine ? ` For reference, past results: ${pastLine}.` : ""}${ptwFor(estimate)}` });
   }
 

@@ -284,6 +284,12 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
               <button className="ghost" disabled={busy} onClick={skip}>Not now</button>
             </div>
           )}
+          {current.kind === "price" && current.notes?.length > 0 && (
+            <div className="stack-sm" style={{ background: "var(--panel)", border: "1px solid var(--line)", borderRadius: 12, padding: 14 }}>
+              <strong>What this bid does to your price</strong>
+              {current.notes.map((n, i) => <div key={i} className="small"><span style={{ color: n.tone === "warn" ? "var(--marigold)" : "var(--primary)", fontWeight: 700 }}>{n.tone === "warn" ? "!" : "i"}</span> {n.text}</div>)}
+            </div>
+          )}
           {current.kind === "price" && current.ra && <RaFloor cost={current.cost} quote={current.quote} />}
           {current.kind === "price" && current.gem && <PreferencePanel gem={current.gem} msme={current.msme} quote={current.quote} estimate={current.estimate} cost={current.cost} />}
           {current.kind === "price" && current.ev && <EvalPanel ev={current.ev} estimate={current.estimate} cost={current.cost} quote={current.quote} />}
