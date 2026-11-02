@@ -29,7 +29,7 @@ export default async function Preferences({ searchParams }) {
       <div className="page-head"><div><h1>What {company.legal_name} does</h1><p>Pick your industries and the exact services you offer. Dhandha uses this to find tenders (and later, leads) for you, then scores each one against your Vault.</p></div></div>
       {params?.welcome && <div className="notice small"><span><strong>Welcome!</strong> Start by telling Dhandha what you do — it takes a minute. Next, fill in your <Link href="/app/vault/profile">company profile</Link>.</span></div>}
       {credQs.length > 0 && (
-        <div className={`notice small`}><span>{credOpen ? <><strong>{credOpen} question{credOpen === 1 ? "" : "s"} about your firm</strong> — licences, registrations and team numbers that tenders in your industries ask for. Answer once: </> : <>All {credQs.length} credential questions for your industries are answered. </>}<Link href="/app/vault/credentials">Vault → Credentials</Link></span></div>
+        <div className={`notice small`}><span>{credOpen ? <><strong>{credOpen} question{credOpen === 1 ? "" : "s"} about your firm</strong> — licences, registrations and team numbers that tenders in your industries ask for. Answer once: </> : <>All {credQs.length} credential questions for your industries are answered. </>}<Link href="/app/vault/masters">Tender-ready checklist</Link></span></div>
       )}
       <FormState action={savePreferences} submit="Save and re-score">
         <fieldset disabled={role === "viewer"} style={{ border: 0, padding: 0, margin: 0 }} className="stack">

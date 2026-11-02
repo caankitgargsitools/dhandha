@@ -3,6 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export const VAULT_PAGES = [
+  ["/app/vault/masters", "Tender-ready checklist"],
   ["/app/tenders/preferences", "What we do"],
   ["/app/vault/profile", "Company profile"],
   ["/app/vault/documents", "Documents"],
