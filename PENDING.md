@@ -2,7 +2,7 @@
 
 Checked and sent to the owner every morning (09:23 IST) by the Dhandha development session. Items move to
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
-Last checked: 1 Nov 2026 (09:23 IST).
+Last checked: 3 Nov 2026 (09:23 IST).
 
 ## The queue — one by one, in this order
 
@@ -77,6 +77,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 52 | **Pricing of Dhandha** — set plans and credits against competitors (notes in CLAUDE.md "Competitors"); suggestion: free tier + ~₹999/mo or ₹9,999/yr all-in + credits | Both | Built and working | To do — one by one, in the order you choose |
 
 ## Claude is fixing
+- **Database slow / unreachable again (3 Nov, from ≈07:30 IST):** connections time out and the 2-million-row speed test takes 15.7 s (normal 0.5 s), the same throttling as on 1 Nov (the server's disk-read allowance runs out). Done: study harvests paused (`gem_harvest_per_run` / `format_harvest_per_run` = 0); a pre-check bug that retried the same tenders 36 times overnight is fixed (PDFs with a NUL character, which Postgres refuses). **You:** Supabase → Project settings → restart the project (as on 2 Nov). If it keeps coming back, the lasting fix is a bigger database size (Compute add-on, about $25 → $60 a month more); I'll measure what uses the disk once it is back and cut it first.
 - **Database overload (1 Nov evening) — resolved 2 Nov (you restarted the project):** statement timeouts everywhere from 12:16 UTC (the study's big text searches plus the GeM harvest used up the database's disk allowance; crawler retries piled on). Fixed `ingest_tenders` (no re-matching of unchanged tenders; no queue on the crawler key), paused the study harvests and cut the GeM study to 10 a run. Turn the harvests back on once timeouts stop; keep study text searches small (by tender, not over all texts). From 14:25 to 14:34 UTC the database API itself was down (503): replacing functions under load made PostgREST reload its schema, and the reload kept timing out; it came back once the load fell and the schema was reloaded (`notify pgrst, 'reload schema'`). Lesson: no function changes while the database is overloaded.
 - ~~Security follow-ups (review 1 Nov)~~ **Done 2 Nov:** a workspace's reading only fills gaps in the shared tender figures and only adds conditions (never overwrites other firms'); tender documents readable only by workspaces matched to that tender (`supabase/pending/78`).
 - ~~Server auto-update~~ **Done 2 Nov:** the hourly update works — the new crawler version reached the server on its own at 12:17 UTC.
@@ -91,6 +92,8 @@ Running list in `TENDER_STUDY.md`: findings from reading tenders across industri
 - **Intelligent master page — built 2 Nov:** Vault → Tender-ready checklist (`/app/vault/masters`): from your services and the kinds of buyers you sell to, every detail, document, licence and registration your tenders need, asked one at a time, with uploads (read automatically). Try it and tell me what to add.
 
 ## Done (recent)
+- 3 Nov (morning): last night all 24 study answers Q13–Q36 went live (brief clauses, price step from the bid, Vault items, bid-file index and page numbers, 71 formats). This morning the database was throttled again — see "Claude is fixing".
+
 - 2 Nov: **database outage** (1 Nov 14:25 UTC → 2 Nov ~12:00 UTC, on and off): the study's big text searches and the crawler's retries used up the database server; you restarted it at 11:57 UTC and it is fast again (0.5 s test, was 16.6 s). Fixed: crawler matching only new / changed tenders; no queue on the crawler key; every crawler / fetcher call to the database gives up after 2 min and each portal after 90 min (the overnight crawl had hung 10 h); the fetcher retries a briefly slow database; the captcha page's portal list 3 s → 0.06 s. Crawler back at 12:17 UTC (3,299 new tenders in its first 40 min); study harvests back on at 10 a run. Also today: tender assistant scrolls the page at the chat's edges; a question is no longer shown twice; answers matched by meaning, not wording; conditions written in the negative asked plainly with buttons that say the outcome.
 
 - 1 Nov (morning): no owner items done since 31 Oct. Tender winners 28 (5 new). 49 leads for ₹98; 3 new GSC matches; ~6,100 tenders crawled. Still no Vault document uploaded to try the new reading.
