@@ -22,14 +22,20 @@ async function prepareFormatsLocked(prev, formData) {
 
   const previous = Object.fromEntries((m.filled_formats || []).map((f) => [f.title, f]));
   // a format seen before keeps the kind chosen for it, the text typed into it and its review mark
+  // a format chosen before keeps everything chosen for it (template, stamp paper, Google Doc, outside file, typed text,
+  // review mark); only formats new to the reading are classified afresh, and formats the person added stay in the plan
+  const seen = new Set();
   let plan = formats.map((f) => {
     const old = previous[f.title];
-    const kind = old?.kind || classifyFormat(f.title, f.text);
-    return { title: f.title, page: f.page, kind, text: f.text || "", filled_text: old?.kind === "custom" ? old.filled_text : undefined, engine: kind === "custom" ? old?.engine : "library", missing: old?.missing || [],
-      ...(old?.edited_text ? { edited_text: old.edited_text } : {}), ...(old?.reviewed ? { reviewed: old.reviewed } : {}) };
+    seen.add(f.title);
+    if (old) return { ...old, page: old.page ?? f.page, text: old.text || f.text || "" };
+    const kind = classifyFormat(f.title, f.text);
+    return { title: f.title, page: f.page, kind, text: f.text || "", engine: kind === "custom" ? undefined : "library", missing: [] };
   });
+  for (const old of m.filled_formats || []) if (!seen.has(old.title)) plan.push(old);
 
-  const custom = plan.filter((p) => p.kind === "custom");
+  // AI fills only custom formats that have no text yet (one charge, never for formats already filled or edited)
+  const custom = plan.filter((p) => p.kind === "custom" && !p.tpl && !p.filled_text && !p.edited_text);
   let message = `${plan.filter((p) => p.kind !== "custom").length} format(s) matched the free template library.`;
   if (custom.length && useAi) {
     if (!aiTiers().some((t) => !t.free)) return { error: "Filling custom formats needs a paid AI key (your company data never goes to free AI). Add ANTHROPIC_API_KEY." };
@@ -45,8 +51,7 @@ async function prepareFormatsLocked(prev, formData) {
     if (ai.error) return { error: `${ai.error} (${ai.attempts.join("; ").slice(0, 200)})` };
     custom.forEach((p, i) => { p.filled_text = ai.data.formats[i].filled_text; p.missing = (ai.data.formats[i].missing || []).slice(0, 10); p.engine = ai.engine; });
     const { error: se } = await supabase.rpc("spend_credits", { p_tenant: tenant.id, p_action: "format_fill", p_qty: 1, p_ref: m.tenders.tender_ref });
-    if (se) return { error: se.message };
-    message += ` ${custom.length} custom format(s) filled by ${ai.label}; 49 credits used.`;
+    message += ` ${custom.length} custom format(s) filled by ${ai.label}; ${se ? `credits could not be charged (${se.message})` : "49 credits used"}.`;
   } else if (custom.length) {
     message += ` ${custom.length} custom format(s) need AI filling or manual text.`;
   }

@@ -17,6 +17,8 @@ export default function DocFetch({ matchId, tenderId, step, say, canAnswer }) {
   const router = useRouter();
   const [job, setJob] = useState(step.job);
   const [note, setNote] = useState("");
+  const [storeFailed, setStoreFailed] = useState(false);
+  const [storeTry, setStoreTry] = useState(0); // fetched, but storing a file failed: retry the storing, not the fetch
   const [answer, setAnswer] = useState("");
   const [busy, setBusy] = useState(false);
   const [phase, setPhase] = useState(""); // "storing" | "reading"
@@ -56,10 +58,11 @@ export default function DocFetch({ matchId, tenderId, step, say, canAnswer }) {
       try {
         setPhase("storing");
         const c = await collectDocs({ jobId: job.id });
-        if (c.error) { setNote(c.error); return; }
-        if (!step.canRead) { setNote("The documents are saved. An admin, manager or bid preparer can now read them (it uses credits)."); router.refresh(); return; }
+        if (c.error) { setNote(c.error); setStoreFailed(true); return; }
+        if (!step.canRead) { setNote("The documents are saved. An admin, manager or bid preparer can now read them."); router.refresh(); return; }
         setPhase("reading");
-        const r = await readTender({}, form({ match_id: matchId, mode: step.aiReady ? "ai" : "basic" }));
+        // free first: the free reader; the assistant offers AI afterwards if the reading is thin
+        const r = await readTender({}, form({ match_id: matchId, mode: "basic" }));
         setNote(r.error ? `Fetched, but reading failed: ${r.error}` : r.message);
         router.refresh();
       } catch (e) {
@@ -68,7 +71,7 @@ export default function DocFetch({ matchId, tenderId, step, say, canAnswer }) {
         setPhase("");
       }
     })();
-  }, [job?.status, job?.id, matchId, step.aiReady, step.canRead, router]);
+  }, [job?.status, job?.id, matchId, step.aiReady, step.canRead, router, storeTry]);
 
   async function sendCaptcha(e) {
     e.preventDefault();
@@ -124,7 +127,9 @@ export default function DocFetch({ matchId, tenderId, step, say, canAnswer }) {
       {(ended || (note && !active)) && canAnswer && !phase && (
         <div className="stack-sm">
           <div className="row" style={{ gap: 8 }}>
-            <button className="sm" aria-busy={busy} disabled={busy} onClick={retry}>Try fetching again</button>
+            {storeFailed && job?.status === "fetched"
+              ? <button className="sm" aria-busy={busy} disabled={busy} onClick={() => { handled.current = false; setStoreFailed(false); setNote(""); setStoreTry((n) => n + 1); }}>Try storing again</button>
+              : <button className="sm" aria-busy={busy} disabled={busy} onClick={retry}>Try fetching again</button>}
           </div>
           <div className="tiny faint">Or upload the PDFs yourself:</div>
           <UploadTenderFiles tenderId={tenderId} />

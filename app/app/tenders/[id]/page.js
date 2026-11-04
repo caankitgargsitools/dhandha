@@ -19,7 +19,7 @@ import { ago } from "@/lib/tickets";
 import { UploadTenderFiles, ReadButtons } from "../TenderDocs";
 import FormatsPanel from "../FormatsPanel";
 import { aiTiers } from "@/lib/ai";
-import { setTenderStatus } from "../actions";
+import StageButton from "../StageButton";
 import { STAGES } from "@/lib/tenderFilters";
 import { summarise, adviceLine, discountPct, priceToWin, normFirm } from "@/lib/pastResults";
 import { KINDS as DKINDS, STATUS as DSTATUS } from "@/lib/deposits";
@@ -118,7 +118,7 @@ export default async function TenderDetail({ params, searchParams }) {
         <div className="row small" style={{ gap: 8 }}>
           <span className="muted">Stage: <strong>{STAGE[m.status] || m.status}</strong> · Mark as</span>
           {[["submitted", "Submitted"], ["won", "Won"], ["lost", "Lost"]].filter(([s]) => s !== m.status).map(([s, l]) => (
-            <form key={s} action={setTenderStatus}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="status" value={s} /><button className="sm ghost">{l}</button></form>
+            <StageButton key={s} id={m.id} status={s} className="sm ghost">{l}</StageButton>
           ))}
         </div>
       )}

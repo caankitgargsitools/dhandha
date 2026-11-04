@@ -1,11 +1,14 @@
 "use server";
+import { revalidatePath } from "next/cache";
 import { getContext } from "@/lib/session";
 import { createRazorpayOrder, razorpayReady } from "@/lib/razorpay";
 
 // Prices the purchase in SQL, opens a Razorpay order for exactly that amount and returns what Checkout needs.
 // Credits are added only when Razorpay's signed webhook confirms the payment.
 export async function startCheckout({ kind, amount, modules, suite }) {
-  const { supabase, company, user, isAdmin } = await getContext();
+  const { supabase, user, isAdmin, tenant, companies } = await getContext();
+  // the workspace's fixed billing company, never whichever client company is selected in the top bar
+  const company = companies.find((c) => c.id === tenant.billing_company_id) || companies[0];
   if (!isAdmin) return { error: "Only the workspace admin can pay." };
   if (!razorpayReady()) return { error: "Online payment is not switched on yet. Please contact support." };
   const { data: q, error } = await supabase.rpc("billing_create_order", {
@@ -28,4 +31,15 @@ export async function startCheckout({ kind, amount, modules, suite }) {
     description: kind === "plan" ? `Plan: ${q.modules.join(", ")}` : `${q.credits} credits`,
     prefill: { name: company.legal_name, email: user.email, contact: c?.signatory_mobile || c?.phone || "" },
   };
+}
+
+// Settings → Companies: which company Dhandha invoices its credits and plans to.
+export async function setBillingCompany(prev, formData) {
+  const { supabase, tenant, isAdmin } = await getContext();
+  if (!isAdmin) return { error: "Only the workspace admin can choose this." };
+  const { error } = await supabase.rpc("set_billing_company", { p_tenant: tenant.id, p_company: String(formData.get("company") || "") });
+  if (error) return { error: error.message };
+  revalidatePath("/app/settings/companies");
+  revalidatePath("/app/wallet");
+  return { message: "Saved — Dhandha's invoices now go to this company." };
 }

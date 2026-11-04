@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { fillPlaceholders } from "@/lib/masters";
 import { withLock } from "@/lib/locks";
 import { getContext } from "@/lib/session";
-import { buildBidPack } from "@/lib/bidpack";
+import { buildBidPack, INDIC } from "@/lib/bidpack";
 import { mandatoryUnmet } from "@/lib/conditions";
 import { keywordsFor, rulesFor, parseRule } from "@/lib/taxonomy";
 import { loadCatalog } from "@/lib/catalog";
@@ -15,6 +15,8 @@ async function download(supabase, path) {
   return new Uint8Array(await data.arrayBuffer());
 }
 
+const hindiNote = (n) => (n ? ` ${n} format${n === 1 ? " has" : "s have"} Hindi text, which this PDF cannot print yet (marked “[Hindi text]”) — use “Word” or “Google Docs” under the format for those pages.` : "");
+
 async function generateBidPackLocked(prev, formData) {
   const { supabase, tenant, company, role, isAdmin, user } = await getContext();
   const matchId = String(formData.get("match_id"));
@@ -24,11 +26,17 @@ async function generateBidPackLocked(prev, formData) {
   const { data: match } = await supabase.from("tender_matches").select("id, tender_id, company_id, filled_formats, reasons, eligible, forced_at, quoted_price, price_note, cost_sheet, tenders(*)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
   if (!match) return { error: "Tender not found for this company." };
   // formats being filled in Google Docs / Sheets: take what is saved there now
+  let staleNote = "";
+  // formats with Hindi text: the PDF marks those passages; say so and point to the Word / Google Docs copy
+  const hindi = (match?.filled_formats || []).filter((f) => INDIC.test(`${f.edited_text || ""}${f.filled_text || ""}${f.text || ""}`)).length;
   if ((match.filled_formats || []).some((f) => f.gdoc?.id)) {
     try {
       const r = await pullFromGoogle({ supabase, tenant, company, plan: match.filled_formats, tender: match.tenders });
       if (r.changed) { match.filled_formats = r.plan; await supabase.from("tender_matches").update({ filled_formats: r.plan }).eq("id", matchId); }
-    } catch {}
+    } catch (e) {
+      // never build silently from stale text: the pack is made, and the message says it used the last text brought back
+      staleNote = ` Note: could not bring back your Google Docs / Sheets edits (${String(e.message || e).slice(0, 100)}) — this pack uses the text last brought back. Press “Bring back now” under the format and make the pack again.`;
+    }
   }
   // a mandatory condition that is not met: no bid file until the person says it is met or chooses to file anyway
   if (mandatoryUnmet(match.reasons).length && !match.forced_at) return { error: "A mandatory condition of this tender is not met. Open the tender assistant: confirm you meet it, or choose “File anyway”." };
@@ -102,7 +110,7 @@ async function generateBidPackLocked(prev, formData) {
   }
   const { data: signed } = await supabase.storage.from("bids").createSignedUrl(path, 3600);
   revalidatePath(`/app/tenders/${match.id}`);
-  return { message: kind === "final" ? `Signed bid pack ready: ${pack.pages} pages, 299 credits used.` : `Draft ready: ${pack.pages} pages (unsigned, marked DRAFT).`, url: signed?.signedUrl };
+  return { message: kind === "final" ? `Signed bid pack ready: ${pack.pages} pages, 299 credits used.${staleNote}${hindiNote(hindi)}` : `Draft ready: ${pack.pages} pages (unsigned, marked DRAFT).${staleNote}${hindiNote(hindi)}`, url: signed?.signedUrl };
 }
 
 // viewers (and disabled members) only look; everyone else may change the tender list

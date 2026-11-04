@@ -2,8 +2,7 @@ import AuthShell from "@/components/AuthShell";
 import MfaChallenge from "./MfaChallenge";
 import { signOut } from "../login/actions";
 
-// only a path on this site, never another address
-const safeNext = (v) => (/^\/(app|admin)(\/[\w\-/]*)?$/.test(String(v || "")) ? String(v) : "/app");
+import { safeNext } from "@/lib/safeNext";
 
 export default async function MfaPage({ searchParams }) {
   const next = safeNext((await searchParams)?.next);

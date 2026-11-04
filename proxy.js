@@ -22,8 +22,10 @@ export async function proxy(request) {
   const path = request.nextUrl.pathname;
   if (!user && PROTECTED.some((p) => path === p || path.startsWith(p + "/"))) {
     const url = request.nextUrl.clone();
+    // keep where the person was going (a phone alert, a WhatsApp link) so sign-in returns there
+    const next = path.startsWith("/app") ? path + request.nextUrl.search : "";
     url.pathname = "/login";
-    url.search = "";
+    url.search = next && next !== "/app" ? `?next=${encodeURIComponent(next)}` : "";
     return NextResponse.redirect(url);
   }
   return response;

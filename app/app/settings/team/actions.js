@@ -51,3 +51,13 @@ export async function revokeInvite(prev, formData) {
   revalidatePath(`/admin/tenants/${String(formData.get("tenant_id") || tenant.id)}`);
   return { message: "Invite cancelled." };
 }
+
+// A fresh invite link (the old one stops working); links last 72 hours and confirm one sign-up.
+export async function renewInvite(prev, formData) {
+  const { supabase, tenant } = await getContext();
+  const { error } = await supabase.rpc("invite_renew", { p_invite: String(formData.get("invite_id")) });
+  if (error) return { error: error.message };
+  revalidatePath("/app/settings/team");
+  revalidatePath(`/admin/tenants/${String(formData.get("tenant_id") || tenant.id)}`);
+  return { message: "New link made — copy or WhatsApp it now; it works for 72 hours." };
+}

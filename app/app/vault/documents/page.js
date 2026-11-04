@@ -25,7 +25,7 @@ export default async function Documents({ searchParams }) {
   const { supabase, tenant, company, isAdmin, role } = await getContext();
   const [{ data: types }, { data: docs }, { data: drive }] = await Promise.all([
     supabase.from("document_types").select("*").order("sort"),
-    supabase.from("documents").select("*").eq("company_id", company.id).order("created_at", { ascending: false }),
+    supabase.from("documents").select("*").eq("company_id", company.id).is("archived_at", null).order("created_at", { ascending: false }),
     supabase.from("drive_connections").select("google_email, revoked_at, token_enc").eq("tenant_id", tenant.id).maybeSingle(),
   ]);
   const driveOn = !!(drive?.token_enc && !drive.revoked_at);
