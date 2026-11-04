@@ -26,6 +26,8 @@ export default async function Experience() {
               <div><label htmlFor="value_inr">Value (₹)</label><input id="value_inr" name="value_inr" inputMode="decimal" /></div>
               <div><label htmlFor="start_date">Start</label><input id="start_date" name="start_date" type="date" /></div>
               <div><label htmlFor="end_date">Completion</label><input id="end_date" name="end_date" type="date" /></div>
+              <div><label htmlFor="work_order_no">Work order no.</label><input id="work_order_no" name="work_order_no" /></div>
+              <div><label htmlFor="scope">Scope in one line</label><input id="scope" name="scope" placeholder="e.g. Statutory audit of 12 branches" /></div>
               <div><label htmlFor="people_deployed">People deployed</label><input id="people_deployed" name="people_deployed" inputMode="numeric" placeholder="Manpower / guards on the contract" /></div>
               <div>
                 <label htmlFor="status">Status</label>
@@ -50,6 +52,8 @@ export default async function Experience() {
                     <div><label htmlFor={`value_inr-${i.id}`}>Value (₹)</label><input id={`value_inr-${i.id}`} name="value_inr" inputMode="decimal" defaultValue={i.value_inr ?? ""} /></div>
                     <div><label htmlFor={`start_date-${i.id}`}>Start</label><input id={`start_date-${i.id}`} name="start_date" type="date" defaultValue={day(i.start_date)} /></div>
                     <div><label htmlFor={`end_date-${i.id}`}>Completion</label><input id={`end_date-${i.id}`} name="end_date" type="date" defaultValue={day(i.end_date)} /></div>
+                    <div><label htmlFor={`work_order_no-${i.id}`}>Work order no.</label><input id={`work_order_no-${i.id}`} name="work_order_no" defaultValue={i.work_order_no || ""} /></div>
+                    <div><label htmlFor={`scope-${i.id}`}>Scope in one line</label><input id={`scope-${i.id}`} name="scope" defaultValue={i.scope || ""} /></div>
                     <div><label htmlFor={`people_deployed-${i.id}`}>People deployed</label><input id={`people_deployed-${i.id}`} name="people_deployed" inputMode="numeric" defaultValue={i.people_deployed ?? ""} /></div>
                     <div>
                       <label htmlFor={`status-${i.id}`}>Status</label>

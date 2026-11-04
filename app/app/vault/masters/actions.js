@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { getContext } from "@/lib/session";
-import { checkField } from "@/lib/masters";
+import { checkField, lastFys } from "@/lib/masters";
 import { BUYERS, currentFy } from "@/lib/masterPlan";
 
 const COMPANY_FIELDS = new Set(["legal_name", "constitution", "pan", "gstin", "registered_address", "incorporation_date", "signatory_name", "signatory_designation", "bank_account", "bank_ifsc", "udyam_no"]);
@@ -45,7 +45,8 @@ export async function saveMasterItem(prev, formData) {
     let value = String(formData.get("value") ?? "").trim().slice(0, 300);
     if (!value) return { error: "Type an answer." };
     if (key === "fin.net_worth") { const n = Number(value.replace(/[,₹\s]/g, "")); if (!Number.isFinite(n)) return { error: "Net worth should be a number in rupees." }; value = String(Math.round(n)); }
-    const period = key === "reg.gem_profile_turnover" ? currentFy() : ""; // asked again each financial year
+    // GeM profile turnover is asked again each financial year; net worth is stored per FY, like the tender assistant does
+    const period = key === "reg.gem_profile_turnover" ? currentFy() : key === "fin.net_worth" ? lastFys()[0] : "";
     const { error } = await supabase.from("company_facts").upsert({ tenant_id: tenant.id, company_id: company.id, key, period, value, unit: key === "fin.net_worth" ? "INR" : null, source: "user" }, { onConflict: "company_id,key,period" });
     return error ? { error: error.message } : done();
   }

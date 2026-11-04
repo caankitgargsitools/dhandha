@@ -179,7 +179,7 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
         {redo && (redo.read || redo.tech || redo.price) && (
           <div className="row" style={{ gap: 8, alignSelf: "flex-start" }}>
             {redo.read && <button className="ghost sm" aria-busy={busy} disabled={busy} onClick={() => other("Read the tender again with AI", () => readTender({}, form({ match_id: matchId, mode: "ai" })), (r) => r.message, { label: "AI is reading the tender again…", seconds: 60 })}>↻ Read again with AI · 99 credits</button>}
-            {redo.tech && <button className="ghost sm" aria-busy={busy} disabled={busy} onClick={() => other("Redo the technical marking", () => techMarking({ matchId }), (r) => r.message, { label: "Reading the evaluation criteria and marking your firm again…", seconds: 50 })}>↻ Redo technical marking · 29 credits</button>}
+            {redo.tech && <button className="ghost sm" aria-busy={busy} disabled={busy} onClick={() => other("Redo the technical marking", () => techMarking({ matchId }), (r) => r.message, { label: "Reading the evaluation criteria and marking your firm again…", seconds: 50 })}>{redo.techFree ? "Mark my firm with AI · 29 credits" : "↻ Redo technical marking · 29 credits"}</button>}
             {redo.price && !repricing && <button className="ghost sm" disabled={busy} onClick={() => setRepricing(true)}>↻ Change price</button>}
           </div>
         )}
@@ -322,7 +322,7 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
       {canAnswer && (
         <form onSubmit={askNow} className="row" style={{ gap: 8, flexWrap: "nowrap", borderTop: "1px solid var(--line)", padding: "10px 14px" }}>
           <input value={ask} onChange={(e) => setAsk(e.target.value)} placeholder="Ask anything about this tender or this question…" aria-label="Ask the assistant" style={{ flex: 1, width: "auto" }} />
-          <button aria-busy={!!asking} className="ghost" disabled={asking || !ask.trim() || balance < 3} title={balance < 3 ? "Needs 3 credits — top up in Credits & plan" : ""}>{asking ? "Thinking…" : "Ask · 3 credits"}</button>
+          <button aria-busy={!!asking} className="ghost" disabled={asking || !ask.trim()} title="Plain questions about the EMD, dates, validity, fees… are answered free; others use 3 credits">{asking ? "Thinking…" : "Ask"}</button>
         </form>
       )}
       </div>

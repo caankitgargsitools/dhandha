@@ -33,7 +33,7 @@ export function MasterAnswer({ step, busy, send, skip }) {
 
 // One completed work (name, client, value, completion date): a single record, not a table.
 export function WorkAnswer({ busy, send, skip }) {
-  const [w, setW] = useState({ work_name: "", client: "", value_inr: "", end_date: "" });
+  const [w, setW] = useState({ work_name: "", client: "", value_inr: "", start_date: "", end_date: "", work_order_no: "", scope: "" });
   const f = (k) => (e) => setW({ ...w, [k]: k === "value_inr" ? e.target.value.replace(/[^\d.]/g, "") : e.target.value });
   return (
     <form className="stack-sm" onSubmit={(e) => { e.preventDefault(); send(`${w.work_name} for ${w.client}, ₹${Number(w.value_inr || 0).toLocaleString("en-IN")}${w.end_date ? `, completed ${w.end_date}` : ""}`, w); }}>
@@ -41,8 +41,12 @@ export function WorkAnswer({ busy, send, skip }) {
         <div><label htmlFor="wn">What was the work?</label><input id="wn" value={w.work_name} onChange={f("work_name")} ref={focusOnce} /></div>
         <div><label htmlFor="wc">For which client?</label><input id="wc" value={w.client} onChange={f("client")} /></div>
         <div><label htmlFor="wv">Contract value (₹)</label><input id="wv" inputMode="numeric" value={w.value_inr} onChange={f("value_inr")} /></div>
+        <div><label htmlFor="ws">Started on</label><input id="ws" type="date" value={w.start_date} onChange={f("start_date")} /></div>
         <div><label htmlFor="we">Completed on</label><input id="we" type="date" value={w.end_date} onChange={f("end_date")} /></div>
+        <div><label htmlFor="wo">Work order no. (optional)</label><input id="wo" value={w.work_order_no} onChange={f("work_order_no")} /></div>
+        <div style={{ gridColumn: "1 / -1" }}><label htmlFor="wsc">Scope in one line (optional)</label><input id="wsc" value={w.scope} onChange={f("scope")} placeholder="e.g. Statutory audit of 12 branches" /></div>
       </div>
+      <div className="tiny faint">Saved once in Vault → Experience; every later format fills these from there.</div>
       <div className="row" style={{ gap: 8 }}><button disabled={busy || !w.work_name || !w.client || !w.value_inr}>Save this work</button><button type="button" className="ghost" disabled={busy} onClick={skip}>Skip</button></div>
     </form>
   );

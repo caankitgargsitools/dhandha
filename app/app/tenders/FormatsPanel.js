@@ -1,6 +1,6 @@
 "use client";
 import { useActionState } from "react";
-import { prepareFormats, answerGaps } from "./formatActions";
+import { prepareFormats } from "./formatActions";
 
 const KIND = {
   covering_letter: "Covering letter", bidder_info: "Bidder information", turnover: "Turnover / net worth", similar_works: "Similar works",
@@ -9,7 +9,6 @@ const KIND = {
 
 export default function FormatsPanel({ matchId, plan, gaps, canEdit, paidAi, hasFormats }) {
   const [state, action, pending] = useActionState(prepareFormats, {});
-  const [gState, gAction, gPending] = useActionState(answerGaps, {});
   const custom = plan.filter((p) => p.kind === "custom" && !p.tpl && !p.filled_text && !p.edited_text); // only formats still empty go to AI
   return (
     <div className="stack-sm">
@@ -37,18 +36,10 @@ export default function FormatsPanel({ matchId, plan, gaps, canEdit, paidAi, has
       {state?.error && <p className="error small">{state.error}</p>}
       {state?.message && <p className="success small">{state.message}</p>}
       {gaps.length > 0 && canEdit && (
-        <form action={gAction} className="notice" style={{ display: "block" }}>
-          <input type="hidden" name="match_id" value={matchId} />
-          <strong className="small">A few details the formats need (asked once, saved to your Vault):</strong>
-          <div className="form-grid" style={{ marginTop: 10 }}>
-            {gaps.map((g) => (
-              <div key={g.key}><label htmlFor={g.key}>{g.label}</label><input id={g.key} name={`gap:${g.key}`} placeholder={g.hint || ""} /></div>
-            ))}
-          </div>
-          {gState?.error && <p className="error small">{gState.error}</p>}
-          {gState?.message && <p className="success small">{gState.message}</p>}
-          <div style={{ marginTop: 10 }}><button className="sm" disabled={gPending}>{gPending ? "Saving…" : "Save answers"}</button></div>
-        </form>
+        <div className="notice small" style={{ display: "block" }}>
+          <strong>{gaps.length} detail{gaps.length === 1 ? "" : "s"} the formats still need</strong> ({gaps.slice(0, 4).map((g) => g.label).join(", ")}{gaps.length > 4 ? "…" : ""}).{" "}
+          The <a href={`/app/tenders/${matchId}/assistant`}>tender assistant</a> asks them one at a time and saves each to your Vault, so no tender asks again.
+        </div>
       )}
     </div>
   );

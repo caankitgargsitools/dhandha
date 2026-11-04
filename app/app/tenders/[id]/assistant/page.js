@@ -17,6 +17,8 @@ import { emptySheet, monthsFrom } from "@/lib/costing";
 import Assistant from "./Assistant";
 import { summarise, adviceLine, priceToWin } from "@/lib/pastResults";
 import TenderBrief from "../../TenderBrief";
+import { evalFromPoints } from "@/lib/evaluation";
+import { pointsRows } from "@/lib/firmPoints";
 
 // AI steps (reading, filling, marking) can take a few minutes; lib/ai.js keeps the whole chain inside this
 export const maxDuration = 300;
@@ -36,7 +38,7 @@ export default async function TenderAssistant({ params }) {
   const { data: m } = await supabase.from("tender_matches").select("*, tenders(*)").eq("id", id).eq("company_id", company.id).maybeSingle();
   if (!m) notFound();
   const t = m.tenders;
-  const [{ data: c }, { data: files }, { data: reads }, { data: facts }, { data: workRows }, { data: peopleRows }, { data: packs }, { data: jobs }, { data: docs }, { data: types }, { data: chat }, { data: wallet }, { data: similar }] = await Promise.all([
+  const [{ data: c }, { data: files }, { data: reads }, { data: facts }, { data: workRows }, { data: peopleRows }, { data: packs }, { data: jobs }, { data: docs }, { data: types }, { data: chat }, { data: wallet }, { data: similar }, { data: lastChange }] = await Promise.all([
     supabase.from("companies").select("*").eq("id", company.id).single(),
     supabase.from("tender_files").select("id, file_name, storage_path").eq("tender_id", t.id).order("file_name"),
     supabase.from("tender_reads").select("engine, fields, formats, risks, summary, created_at").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
@@ -50,6 +52,7 @@ export default async function TenderAssistant({ params }) {
     supabase.from("tender_chat").select("who, body, error").eq("match_id", id).order("id", { ascending: false }).limit(300),
     supabase.from("wallets").select("balance").eq("tenant_id", m.tenant_id).maybeSingle(),
     supabase.rpc("similar_awards", { p_tender: t.id, p_limit: 8 }),
+    supabase.from("tender_changes").select("created_at, field").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
   ]);
   const pastLine = adviceLine(summarise(similar || []), lakh);
   const ptwFor = (est) => { const p = priceToWin(similar || [], est); return p ? ` Price to win: about ${lakh(p.price.likely)} (${p.discount.mid}% below the estimate; safer ${lakh(p.price.safe)}).` : ""; };
@@ -188,10 +191,15 @@ export default async function TenderAssistant({ params }) {
     });
   }
 
-  // technical marking: how the tender is evaluated and the marks your Vault earns (paid AI, asked once)
-  if (m.tech_eval) {
-    const ev = m.tech_eval, tot = ev.criteria?.length ? ev.criteria.reduce((a, c) => [a[0] + (c.awarded || 0), a[1] + (c.max || 0)], [0, 0]) : null;
-    done.push(`Evaluation: ${ev.method === "QCBS" ? `QCBS, technical ${ev.tech_weight}% : financial ${ev.fin_weight}%` : ev.method === "L1" ? "L1 — lowest price among qualified bids wins" : ev.method}${tot ? `. Your technical marks: ${tot[0]} of ${tot[1]}` : ""}.`);
+  // technical marking: free first — GeM's own points table gives the method, weights and each parameter with your
+  // figure (brief §2.3); the paid AI marking (29 credits) is asked only when there is no table, or on "Redo"
+  const freeEval = !m.tech_eval && read?.fields?.points
+    ? evalFromPoints(read.fields.points, pointsRows(read.fields.points, { facts: facts || [], works: (workRows || []).filter((w) => w.status === "completed").length, incorporated: c?.incorporation_date }))
+    : null;
+  const evNow = m.tech_eval || freeEval;
+  if (evNow) {
+    const ev = evNow, tot = ev.criteria?.length ? ev.criteria.reduce((a, c) => [a[0] + (c.awarded || 0), a[1] + (c.max || 0)], [0, 0]) : null;
+    done.push(`Evaluation: ${ev.method === "QCBS" ? `QCBS, technical ${ev.tech_weight}% : financial ${ev.fin_weight}%` : ev.method === "L1" ? "L1 — lowest price among qualified bids wins" : ev.method}${ev.free ? " (read free from the bid's points table — type the marks you expect at the price step)" : tot ? `. Your technical marks: ${tot[0]} of ${tot[1]}` : ""}.`);
   } else if (read && canPrepare && plan.length) {
     steps.push({ id: "tech", kind: "tech_eval", paidAi, say: "Shall I work out how this tender is evaluated and your technical marks, criterion by criterion, from your Vault? For an L1 tender I'll give you the best price; for QCBS, your weighted final score. (29 credits)" });
   }
@@ -204,8 +212,11 @@ export default async function TenderAssistant({ params }) {
   const start = starterLines({ gem: f.gem, terms: f.terms, months: monthsFrom(f.completion_period || job?.detail?.period_of_work) });
   const sheet = () => m.cost_sheet || emptySheet({ months: start.months || monthsFrom(f.completion_period || job?.detail?.period_of_work), value: estimate, scope: f.work_scope || [], travel: !!(t.state && c.state && t.state !== c.state), finance: { payment_days: f.gem?.payment_days, pbg_pct: f.performance_security_pct, pbg_months: f.gem?.epbg_months }, manpower: start.manpower, other: start.other, statutory: start.statutory });
   if (m.quoted_price) done.push(`Your price: ₹${Number(m.quoted_price).toLocaleString("en-IN")} + GST${m.price_note ? ` (${m.price_note})` : ""}.`);
+  // a corrigendum after the price was set: say so (brief §2.7) — dates, EMD or value may have moved
+  const ch = lastChange?.[0];
+  if (m.quoted_price && m.priced_at && ch && new Date(ch.created_at) > new Date(m.priced_at)) done.push(`⚠ The tender changed (${ch.field}) after you set this price on ${fmtDate(m.priced_at)} — check the price again (↻ Change price).`);
   else if (canPrepare && read) {
-    steps.push({ id: "price", kind: "price", fresh: !m.cost_sheet, ev: m.tech_eval || null, gem: f.gem?.mse_preference || f.gem?.mii_preference ? f.gem : null, ra: !!f.gem?.bid_to_ra, notes: priceNotes({ gem: f.gem, terms: f.terms }), msme: !!msme, cost: m.cost_sheet ? computeSheet(m.cost_sheet).cost : null, quote: m.quoted_price || null, estimate, sheet: sheet(),
+    steps.push({ id: "price", kind: "price", fresh: !m.cost_sheet, ev: evNow || null, gem: f.gem?.mse_preference || f.gem?.mii_preference ? f.gem : null, ra: !!f.gem?.bid_to_ra, notes: priceNotes({ gem: f.gem, terms: f.terms }), msme: !!msme, cost: m.cost_sheet ? computeSheet(m.cost_sheet).cost : null, quote: m.quoted_price || null, estimate, sheet: sheet(),
       say: `Last, your price. Type it if you know it, or let's work out the cost together — items, manpower with PF/ESI/bonus, travel and stay, overheads and margin — and I'll suggest a quote.${pastLine ? ` For reference, past results: ${pastLine}.` : ""}${ptwFor(estimate)}` });
   }
 
@@ -214,7 +225,7 @@ export default async function TenderAssistant({ params }) {
 
   const left = daysLeft(t.due_at);
   // results can be redone (e.g. after a bad read of a big scanned document)
-  const redo = canPrepare && read ? { read: aiTiers().length > 0, tech: !!m.tech_eval && paidAi, price: m.quoted_price ? { price: m.quoted_price, sheet: sheet(), estimate } : null } : null;
+  const redo = canPrepare && read ? { read: aiTiers().length > 0, tech: !!evNow && paidAi, techFree: !!freeEval, price: m.quoted_price ? { price: m.quoted_price, sheet: sheet(), estimate } : null } : null;
   return page({ m, t, left, done, steps, role, canPrepare, files, history, balance: Number(wallet?.balance || 0), formatsView, google, redo, brief: read ? <TenderBrief t={t} m={m} read={read} detail={job?.detail} checklist={checklist} files={files} msme={!!msme} /> : null });
 }
 

@@ -8,7 +8,10 @@ const num = (v) => Number(String(v).replace(/[^\d.]/g, "")) || 0;
 // The tender's technical marking, and what it means for the price: the best price for an L1 tender, or the
 // weighted final score (and the price that still beats a rival) for a QCBS tender.
 export default function EvalPanel({ ev, estimate, cost, quote }) {
-  const tot = techTotals(ev.criteria);
+  // marks the person expects where the reading could not award them (free points table, presentation on the day)
+  const [expect, setExpect] = useState({});
+  const crit = ev.criteria.map((c, i) => (c.awarded === null && expect[i] !== undefined && expect[i] !== "" ? { ...c, awarded: Math.min(c.max || 100, num(expect[i])) } : c));
+  const tot = techTotals(crit);
   const [price, setPrice] = useState(String(quote || ""));
   const [rivalTech, setRivalTech] = useState("70");
   const [rivalPrice, setRivalPrice] = useState(String(estimate ? Math.round(estimate * 0.9) : ""));
@@ -32,14 +35,16 @@ export default function EvalPanel({ ev, estimate, cost, quote }) {
               <tbody>
                 {ev.criteria.map((c, i) => (
                   <tr key={i}><td>{c.criterion}{c.scoring && <div className="tiny faint">{c.scoring}</div>}</td><td>{c.max}</td>
-                    <td><strong>{c.awarded === null ? "?" : c.awarded}</strong></td><td className="tiny">{c.basis}{c.raise && <div style={{ color: "var(--madder)" }}>{c.raise}</div>}</td></tr>
+                    <td>{c.awarded === null
+                      ? <input aria-label={`Marks you expect for ${c.criterion}`} inputMode="decimal" placeholder="?" value={expect[i] ?? ""} onChange={(e) => setExpect((x) => ({ ...x, [i]: e.target.value }))} style={{ width: 56 }} />
+                      : <strong>{c.awarded}</strong>}</td><td className="tiny">{c.basis}{c.raise && <div style={{ color: "var(--madder)" }}>{c.raise}</div>}</td></tr>
                 ))}
               </tbody>
             </table>
           </div>
           <div className="row" style={{ gap: 8 }}>
             <span className="chip ok">Technical: {tot.got} / {tot.max} = {tot.score}%</span>
-            {tot.unknown > 0 && <span className="chip warn">{tot.unknown} criterion{tot.unknown === 1 ? "" : "s"} decided on the day (presentation etc.)</span>}
+            {tot.unknown > 0 && <span className="chip warn">{tot.unknown} criterion{tot.unknown === 1 ? "" : "s"} without marks — type what you expect{ev.free ? " (the marks per figure are in the buyer's file)" : " (presentation etc.)"}</span>}
             {ev.min_tech != null && <span className={`chip ${tot.got >= ev.min_tech ? "ok" : "bad"}`}>Minimum to qualify: {ev.min_tech}</span>}
           </div>
         </>
