@@ -14,7 +14,7 @@ export default async function MfaPage({ searchParams }) {
       </div>
       <div className="panel"><MfaChallenge next={next} /></div>
       <p className="small muted" style={{ margin: 0 }}>
-        Lost your phone or the authenticator app? Sign out below and contact Dhandha support to reset two-factor login for your account.
+        Lost your phone or the authenticator app? Sign out below and ask Dhandha support (or your workspace admin, who can raise it with us) to reset two-factor login. We check it is really you by calling your registered number, then you set up a new authenticator.
       </p>
       <form action={signOut}><button className="ghost sm">Sign out</button></form>
     </AuthShell>

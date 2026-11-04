@@ -5,7 +5,9 @@ import { inr, fmtDate, daysLeft } from "@/lib/session";
 import { Sparkline } from "@/components/Charts";
 import { STAFF_STATUS, ago } from "@/lib/tickets";
 import FormState from "@/app/app/FormState";
-import { adjustCredits } from "../../actions";
+import { adjustCredits, resetMfa } from "../../actions";
+import ResetLinks from "@/components/ResetLinks";
+import { headers } from "next/headers";
 import MemberTable from "@/components/MemberTable";
 import AddMemberForm from "@/components/AddMemberForm";
 
@@ -23,7 +25,12 @@ export default async function AdminTenant({ params }) {
     supabase.from("subscriptions").select("*").eq("tenant_id", id),
     supabase.from("documents").select("id").eq("tenant_id", id),
   ]);
-  const { data: invites } = await supabase.from("invites").select("*").eq("tenant_id", id).is("accepted_at", null).is("revoked_at", null);
+  const [{ data: invites }, { data: resets }] = await Promise.all([
+    supabase.from("invites").select("*").eq("tenant_id", id).is("accepted_at", null).is("revoked_at", null),
+    supabase.rpc("password_reset_links", { p_tenant: id }),
+  ]);
+  const h = await headers();
+  const origin = `${h.get("x-forwarded-proto") || "https"}://${h.get("x-forwarded-host") || h.get("host")}`;
   const left = daysLeft(t.trial_ends_at);
   return (
     <div className="stack">
@@ -62,6 +69,21 @@ export default async function AdminTenant({ params }) {
           </div>
         </div>
         <div className="stack">
+          <ResetLinks rows={resets} origin={origin} />
+          <div className="panel">
+            <h3>Reset two-factor login</h3>
+            <p className="small muted">For a person who lost their phone or authenticator app. Check it is really them first (call them on their known number).</p>
+            <FormState action={resetMfa} submit="Reset authenticator">
+              <input type="hidden" name="tenant_id" value={t.id} />
+              <div className="form-grid">
+                <div><label htmlFor="mfa_user">Person</label><select id="mfa_user" name="user_id" required defaultValue="">
+                  <option value="" disabled>Choose…</option>
+                  {(members || []).filter((m) => m.role !== "disabled").map((m) => <option key={m.user_id} value={m.user_id}>{m.profiles?.full_name || m.profiles?.email} ({m.profiles?.email})</option>)}
+                </select></div>
+                <div><label htmlFor="mfa_confirm">Type RESET</label><input id="mfa_confirm" name="confirm" autoComplete="off" required /></div>
+              </div>
+            </FormState>
+          </div>
           <div className="panel">
             <h3>Adjust credits</h3>
             <p className="small muted">Goodwill credit, refund or correction. Use a minus sign to deduct. The customer sees the reason.</p>

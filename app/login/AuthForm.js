@@ -20,7 +20,8 @@ export default function AuthForm({ mode, email, name, invite, next }) {
         <input id="password" name="password" type="password" required minLength={mode === "signup" ? 8 : undefined}
           autoComplete={mode === "signup" ? "new-password" : "current-password"} />
       </div>
-      {state?.error && <p className="error">{state.error}</p>}
+      {mode !== "signup" && <a className="small" href="/login/forgot" style={{ marginTop: -6 }}>Forgot password?</a>}
+      {state?.error && <p className="error" role="alert">{state.error}</p>}
       {state?.message && <p className="notice small">{state.message}</p>}
       <button aria-busy={!!pending} disabled={pending}>{pending ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}</button>
     </form>

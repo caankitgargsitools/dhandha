@@ -23,6 +23,7 @@ export default async function LoginPage({ searchParams }) {
       </div>
       <div className="panel"><AuthForm mode={mode} email={invite?.email} name={invite?.full_name} invite={invite ? params.invite : null} next={params?.next ? safeNext(params.next) : null} /></div>
       {invite?.expired && <p className="notice">This invite link has expired or was already used. If you have already signed up, just sign in; otherwise ask your workspace admin for a new link (Team → “New link”).</p>}
+      {params?.reset && <p className="notice small">Password changed — sign in with the new one.</p>}
       {params?.error && <p className="error">{params.error}</p>}
       <p className="small muted">
         {mode === "signup" ? <>Already have an account? <Link href={invite ? `/login?invite=${params.invite}&mode=signin` : "/login"}>Sign in</Link></> : <>New to Dhandha? <Link href={invite ? `/login?invite=${params.invite}` : "/login?mode=signup"}>Create an account</Link></>}

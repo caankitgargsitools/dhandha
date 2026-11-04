@@ -102,3 +102,15 @@ export async function saveAppUrl(prev, formData) {
   revalidatePath("/admin/outreach");
   return { message: "Saved. Background sending can now reach the site." };
 }
+
+// Lost phone / authenticator: remove the person's TOTP factor (they set it up again). Logged in the audit table.
+export async function resetMfa(prev, formData) {
+  const { supabase } = await getAdminContext();
+  const user = String(formData.get("user_id") || "");
+  if (!/^[0-9a-f-]{36}$/i.test(user)) return { error: "Pick a person." };
+  if (String(formData.get("confirm") || "").trim().toUpperCase() !== "RESET") return { error: "Type RESET to confirm — only do this after checking it really is them (call them on their known number)." };
+  const { data, error } = await supabase.rpc("admin_reset_mfa", { p_user: user });
+  if (error) return { error: error.message };
+  revalidatePath(`/admin/tenants/${String(formData.get("tenant_id") || "")}`);
+  return { message: data ? "Two-factor login removed. They can sign in with their password and set up a new authenticator." : "This person had no authenticator set up." };
+}
