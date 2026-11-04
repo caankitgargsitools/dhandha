@@ -287,3 +287,13 @@ button[aria-busy="true"]::before { content: ""; position: absolute; left: 12px; 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .page-loading { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 40vh; color: var(--ink-3); }
 @media (prefers-reduced-motion: reduce) { .activity-bar::after, .spinner, button[aria-busy="true"]::before { animation-duration: 2.4s; } }
+
+/* Tender assistant: normal and full-screen (owner, 3 Nov — ⤢ at the right of the tab strip) */
+.assistant-shell .fullscreen-toggle { margin-left: auto; margin-bottom: 4px; padding: 6px 8px; min-width: 36px; min-height: 36px; display: inline-flex; align-items: center; justify-content: center; }
+.assistant-shell .assistant-log { height: min(62vh, 640px); }
+.assistant-shell.is-full { position: fixed; inset: 0; z-index: 80; margin: 0; border-radius: 0; border: 0; max-width: none; width: 100vw; height: 100vh; height: 100dvh; box-shadow: none; }
+.assistant-shell.is-full > .assistant-pane { flex: 1; min-height: 0; overflow-y: auto; }
+.assistant-shell.is-full > .assistant-chat { flex: 1; min-height: 0; }
+.assistant-shell.is-full .assistant-log { height: auto; flex: 1; min-height: 0; }
+.assistant-shell.is-full > .assistant-chat > :not(.assistant-log) { max-height: 45dvh; overflow-y: auto; }
+@media (min-width: 1100px) { .assistant-shell.is-full .assistant-log, .assistant-shell.is-full > .assistant-chat > :not(.assistant-log), .assistant-shell.is-full > .assistant-pane { padding-left: calc((100% - 980px) / 2) !important; padding-right: calc((100% - 980px) / 2) !important; } }

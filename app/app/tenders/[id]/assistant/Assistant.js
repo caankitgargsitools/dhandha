@@ -32,6 +32,16 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
   const boqDocs = files.filter((x) => x.url && /boq/i.test(x.file_name) && /\.xlsx?$/i.test(x.file_name));
   const [log, setLog] = useState(history);
   const [tab, setTab] = useState("chat");
+  // full-screen view (owner, 3 Nov): the ⤢ button at the right of the tab strip fills the screen; Esc or ⤡ returns
+  const [full, setFull] = useState(false);
+  useEffect(() => {
+    if (!full) return;
+    const onKey = (e) => { if (e.key === "Escape") setFull(false); };
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", onKey); };
+  }, [full]);
   const [skipped, setSkipped] = useState(() => new Set());
   const [busyOwn, setBusy] = useState(false);
   // the page's fresh data after an answer: until it arrives the old question stays locked (no double answers)
@@ -139,24 +149,30 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
   const skip = () => { askedNow(); say("me", "Skip for now"); say("bot", "Okay, I'll ask that again later."); setSkipped((s) => new Set(s).add(current.id)); setText(""); };
 
   return (
-    <div className="panel" style={{ padding: 0, display: "flex", flexDirection: "column" }}>
-      <div className="row" role="tablist" style={{ gap: 4, padding: "8px 10px 0", borderBottom: "1px solid var(--line)" }}>
+    <div className={`panel assistant-shell${full ? " is-full" : ""}`} style={{ padding: 0, display: "flex", flexDirection: "column" }} role={full ? "dialog" : undefined} aria-modal={full || undefined} aria-label={full ? "Tender assistant, full screen" : undefined}>
+      <div className="row" role="tablist" style={{ gap: 4, padding: "8px 10px 0", borderBottom: "1px solid var(--line)", flexWrap: "nowrap" }}>
         {[["chat", "Assistant"], brief && ["brief", "Tender summary"], files.length && ["docs", `Documents (${files.length})`]].filter(Boolean).map(([k, l]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)} className="ghost sm"
             style={{ border: 0, borderRadius: "8px 8px 0 0", borderBottom: `2px solid ${tab === k ? "var(--primary)" : "transparent"}`, color: tab === k ? "var(--primary)" : "var(--ink-2)", fontWeight: tab === k ? 700 : 500 }}>{l}</button>
         ))}
+        <button type="button" className="ghost sm fullscreen-toggle" onClick={() => setFull((f) => !f)} aria-pressed={full}
+          title={full ? "Exit full screen (Esc)" : "Full screen"} aria-label={full ? "Exit full screen" : "Full screen"}>
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {full ? <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" /> : <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />}
+          </svg>
+        </button>
       </div>
-      {tab === "brief" && <div style={{ padding: 16 }}>{brief}</div>}
+      {tab === "brief" && <div className="assistant-pane" style={{ padding: 16 }}>{brief}</div>}
       {tab === "docs" && (
-        <div style={{ padding: 16 }} className="stack-sm">
+        <div style={{ padding: 16 }} className="stack-sm assistant-pane">
           <span className="small muted">Fetched from {portal}. Click a file to download it.</span>
           <ul className="small" style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 6 }}>
             {files.map((x) => <li key={x.id} style={{ overflowWrap: "anywhere" }}>{x.url ? <a href={x.url} download={x.file_name} target="_blank" rel="noreferrer">{x.file_name}</a> : x.file_name}</li>)}
           </ul>
         </div>
       )}
-      <div style={{ display: tab === "chat" ? "flex" : "none", flexDirection: "column" }}>
-      <div ref={box} style={{ height: "min(62vh, 640px)", overflowY: "auto", padding: "18px 18px 8px", display: "flex", flexDirection: "column", gap: 10 }} aria-live="polite">
+      <div className="assistant-chat" style={{ display: tab === "chat" ? "flex" : "none", flexDirection: "column" }}>
+      <div ref={box} className="assistant-log" style={{ overflowY: "auto", padding: "18px 18px 8px", display: "flex", flexDirection: "column", gap: 10 }} aria-live="polite">
         <Bubble>Namaste! I'll prepare this tender with you. I'll ask only what I can't find in your Vault, and save every answer so the next tender asks less.</Bubble>
         {done.map((d, i) => <Bubble key={`d${i}`}>{d}</Bubble>)}
         {redo && (redo.read || redo.tech || redo.price) && (
