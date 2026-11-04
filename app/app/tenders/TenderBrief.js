@@ -41,6 +41,13 @@ export default function TenderBrief({ t, m, read, detail = {}, checklist = [], f
         <div className="row" style={{ gap: 8, marginBottom: 6 }}>
           <span className={`chip ${mandatoryUnmet(m.reasons).length || m.pending ? "warn" : "ok"}`}>{mandatoryUnmet(m.reasons).length ? (m.forced_at ? "Filing despite a warning" : "⚠ Mandatory condition not met") : m.pending ? `Qualifies if you answer ${m.pending}` : "Qualified"}</span>
           <span className={`chip ${left === null ? "mute" : left < 0 ? "mute" : left <= 5 ? "bad" : "info"}`}>{left === null ? "Closing date not known yet" : left < 0 ? "Closed" : `${left} day${left === 1 ? "" : "s"} left`}</span>
+          {/hindi/i.test(String(f.language || "")) && <span className="chip warn" title="Formats may need Hindi answers; the bid PDF cannot print Hindi yet — use Word / Google Docs for those pages">Tender in Hindi</span>}
+          {(() => {
+            // qualifying technical marks vs the marks your Vault earns (brief §2.7)
+            const ev = m.tech_eval; if (!ev?.min_tech || !ev.criteria?.length || ev.criteria.some((c) => c.awarded === null)) return null;
+            const got = ev.criteria.reduce((a, c) => a + (c.awarded || 0), 0);
+            return got < ev.min_tech ? <span className="chip bad">Technical marks {got} — below the {ev.min_tech} needed to qualify</span> : null;
+          })()}
           <span className="tiny faint">{t.portal} · Tender ID {t.tender_ref}</span>
         </div>
         <h3 style={{ margin: 0, fontSize: 18, lineHeight: 1.3 }}>{t.title}</h3>

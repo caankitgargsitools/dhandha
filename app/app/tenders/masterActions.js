@@ -53,13 +53,14 @@ export async function answerFact({ key, period = "", value, unit = null, money =
   return { ok: true };
 }
 
-export async function addWork({ work_name, client, value_inr, end_date, matchId }) {
+export async function addWork({ work_name, client, value_inr, start_date, end_date, work_order_no, scope, matchId }) {
   const { supabase, tenant, company, role } = await getContext();
   if (writer(role)) return writer(role);
   const name = String(work_name || "").trim(), cl = String(client || "").trim(), val = Number(String(value_inr || "").replace(/[,₹\s]/g, ""));
   if (!name || !cl) return { error: "The work's name and the client are needed." };
   if (!Number.isFinite(val) || val <= 0) return { error: "Enter the contract value in rupees." };
-  const { error } = await supabase.from("experience_items").insert({ tenant_id: tenant.id, company_id: company.id, work_name: name.slice(0, 300), client: cl.slice(0, 200), value_inr: val, end_date: end_date || null, status: "completed" });
+  const { error } = await supabase.from("experience_items").insert({ tenant_id: tenant.id, company_id: company.id, work_name: name.slice(0, 300), client: cl.slice(0, 200), value_inr: val, start_date: /^\d{4}-\d{2}-\d{2}$/.test(String(start_date || "")) ? start_date : null, end_date: end_date || null, status: "completed",
+    work_order_no: String(work_order_no || "").trim().slice(0, 100) || null, scope: String(scope || "").trim().slice(0, 500) || null });
   if (error) return { error: error.message };
   await supabase.rpc("rescore_company", { p_company: company.id });
   done(matchId);

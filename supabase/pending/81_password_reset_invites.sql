@@ -140,3 +140,9 @@ begin
 end $$;
 revoke all on function public.admin_reset_mfa(uuid) from public, anon;
 grant execute on function public.admin_reset_mfa(uuid) to authenticated;
+
+-- §2.6 (4 Nov): works keep their work-order number and a one-line scope, so formats stop asking for them
+alter table public.experience_items add column if not exists work_order_no text, add column if not exists scope text;
+-- net worth is stored per financial year everywhere (Vault → Masters used period ''); old rows moved to FY 2025-26
+update public.company_facts f set period = 'FY 2025-26' where key = 'fin.net_worth' and period = ''
+  and not exists (select 1 from public.company_facts g where g.company_id = f.company_id and g.key = 'fin.net_worth' and g.period = 'FY 2025-26');

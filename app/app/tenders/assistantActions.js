@@ -1,4 +1,5 @@
 "use server";
+import { quickAnswer } from "@/lib/quickAnswer";
 import { revalidatePath } from "next/cache";
 import { withLock } from "@/lib/locks";
 import { getContext } from "@/lib/session";
@@ -68,6 +69,15 @@ async function askAssistantLocked({ matchId, question, about, history = [] }) {
   if (role === "viewer") return { error: "Viewers cannot ask the assistant." };
   const q = String(question || "").trim().slice(0, 1500);
   if (!q) return { error: "Type your question." };
+  // free first (brief §2.5): a plain question about a number or date the reading already has costs nothing
+  {
+    const { data: qm } = await supabase.from("tender_matches").select("tender_id, tenders(emd_inr, due_at, opening_at, value_inr)").eq("id", matchId).eq("company_id", company.id).maybeSingle();
+    if (qm) {
+      const { data: rr } = await supabase.from("tender_reads").select("fields").eq("tender_id", qm.tender_id).order("created_at", { ascending: false }).limit(1);
+      const quick = quickAnswer(q, qm.tenders, rr?.[0]?.fields || {});
+      if (quick) return { answer: quick.answer, free: true };
+    }
+  }
   if (!aiTiers().some((t) => !t.free)) return { error: PAID };
   if (!(await enough(supabase, tenant.id, 3))) return { error: "Not enough credits — a question needs 3." };
   const { data: m } = await supabase.from("tender_matches").select("id, tender_id, score, eligible, reasons, quoted_price, tech_eval, tenders(*)").eq("id", matchId).eq("company_id", company.id).maybeSingle();

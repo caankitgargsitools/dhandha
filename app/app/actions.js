@@ -204,6 +204,8 @@ export async function addExperience(prev, formData) {
     end_date: s(formData.get("end_date")),
     status: formData.get("status") === "ongoing" ? "ongoing" : "completed",
     people_deployed: n(formData.get("people_deployed")),
+    work_order_no: s(formData.get("work_order_no")),
+    scope: s(formData.get("scope")),
   });
   if (error) return { error: error.message };
   revalidatePath("/app/vault/experience");
@@ -268,6 +270,8 @@ export async function updateExperience(prev, formData) {
     end_date: s(formData.get("end_date")),
     status: formData.get("status") === "ongoing" ? "ongoing" : "completed",
     people_deployed: n(formData.get("people_deployed")),
+    work_order_no: s(formData.get("work_order_no")),
+    scope: s(formData.get("scope")),
   });
 }
 

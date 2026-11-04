@@ -2,6 +2,7 @@ import Link from "next/link";
 import { changeText, realChange } from "@/lib/tenderChanges";
 import { prerequisiteList } from "@/lib/prereq";
 import GetReady from "@/components/GetReady";
+import { similarWorks } from "@/lib/similarWork";
 import FinTests from "@/components/FinTests";
 import { checkFinTests } from "@/lib/finTests";
 import { oemCheck, oemsFrom, suppliesFrom } from "@/lib/oem";
@@ -54,7 +55,7 @@ export default async function TenderDetail({ params, searchParams }) {
     supabase.from("tender_changes").select("*").eq("tender_id", t.id).order("seen_at", { ascending: false }),
     supabase.from("wallets").select("balance").eq("tenant_id", m.tenant_id).maybeSingle(),
   ]);
-  const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }, { data: deposits }, { data: board }, { data: team }, { data: outcomes }, { data: oemFacts }, { count: worksDone }, { data: deployedTop }] = await Promise.all([
+  const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }, { data: deposits }, { data: board }, { data: team }, { data: outcomes }, { data: oemFacts }, { count: worksDone }, { data: myWorks }] = await Promise.all([
     supabase.from("tender_files").select("*").eq("tender_id", t.id).order("created_at"),
     supabase.from("tender_reads").select("*").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
     supabase.rpc("similar_awards", { p_tender: t.id, p_limit: 8 }),
@@ -65,7 +66,7 @@ export default async function TenderDetail({ params, searchParams }) {
     supabase.rpc("bid_outcomes", { p_company: company.id }),
     supabase.from("company_facts").select("key, period, value, valid_until").eq("company_id", company.id).or("key.like.oem.%,key.like.supply.%,key.like.cred.%,key.like.presence.office.%"),
     supabase.from("experience_items").select("id", { count: "exact", head: true }).eq("company_id", company.id).eq("status", "completed"),
-    supabase.from("experience_items").select("people_deployed").eq("company_id", company.id).not("people_deployed", "is", null).order("people_deployed", { ascending: false }).limit(1),
+    supabase.from("experience_items").select("work_name, client, category, scope, value_inr, end_date, status, people_deployed").eq("company_id", company.id),
   ]);
   const record = bidChance((outcomes || []).filter((o) => o.match_id !== m.id), t);
   const members = (team || []).map((x) => ({ user_id: x.user_id, name: x.profiles?.full_name || x.profiles?.email || "Member" }));
@@ -84,8 +85,9 @@ export default async function TenderDetail({ params, searchParams }) {
     return { code, name, d, state };
   });
   const gaps = [
-    ...PROFILE_NEEDED.filter(([k]) => !c[k]).map(([, l]) => ({ label: l, href: "/app/vault/profile" })),
-    ...((facts || []).filter((f) => f.key === "fin.turnover").length < 3 ? [{ label: "Turnover for the last 3 years", href: "/app/vault/facts" }] : []),
+    // one queue (brief §2.6): every "fill once" detail is answered on the Tender-ready checklist, one at a time
+    ...PROFILE_NEEDED.filter(([k]) => !c[k]).map(([k, l]) => ({ label: l, href: `/app/vault/masters?item=${encodeURIComponent(`c:${k}`)}` })),
+    ...((facts || []).filter((f) => f.key === "fin.turnover").length < 3 ? [{ label: "Turnover for the last 3 years", href: `/app/vault/masters?item=${encodeURIComponent("f:turnover")}` }] : []),
   ];
   const kinds = new Set((brand || []).map((b) => b.kind));
   const signed = await Promise.all((packs || []).map(async (p) => ({ ...p, url: (await supabase.storage.from("bids").createSignedUrl(p.storage_path, 3600)).data?.signedUrl })));
@@ -135,8 +137,23 @@ export default async function TenderDetail({ params, searchParams }) {
       {t.invite_only && <div className="notice small"><span>✉ <strong>Invitation only</strong> — {t.invite_only.kind === "enlisted" ? `only vendors enlisted with ${t.invite_only.with} may bid` : t.invite_only.masked ? "the buyer invited a list of sellers (names hidden on GeM); bid only if you received the invitation" : `only the listed sellers may bid${t.invite_only.names?.length ? `: ${t.invite_only.names.slice(0, 5).join(", ")}` : ""}`}.</span></div>}
       {t.reserved_for && <div className="notice small"><span>⚠ <strong>Reserved for {t.reserved_for}</strong> — the buyer says other bidders are not considered, so Dhandha keeps it out of your matches.</span></div>}
       <FinTests rows={checkFinTests(read?.fields?.fin_tests, facts, t.value_inr)} />
+      {(() => {
+        // the tender's own "similar work" definition and value tests against your works (brief §2.7, free)
+        const sw = read ? similarWorks({ ...read.fields, req_similar_one: read.fields?.req_similar_one ?? t.req_similar_one, req_similar_two: read.fields?.req_similar_two ?? t.req_similar_two, req_similar_three: read.fields?.req_similar_three ?? t.req_similar_three }, myWorks || []) : null;
+        if (!sw || (!sw.definition && !sw.tests.length)) return null;
+        const rows = [
+          ...sw.tests.map((x, i) => ({ key: `sw${i}`, label: x.label, need: `${x.need}`, have: `${x.have} of your works`, state: x.ok ? "ok" : "bad", note: !x.ok && i === 0 ? sw.gap : "" })),
+          ...sw.best.map((x, i) => ({ key: `swb${i}`, label: `${x.work.work_name} — ${x.work.client}`, need: x.fit != null ? `${Math.round(x.fit * 100)}% match` : "", have: x.value ? `₹${x.value.toLocaleString("en-IN")}` : "", state: "ok", note: i === 0 ? "Your closest works — list these in the similar-works format" : "" })),
+        ];
+        return (
+          <div className="stack-sm">
+            {sw.definition && <div className="tiny faint">Tender's definition of similar work: “{String(sw.definition).slice(0, 300)}” (last {sw.years} years)</div>}
+            <FinTests title="Similar work" href="/app/vault/experience" link="Vault → Experience" rows={rows.length ? rows : [{ key: "none", label: "No matching completed work in your Vault", need: "", have: "", state: "ask", note: sw.gap || "Add your works in Vault → Experience." }]} />
+          </div>
+        );
+      })()}
       <PointsTable table={read?.fields?.points} rows={pointsRows(read?.fields?.points, { facts: [...(facts || []), ...(oemFacts || [])], works: worksDone || 0, incorporated: c.incorporation_date })} />
-      <FinTests title="Licences, registrations and team" href="/app/vault/credentials" link="Vault → Credentials" rows={checkCredentials(read?.fields?.credentials, oemFacts || [], deployedTop || [])} />
+      <FinTests title="Licences, registrations and team" href="/app/vault/credentials" link="Vault → Credentials" rows={checkCredentials(read?.fields?.credentials, oemFacts || [], myWorks || [])} />
       <FinTests title="GeM: OEM and past supplies" href="/app/vault/brands" link="Vault → Brands & supplies" rows={oemCheck({ gem: read?.fields?.gem, title: t.title, oems: oemsFrom(oemFacts || []), supplies: suppliesFrom(oemFacts || []), dueAt: t.due_at })} />
 
       <GetReady items={prerequisiteList({ found: read?.fields?.prereq || t.prereq || [], fields: read?.fields || {}, tender: t, unmet: mandatoryUnmet(m.reasons), checklist, msme: !!msme, aiLines: read?.fields?.prepare_before })} />
