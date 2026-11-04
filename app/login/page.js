@@ -3,6 +3,7 @@ import AuthShell from "@/components/AuthShell";
 import AuthForm from "./AuthForm";
 import { createClient } from "@/lib/supabase/server";
 import { ROLES } from "@/lib/session";
+import { safeNext } from "@/lib/safeNext";
 
 export default async function LoginPage({ searchParams }) {
   const params = await searchParams;
@@ -20,7 +21,9 @@ export default async function LoginPage({ searchParams }) {
         <h1>{invite ? `Join ${invite.workspace}` : mode === "signup" ? "Start your 7-day trial" : "Sign in to Dhandha"}</h1>
         <p className="muted">{invite ? `You have been added as ${ROLES[invite.role]?.label || invite.role}. Create your login with this email; if you already have one, just sign in.` : mode === "signup" ? "500 free credits. No card needed." : "Welcome back."}</p>
       </div>
-      <div className="panel"><AuthForm mode={mode} email={invite?.email} name={invite?.full_name} invite={invite ? params.invite : null} /></div>
+      <div className="panel"><AuthForm mode={mode} email={invite?.email} name={invite?.full_name} invite={invite ? params.invite : null} next={params?.next ? safeNext(params.next) : null} /></div>
+      {invite?.expired && <p className="notice">This invite link has expired or was already used. If you have already signed up, just sign in; otherwise ask your workspace admin for a new link (Team → “New link”).</p>}
+      {params?.reset && <p className="notice small">Password changed — sign in with the new one.</p>}
       {params?.error && <p className="error">{params.error}</p>}
       <p className="small muted">
         {mode === "signup" ? <>Already have an account? <Link href={invite ? `/login?invite=${params.invite}&mode=signin` : "/login"}>Sign in</Link></> : <>New to Dhandha? <Link href={invite ? `/login?invite=${params.invite}` : "/login?mode=signup"}>Create an account</Link></>}

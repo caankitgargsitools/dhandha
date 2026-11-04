@@ -3,7 +3,7 @@ import { changeText, latestByTender } from "@/lib/tenderChanges";
 import { getContext, daysLeft, lakh, fmtDate } from "@/lib/session";
 import { ScoreRing, Donut } from "@/components/Charts";
 import Icon from "@/components/Icon";
-import { setTenderStatus } from "./actions";
+import StageButton from "./StageButton";
 import { rescore, muteTenderWord, aiCheckNow, setAiFit } from "./bidActions";
 import { muteSuggestions } from "@/lib/matchLearning";
 import QuestionCards from "./QuestionCards";
@@ -188,13 +188,13 @@ export default async function Tenders({ searchParams }) {
                 {canWrite && left >= 0 && (
                   <div className="row" style={{ marginTop: 12, gap: 8 }}>
                     {m.status !== "shortlisted" && m.status !== "preparing" && (
-                      <form action={setTenderStatus}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="status" value="shortlisted" /><button className="sm gold">Shortlist</button></form>
+                      <StageButton id={m.id} status="shortlisted" className="sm gold">Shortlist</StageButton>
                     )}
                     {m.status !== "skipped" && (
-                      <form action={setTenderStatus}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="status" value="skipped" /><button className="sm ghost">Skip</button></form>
+                      <StageButton id={m.id} status="skipped" className="sm ghost">Skip</StageButton>
                     )}
                     {m.status === "skipped" && (
-                      <form action={setTenderStatus}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="status" value="new" /><button className="sm ghost">Restore</button></form>
+                      <StageButton id={m.id} status="new" className="sm ghost">Restore</StageButton>
                     )}
                     <Link className="btn sm ghost" href={`/app/tasks?link_type=tender&link_id=${t.id}&link_label=${encodeURIComponent(t.title.slice(0, 80))}&title=${encodeURIComponent("Prepare bid: " + t.title.slice(0, 120))}`}>Assign to someone</Link>
                     <Link className="btn sm" href={`/app/tenders/${m.id}/assistant`}>Prepare with assistant</Link>

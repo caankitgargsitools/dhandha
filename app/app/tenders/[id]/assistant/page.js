@@ -88,8 +88,13 @@ export default async function TenderAssistant({ params }) {
 
   // 2. read them, then 3. the brief — nothing is prepared until you say it looks good
   // the automatic pre-check (free reader) is a first look; the full reading still runs here (by those who may spend credits)
+  // free first (owner rule 1): the free reader runs by itself; AI (99 credits) is only offered, never started unasked —
+  // and suggested when the free reading is thin (scanned pages, a non-English tender, low confidence)
+  const thin = read && read.engine === "rules" && (Number(read.confidence) < 60 || /hindi/i.test(String(read.fields?.language || "")));
   if (pdfs.length && (!read || read.engine === "precheck")) steps.push({ id: "read", kind: "read", auto: canPrepare, aiReady: aiTiers().length > 0,
-    say: canPrepare ? "Reading the documents now…" : "The documents are in. Reading them uses credits, so an admin, manager or bid preparer starts it — ask one of them to open this assistant." });
+    say: canPrepare ? "Reading the documents now with the free reader…" : "The documents are in. An admin, manager or bid preparer reads them — ask one of them to open this assistant." });
+  else if (thin && canPrepare && aiTiers().length > 0 && !confirmed) steps.push({ id: "read-ai", kind: "read", auto: false, aiReady: true,
+    say: `The free reader found only part of this tender (confidence ${Math.round(Number(read.confidence) || 0)}%) — the pages may be scanned or not in English. Shall AI read it fully? It costs 99 credits; or carry on with what we have.` });
   if (read && !confirmed) {
     steps.push({ id: "brief", kind: "brief", say: "Here is the tender in one page. Shall we go ahead and prepare the bid?" });
   }

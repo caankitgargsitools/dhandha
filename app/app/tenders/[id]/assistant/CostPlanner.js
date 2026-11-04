@@ -17,6 +17,7 @@ export default function CostPlanner({ matchId, initial, estimate, saved, fresh, 
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [saveErr, setSaveErr] = useState("");
   const c = useMemo(() => computeSheet(s), [s]);
   const timer = useRef(null);
 
@@ -24,7 +25,11 @@ export default function CostPlanner({ matchId, initial, estimate, saved, fresh, 
   useEffect(() => {
     if (mode !== "plan") return;
     clearTimeout(timer.current);
-    timer.current = setTimeout(() => saveSheet({ matchId, sheet: s }), 1500);
+    // autosave; a failed save is shown (not lost silently) and tried again on the next change
+    timer.current = setTimeout(async () => {
+      try { const r = await saveSheet({ matchId, sheet: s }); setSaveErr(r?.error ? `Not saved: ${r.error}` : ""); }
+      catch (e) { setSaveErr(`Not saved — check your connection (${e.message || "network"}). It is tried again on your next change.`); }
+    }, 1500);
     return () => clearTimeout(timer.current);
   }, [s, mode, matchId]);
 
@@ -134,6 +139,7 @@ export default function CostPlanner({ matchId, initial, estimate, saved, fresh, 
             {c.vsEstimatePct !== null && <div className={`chip ${c.vsEstimatePct <= 0 ? "ok" : "warn"}`} style={{ marginTop: 6 }}>{Math.abs(c.vsEstimatePct)}% {c.vsEstimatePct <= 0 ? "below" : "above"} the estimate ({lakh(s.estimate)})</div>}
           </div>
           {err && <div className="small" style={{ color: "var(--blood)" }}>{err}</div>}
+          {saveErr && <div className="small" role="alert" style={{ color: "var(--blood)" }}>{saveErr}</div>}
           <button disabled={busy || !c.quote} onClick={() => finish({ sheet: s }, `Use the planner's quote: ${inr(c.quote)} + GST`)}>Use {inr(c.quote)} as my price</button>
           <button className="ghost sm" onClick={() => setMode("direct")}>Type a different price</button>
         </aside>

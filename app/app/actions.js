@@ -87,12 +87,23 @@ export async function saveFact(prev, formData) {
 }
 
 export async function deleteRow(prev, formData) {
-  const { supabase, role } = await getContext();
+  const { supabase, role, company, user } = await getContext();
   if (viewOnly(role)) return VIEW_ONLY;
   const table = String(formData.get("table"));
   const allowed = { company_facts: "/app/vault/facts", documents: "/app/vault/documents", experience_items: "/app/vault/experience", people: "/app/vault/people" };
   if (!allowed[table]) return { error: "This cannot be deleted here." };
-  const { error, count } = await supabase.from(table).delete({ count: "exact" }).eq("id", String(formData.get("id")));
+  const id = String(formData.get("id"));
+  if (table === "documents") {
+    // documents are archived, never deleted: the file stays in storage and the row keeps its history (owner rule 5)
+    const { data: done, error } = await supabase.from("documents").update({ status: "superseded", archived_at: new Date().toISOString(), archived_by: user.id })
+      .eq("id", id).eq("company_id", company.id).is("archived_at", null).select("id");
+    if (error) return { error: error.message };
+    if (!done?.length) return { error: "Nothing was removed: it is already gone, or your role cannot remove it." };
+    revalidatePath(allowed[table]);
+    revalidatePath("/app/vault");
+    return {};
+  }
+  const { error, count } = await supabase.from(table).delete({ count: "exact" }).eq("id", id).eq("company_id", company.id);
   if (error) return { error: error.message };
   if (!count) return { error: "Nothing was deleted: it is already gone, or your role cannot delete it." };
   revalidatePath(allowed[table]);
@@ -278,13 +289,15 @@ export async function recordBrandAsset({ kind, path, meta }) {
   if (!isAdmin) return { error: "Only an admin can change brand assets." };
   if ((kind === "signature" || kind === "seal") && !has2fa) return { error: "Turn on two-factor login before storing a signature or seal." };
   if (!String(path).startsWith(`${tenant.id}/${company.id}/`)) return { error: "Invalid file path." };
-  const { data: old } = await supabase.from("brand_assets").select("storage_path").eq("company_id", company.id).eq("kind", kind).maybeSingle();
+  // the old file is kept and listed in meta.history: bids already signed can still be traced to the signature used
+  const { data: old } = await supabase.from("brand_assets").select("storage_path, meta").eq("company_id", company.id).eq("kind", kind).maybeSingle();
+  const history = [...(old?.meta?.history || [])];
+  if (old?.storage_path && old.storage_path !== path) history.push({ path: old.storage_path, replaced_at: new Date().toISOString() });
   const { error } = await supabase.from("brand_assets").upsert(
-    { tenant_id: tenant.id, company_id: company.id, kind, storage_path: path, meta: meta || {} },
+    { tenant_id: tenant.id, company_id: company.id, kind, storage_path: path, meta: { ...(meta || {}), history: history.slice(-20) } },
     { onConflict: "company_id,kind" }
   );
   if (error) return { error: error.message };
-  if (old?.storage_path && old.storage_path !== path) await supabase.storage.from("brand").remove([old.storage_path]);
   revalidatePath("/app/brand");
   return { ok: true };
 }

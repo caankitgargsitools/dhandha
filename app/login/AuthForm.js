@@ -2,11 +2,12 @@
 import { useActionState } from "react";
 import { signIn, signUp } from "./actions";
 
-export default function AuthForm({ mode, email, name, invite }) {
+export default function AuthForm({ mode, email, name, invite, next }) {
   const [state, action, pending] = useActionState(mode === "signup" ? signUp : signIn, {});
   return (
     <form action={action} className="stack">
       {invite && <input type="hidden" name="invite" value={invite} />}
+      {next && <input type="hidden" name="next" value={next} />}
       {mode === "signup" && (
         <>
           <div><label htmlFor="full_name">Your name</label><input id="full_name" name="full_name" required defaultValue={name || ""} /></div>
@@ -19,7 +20,8 @@ export default function AuthForm({ mode, email, name, invite }) {
         <input id="password" name="password" type="password" required minLength={mode === "signup" ? 8 : undefined}
           autoComplete={mode === "signup" ? "new-password" : "current-password"} />
       </div>
-      {state?.error && <p className="error">{state.error}</p>}
+      {mode !== "signup" && <a className="small" href="/login/forgot" style={{ marginTop: -6 }}>Forgot password?</a>}
+      {state?.error && <p className="error" role="alert">{state.error}</p>}
       {state?.message && <p className="notice small">{state.message}</p>}
       <button aria-busy={!!pending} disabled={pending}>{pending ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}</button>
     </form>

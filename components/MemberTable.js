@@ -1,5 +1,5 @@
 import { ROLES } from "@/lib/roles";
-import { changeRole, disableMember, revokeInvite } from "@/app/app/settings/team/actions";
+import { changeRole, disableMember, revokeInvite, renewInvite } from "@/app/app/settings/team/actions";
 import { fmtDate } from "@/lib/session";
 import InviteShare from "./InviteShare";
 import ActionForm from "./ActionForm";
@@ -36,7 +36,16 @@ export default function MemberTable({ members, invites, canManage, tenantId, sel
           ))}
           {invites.map((i) => (
             <tr key={i.id}>
-              <td><strong>{i.full_name || i.email}</strong><div className="tiny faint">{i.email} · not signed up yet — they sign up with this email, or use the link</div>{canManage && origin && i.token && <div style={{ marginTop: 4 }}><InviteShare url={`${origin}/login?invite=${i.token}`} name={i.full_name} /></div>}</td>
+              <td><strong>{i.full_name || i.email}</strong><div className="tiny faint">{i.email} · not signed up yet — they sign up with this email, or use the link</div>{canManage && origin && i.token && (() => {
+                const expired = i.link_used_at || new Date(i.link_expires_at || 0) <= new Date();
+                return (
+                  <div className="row" style={{ marginTop: 4, gap: 6 }}>
+                    {!expired && <InviteShare url={`${origin}/login?invite=${i.token}`} name={i.full_name} />}
+                    <span className="tiny faint">{expired ? "Link expired or used" : `Link works till ${new Date(i.link_expires_at).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" })}`}</span>
+                    <ActionForm action={renewInvite}><input type="hidden" name="tenant_id" value={tenantId} /><input type="hidden" name="invite_id" value={i.id} /><SubmitButton className="ghost sm">New link</SubmitButton></ActionForm>
+                  </div>
+                );
+              })()}</td>
               <td><span className="chip warn">Invited · {ROLES[i.role]?.label}</span></td>
               <td className="small faint">{fmtDate(i.created_at)}</td>
               {canManage && <td><ActionForm action={revokeInvite} confirm="Cancel this invite?"><input type="hidden" name="tenant_id" value={tenantId} /><input type="hidden" name="invite_id" value={i.id} /><SubmitButton className="danger">Cancel invite</SubmitButton></ActionForm></td>}

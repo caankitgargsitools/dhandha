@@ -71,9 +71,10 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
   // documents present but not read yet: read them straight away (AI when available, else the free reader)
   const autoRead = useRef(false);
   useEffect(() => {
-    if (current?.kind !== "read" || !current.auto || autoRead.current || !canPrepare || balance < (current.aiReady ? 99 : 10)) return;
+    // free first: the automatic reading is always the free reader; AI is offered afterwards when the reading is thin
+    if (current?.kind !== "read" || !current.auto || autoRead.current || !canPrepare) return;
     autoRead.current = true;
-    run(null, () => readTender({}, form({ match_id: matchId, mode: current.aiReady ? "ai" : "basic" })), (r) => r.message, { label: "Reading every page of the tender…", seconds: current.aiReady ? 60 : 15 });
+    run(null, () => readTender({}, form({ match_id: matchId, mode: "basic" })), (r) => r.message, { label: "Reading every page of the tender (free)…", seconds: 15 });
   }, [current?.kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // formats being filled in Google Docs / Sheets: brought back when the person returns to this page
@@ -241,7 +242,7 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
         <div style={{ borderTop: "1px solid var(--line)", padding: 14, background: "var(--paper-2, transparent)" }} className="stack-sm">
           {(() => {
             // say up front when the next paid step needs more credits than are left
-            const need = { read: current.aiReady ? 99 : 10, fill_ai: 49, tech_eval: 29 }[current.kind];
+            const need = { fill_ai: 49, tech_eval: 29 }[current.kind]; // reading: the free reader always works; AI asks for 99 on its button
             return need && balance < need ? (
               <div className="notice warn small" style={{ margin: 0 }}>This step needs {need} credits and you have {Number(balance).toLocaleString("en-IN")}. <Link href="/app/wallet">Top up credits</Link> first.</div>
             ) : null;
@@ -290,8 +291,8 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
           )}
           {current.kind === "read" && (
             <div className="row" style={{ gap: 8 }}>
-              <button className="ghost" disabled={busy || !canPrepare} onClick={() => run("Read it with basic reading", () => readTender({}, form({ match_id: matchId, mode: "basic" })), (r) => r.message, { label: "Reading the tender (basic reading)…", seconds: 15 })}>{busy ? "Reading…" : "Basic reading · 10 credits"}</button>
-              <button disabled={busy || !canPrepare} onClick={() => run("Read it with AI", () => readTender({}, form({ match_id: matchId, mode: "ai" })), (r) => r.message, { label: "AI is reading the tender…", seconds: 60 })}>{busy ? "Reading…" : "Read with AI · 99 credits"}</button>
+              {current.id === "read-ai" ? <button className="ghost" disabled={busy} onClick={skip}>Carry on without AI</button> : <button className="ghost" disabled={busy || !canPrepare} onClick={() => run("Read it with the free reader", () => readTender({}, form({ match_id: matchId, mode: "basic" })), (r) => r.message, { label: "Reading the tender (free reading)…", seconds: 15 })}>{busy ? "Reading…" : "Free reading"}</button>}
+              <button disabled={busy || !canPrepare || balance < 99} title={balance < 99 ? "Needs 99 credits — top up in Credits & plan" : ""} onClick={() => run("Read it with AI", () => readTender({}, form({ match_id: matchId, mode: "ai" })), (r) => r.message, { label: "AI is reading the tender…", seconds: 60 })}>{busy ? "Reading…" : "Read with AI · 99 credits"}</button>
             </div>
           )}
           {current.kind === "fill_ai" && (

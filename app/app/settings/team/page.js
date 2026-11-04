@@ -3,14 +3,16 @@ import { getContext } from "@/lib/session";
 import { ROLES } from "@/lib/roles";
 import MemberTable from "@/components/MemberTable";
 import AddMemberForm from "@/components/AddMemberForm";
+import ResetLinks from "@/components/ResetLinks";
 
 export default async function Team() {
   const { supabase, tenant, isAdmin, user } = await getContext();
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") || "https"}://${h.get("x-forwarded-host") || h.get("host")}`;
-  const [{ data: members }, { data: invites }] = await Promise.all([
+  const [{ data: members }, { data: invites }, { data: resets }] = await Promise.all([
     supabase.from("tenant_members").select("user_id, role, created_at, profiles(full_name, email)").eq("tenant_id", tenant.id).order("created_at"),
     isAdmin ? supabase.from("invites").select("*").eq("tenant_id", tenant.id).is("accepted_at", null).is("revoked_at", null) : Promise.resolve({ data: [] }),
+    isAdmin ? supabase.rpc("password_reset_links", { p_tenant: tenant.id }) : Promise.resolve({ data: [] }),
   ]);
   return (
     <div className="stack">
@@ -21,6 +23,7 @@ export default async function Team() {
           <AddMemberForm />
         </div>
       )}
+      {isAdmin && <ResetLinks rows={resets} origin={origin} />}
       <div className="panel flush"><MemberTable members={members || []} invites={invites || []} canManage={isAdmin} tenantId={tenant.id} selfId={user.id} origin={origin} /></div>
       <div className="panel">
         <h3>Roles</h3>

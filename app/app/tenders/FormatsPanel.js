@@ -10,7 +10,7 @@ const KIND = {
 export default function FormatsPanel({ matchId, plan, gaps, canEdit, paidAi, hasFormats }) {
   const [state, action, pending] = useActionState(prepareFormats, {});
   const [gState, gAction, gPending] = useActionState(answerGaps, {});
-  const custom = plan.filter((p) => p.kind === "custom");
+  const custom = plan.filter((p) => p.kind === "custom" && !p.tpl && !p.filled_text && !p.edited_text); // only formats still empty go to AI
   return (
     <div className="stack-sm">
       {!plan.length && <p className="small muted" style={{ margin: 0 }}>{hasFormats ? "Match the tender's formats to the template library to see how each will be filled." : "Read the tender first to find its formats."}</p>}

@@ -49,8 +49,14 @@ export async function collectDocs({ jobId }) {
     if (error || !chunks?.length) continue;
     const bytes = Buffer.concat(chunks.map((c) => fromBytea(c.data)));
     const path = `${job.tender_id}/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
-    const { error: up } = await supabase.storage.from("tender-docs").upload(path, bytes, { contentType: TYPES[ext] });
-    if (up) return { error: `Could not store ${f.name}: ${up.message}` };
+    // a dropped upload is tried twice more before giving up; files stored already are skipped on the next try
+    let up = null;
+    for (let i = 0; i < 3; i++) {
+      ({ error: up } = await supabase.storage.from("tender-docs").upload(path, bytes, { contentType: TYPES[ext], upsert: true }));
+      if (!up) break;
+      await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+    }
+    if (up) return { error: `Could not store ${f.name}: ${up.message}. The other files are kept — press “Try storing again”.` };
     await supabase.from("tender_files").insert({ tender_id: job.tender_id, storage_path: path, file_name: f.name.slice(0, 200), size_bytes: bytes.length, uploaded_by: user.id });
     added++;
   }

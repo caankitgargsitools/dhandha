@@ -41,9 +41,12 @@ export async function readTender(prev, formData) {
     return { message: "This tender was read a few minutes ago — using that reading. No credits used." };
   }
 
-  const price = mode === "ai" ? 99 : 10;
-  const { data: w } = await supabase.from("wallets").select("balance").eq("tenant_id", tenant.id).maybeSingle();
-  if (Number(w?.balance || 0) < price) return { error: `Not enough credits — this needs ${price}.` };
+  // the free reader costs nothing (owner rule 1: free first); only the AI reading is charged
+  const price = mode === "ai" ? 99 : 0;
+  if (price) {
+    const { data: w } = await supabase.from("wallets").select("balance").eq("tenant_id", tenant.id).maybeSingle();
+    if (Number(w?.balance || 0) < price) return { error: `Not enough credits — the AI reading needs ${price}. The free reading costs nothing: use “Free reading” instead.` };
+  }
   // one reading at a time: a second click or a retried request waits for the first instead of paying twice
   const lock = { p_company: company.id, p_action: "tender_read", p_ref: m.tender_id };
   const { data: got } = await supabase.rpc("action_lock", { ...lock, p_seconds: 300 });
@@ -143,11 +146,14 @@ async function readTenderLocked({ supabase, tenant, user, m, matchId, mode, file
     }
   }
 
-  if (!aiFailed) {
-    const { error: se } = await supabase.rpc("spend_credits", { p_tenant: tenant.id, p_action: mode === "ai" ? "tender_deep_read" : "tender_read_basic", p_qty: 1, p_ref: m.tenders.tender_ref });
-    if (se) return { error: se.message };
+  // the reading is saved first: if charging then fails, the AI's work (already paid for) is not thrown away
+  const { error: ie } = await supabase.from("tender_reads").insert({ tender_id: m.tender_id, engine, confidence, fields: { ...fields, _evidence: rules.evidence, _note: note }, required_docs: docs, formats, risks, summary, created_by: user.id });
+  if (ie) return { error: `The reading could not be saved: ${ie.message}. No credits were used.` };
+  let chargeNote = null;
+  if (!aiFailed && price) {
+    const { error: se } = await supabase.rpc("spend_credits", { p_tenant: tenant.id, p_action: "tender_deep_read", p_qty: 1, p_ref: m.tenders.tender_ref });
+    if (se) chargeNote = `(credits could not be charged: ${se.message})`;
   }
-  await supabase.from("tender_reads").insert({ tender_id: m.tender_id, engine, confidence, fields: { ...fields, _evidence: rules.evidence, _note: note }, required_docs: docs, formats, risks, summary, created_by: user.id });
   const apply = Object.fromEntries(Object.entries(fields).filter(([k]) => ["value_inr", "emd_inr", "req_avg_turnover", "req_similar_one", "req_similar_two", "req_similar_three", "req_similar_years", "mse_emd_exempt", "prebid_on", "due_at"].includes(k)));
   await supabase.rpc("apply_tender_read", { p_tender: m.tender_id, p_fields: apply, p_docs: docs });
   // yes/no conditions (branch in a state, GST there, ISO, contractor class, years in business) become questions
@@ -159,5 +165,5 @@ async function readTenderLocked({ supabase, tenant, user, m, matchId, mode, file
   revalidatePath(`/app/tenders/${matchId}`);
   revalidatePath("/app/tenders");
   const asks = after?.pending || 0;
-  return { message: `Read by ${engine === "rules" ? "the free reader" : engine}: ${Object.keys(apply).length} criteria, ${conditions.length} conditions, ${docs.length} documents, ${formats.length} formats, ${risks.length} risk clauses. Score updated. ${aiFailed ? aiFailed : `${price} credits used.`}${asks ? ` ${asks} question${asks === 1 ? "" : "s"} for you in the assistant.` : ""}`, asks };
+  return { message: `Read by ${engine === "rules" ? "the free reader" : engine}: ${Object.keys(apply).length} criteria, ${conditions.length} conditions, ${docs.length} documents, ${formats.length} formats, ${risks.length} risk clauses. Score updated. ${aiFailed ? aiFailed : chargeNote || (price ? `${price} credits used.` : "Free.")}${asks ? ` ${asks} question${asks === 1 ? "" : "s"} for you in the assistant.` : ""}`, asks };
 }

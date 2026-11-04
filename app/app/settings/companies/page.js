@@ -1,9 +1,11 @@
 import { getContext } from "@/lib/session";
 import FormState from "../../FormState";
 import { addCompany } from "../../actions";
+import { setBillingCompany } from "../../wallet/actions";
 
 export default async function Companies() {
-  const { companies, isAdmin, company } = await getContext();
+  const { companies, isAdmin, company, tenant } = await getContext();
+  const billing = companies.find((c) => c.id === tenant.billing_company_id) || companies[0];
   return (
     <div className="stack">
       <div>
@@ -13,9 +15,19 @@ export default async function Companies() {
       <div className="panel">
         <div className="table-wrap"><table>
           <thead><tr><th>Company</th><th></th></tr></thead>
-          <tbody>{companies.map((c) => <tr key={c.id}><td>{c.legal_name}</td><td>{c.id === company.id && <span className="chip info">Selected</span>}</td></tr>)}</tbody>
+          <tbody>{companies.map((c) => <tr key={c.id}><td>{c.legal_name}</td><td className="row" style={{ gap: 6 }}>{c.id === company.id && <span className="chip info">Selected</span>}{c.id === billing?.id && <span className="chip mute">Billed by Dhandha</span>}</td></tr>)}</tbody>
         </table></div>
       </div>
+      {isAdmin && companies.length > 1 && (
+        <div className="panel">
+          <h3>Dhandha's invoices go to</h3>
+          <p className="muted small" style={{ marginTop: 0 }}>Credits and plans are invoiced to this company (its name, GSTIN and address), whichever company is selected in the top bar.</p>
+          <FormState action={setBillingCompany} submit="Save">
+            <div><label htmlFor="billing">Billing company</label>
+              <select id="billing" name="company" defaultValue={billing?.id}>{companies.map((c) => <option key={c.id} value={c.id}>{c.legal_name}</option>)}</select></div>
+          </FormState>
+        </div>
+      )}
       {isAdmin && (
         <div className="panel">
           <h3>Add a client company</h3>

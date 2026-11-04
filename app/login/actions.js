@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { safeNext } from "@/lib/safeNext";
 
 async function origin() {
   const h = await headers();
@@ -26,7 +27,11 @@ export async function signIn(prev, formData) {
   await confirmByInvite(supabase, inviteOf(formData), email);
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: error.message === "Email not confirmed" ? "Please confirm your email first — check your inbox (and spam)." : error.message };
-  redirect("/app");
+  // back to where the person was going; through the 2FA check first when their login has an authenticator
+  const next = safeNext(formData.get("next"));
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") redirect(`/mfa?next=${encodeURIComponent(next)}`);
+  redirect(next);
 }
 
 export async function signUp(prev, formData) {

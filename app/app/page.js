@@ -11,7 +11,7 @@ export default async function Dashboard() {
   const { supabase, tenant, company, user } = await getContext();
   const [{ data: c }, { data: docs }, { data: wallet }, { data: brand }, { data: ledger }, { data: matches }, { data: deals }] = await Promise.all([
     supabase.from("companies").select("*").eq("id", company.id).single(),
-    supabase.from("documents").select("id, type_code, title, valid_until, document_types(name)").eq("company_id", company.id),
+    supabase.from("documents").select("id, type_code, title, valid_until, document_types(name)").eq("company_id", company.id).eq("status", "active"),
     supabase.from("wallets").select("balance").eq("tenant_id", tenant.id).maybeSingle(),
     supabase.from("brand_assets").select("kind").eq("company_id", company.id),
     // the latest 60 entries (newest first, turned round below) — not the oldest ones
