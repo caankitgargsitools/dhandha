@@ -17,6 +17,8 @@ import { filingKit, emdOnFiling } from "@/lib/filing";
 import FilingPanel from "../FilingPanel";
 import AwardPanel from "../AwardPanel";
 import TenderComments from "../TenderComments";
+import CloneBid from "../CloneBid";
+import { likeness } from "@/lib/cloneBid";
 import { performanceSecurity, completionLetter } from "@/lib/afterAward";
 import { ScoreRing } from "@/components/Charts";
 import Icon from "@/components/Icon";
@@ -60,7 +62,7 @@ export default async function TenderDetail({ params, searchParams }) {
     supabase.from("tender_changes").select("*").eq("tender_id", t.id).order("seen_at", { ascending: false }),
     supabase.from("wallets").select("balance").eq("tenant_id", m.tenant_id).maybeSingle(),
   ]);
-  const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }, { data: deposits }, { data: board }, { data: team }, { data: outcomes }, { data: oemFacts }, { count: worksDone }, { data: myWorks }, { data: comments }] = await Promise.all([
+  const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }, { data: deposits }, { data: board }, { data: team }, { data: outcomes }, { data: oemFacts }, { count: worksDone }, { data: myWorks }, { data: comments }, { data: pastBids }] = await Promise.all([
     supabase.from("tender_files").select("*").eq("tender_id", t.id).order("created_at"),
     supabase.from("tender_reads").select("*").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
     supabase.rpc("similar_awards", { p_tender: t.id, p_limit: 8 }),
@@ -73,6 +75,7 @@ export default async function TenderDetail({ params, searchParams }) {
     supabase.from("experience_items").select("id", { count: "exact", head: true }).eq("company_id", company.id).eq("status", "completed"),
     supabase.from("experience_items").select("work_name, client, category, scope, value_inr, end_date, status, people_deployed").eq("company_id", company.id),
     supabase.from("tender_comments").select("id, author, body, mentions, created_at").eq("match_id", m.id).is("archived_at", null).order("created_at").limit(200),
+    supabase.from("tender_matches").select("id, status, filled_formats, tenders(title, authority, industry_pack)").eq("company_id", company.id).in("status", ["preparing", "submitted", "won", "lost"]).neq("id", m.id).order("created_at", { ascending: false }).limit(60),
   ]);
   const record = bidChance((outcomes || []).filter((o) => o.match_id !== m.id), t);
   const members = (team || []).map((x) => ({ user_id: x.user_id, name: x.profiles?.full_name || x.profiles?.email || "Member" }));
@@ -285,6 +288,11 @@ export default async function TenderDetail({ params, searchParams }) {
         <div className="stack">
           <div className="panel stack-sm">
             <div className="panel-head" style={{ marginBottom: 0 }}><h3>The tender's formats</h3><span className="small faint">{(m.filled_formats || []).length || ""}</span></div>
+            {canMake && !(m.filled_formats || []).some((x) => x.edited_text || x.filled_text) && ["new", "shortlisted", "preparing"].includes(m.status) && (
+              <CloneBid matchId={m.id} options={(pastBids || []).filter((b) => (b.filled_formats || []).some((x) => x.edited_text || x.filled_text))
+                .map((b) => ({ id: b.id, score: likeness(t, b.tenders || {}), label: `${String(b.tenders?.title || "").slice(0, 70)} (${b.status})` }))
+                .sort((a, b) => b.score - a.score).slice(0, 12)} />
+            )}
             <FormatsPanel matchId={m.id} plan={m.filled_formats || []} gaps={m.gaps || []} canEdit={canMake} paidAi={aiTiers().some((t) => !t.free)} hasFormats={!!read?.formats?.length} />
           </div>
           <div className="panel stack-sm">
