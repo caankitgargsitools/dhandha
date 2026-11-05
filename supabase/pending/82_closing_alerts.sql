@@ -39,3 +39,27 @@ alter table public.tender_matches add column if not exists submitted_at timestam
 -- §3.4 after the award: LoA / work order, contract value, work dates, completion → Experience
 alter table public.tender_matches add column if not exists loa_no text, add column if not exists loa_date date, add column if not exists contract_value numeric,
   add column if not exists work_start date, add column if not exists work_end date, add column if not exists completed_on date, add column if not exists experience_id uuid;
+
+-- §3.7 why a tender was skipped (5 Nov)
+alter table public.tender_matches add column if not exists skip_reason text;
+
+-- §3.9 team notes per tender with phone alerts to the people ticked
+create table if not exists public.tender_comments (
+  id uuid primary key default gen_random_uuid(),
+  tenant_id uuid not null references public.tenants(id),
+  company_id uuid not null references public.companies(id),
+  match_id uuid not null references public.tender_matches(id),
+  body text not null check (length(body) between 1 and 2000),
+  mentions uuid[] not null default '{}',
+  author uuid not null default auth.uid(),
+  created_at timestamptz not null default now(),
+  archived_at timestamptz
+);
+create index if not exists tender_comments_match on public.tender_comments (match_id, created_at);
+alter table public.tender_comments enable row level security;
+create policy tc_read on public.tender_comments for select using (public.is_tenant_member(tenant_id));
+create policy tc_insert on public.tender_comments for insert with check (public.is_tenant_member(tenant_id) and author = auth.uid()
+  and coalesce(public.tenant_role(tenant_id), '') not in ('viewer', 'disabled')
+  and exists (select 1 from public.tender_matches m where m.id = match_id and m.company_id = tender_comments.company_id and m.tenant_id = tender_comments.tenant_id));
+create policy tc_archive on public.tender_comments for update using (author = auth.uid()) with check (author = auth.uid());
+-- private.tender_comment_push() + trigger t_tender_comment_push: "X mentioned you" to each ticked member (not the author)

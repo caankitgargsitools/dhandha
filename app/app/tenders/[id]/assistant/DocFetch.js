@@ -28,7 +28,7 @@ export default function DocFetch({ matchId, tenderId, step, say, canAnswer }) {
 
   // start a fetch as soon as the assistant opens (once)
   useEffect(() => {
-    if (started.current || job || !canAnswer) return;
+    if (started.current || job || !canAnswer || step.noFetch) return;
     started.current = true;
     fetchDocs({ matchId }).then((r) => {
       if (r.error) { setNote(r.error); return; }
@@ -101,6 +101,13 @@ export default function DocFetch({ matchId, tenderId, step, say, canAnswer }) {
   const active = job && ["queued", "running", "captcha"].includes(job.status);
   const working = (job && ["queued", "running"].includes(job.status)) || (job?.status === "captcha" && !step.typer) || phase;
   const ended = job && ["failed", "collected", "cancelled"].includes(job.status);
+  if (step.noFetch) return (
+    <div className="stack-sm">
+      <div>{say}</div>
+      {step.url && <div><a className="btn sm ghost" href={step.url} target="_blank" rel="noreferrer">Open the tender on {step.portal}</a></div>}
+      {canAnswer && <UploadTenderFiles tenderId={tenderId} />}
+    </div>
+  );
   return (
     <div className="stack-sm">
       <div>{say}</div>
