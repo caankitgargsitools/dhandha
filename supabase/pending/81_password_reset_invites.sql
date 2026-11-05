@@ -146,3 +146,6 @@ alter table public.experience_items add column if not exists work_order_no text,
 -- net worth is stored per financial year everywhere (Vault → Masters used period ''); old rows moved to FY 2025-26
 update public.company_facts f set period = 'FY 2025-26' where key = 'fin.net_worth' and period = ''
   and not exists (select 1 from public.company_facts g where g.company_id = f.company_id and g.key = 'fin.net_worth' and g.period = 'FY 2025-26');
+
+-- 5 Nov: the pre-fetch never queues World Bank / abroad tenders (their documents cannot be fetched; 4 jobs failed on 4 Nov)
+-- private.queue_prefetch portal list += 'World Bank', or t.state ilike 'Abroad:%' (edited in place with pg_get_functiondef + replace)
