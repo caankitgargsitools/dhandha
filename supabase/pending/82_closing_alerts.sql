@@ -30,3 +30,12 @@ select cron.schedule('closing_alerts', '*/30 * * * *', 'select private.closing_a
 -- §3.2 File it (5 Nov): upload ticks, bid id / receipt and filing time on the match
 alter table public.tender_matches add column if not exists submitted_at timestamptz, add column if not exists submission_ref text,
   add column if not exists upload_ticks jsonb not null default '{}'::jsonb;
+
+-- §3.3 results fill themselves (5 Nov): ingest_awards (edited in place) — an own win also sets result_stage 'awarded',
+-- result_at and L1 = the awarded value; a *submitted* bid whose award went to another firm becomes lost
+-- (result_reason "Awarded to X (from the portal's result)", L1 price), the EMD refund falls due (t_deposit_on_result)
+-- and admins / managers / bid preparers get "Result: not won"; in a split order an own award row later turns such an
+-- automatic "lost" back into won.
+-- §3.4 after the award: LoA / work order, contract value, work dates, completion → Experience
+alter table public.tender_matches add column if not exists loa_no text, add column if not exists loa_date date, add column if not exists contract_value numeric,
+  add column if not exists work_start date, add column if not exists work_end date, add column if not exists completed_on date, add column if not exists experience_id uuid;

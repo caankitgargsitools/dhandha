@@ -15,6 +15,8 @@ import { getContext, daysLeft, lakh, fmtDate } from "@/lib/session";
 import { requiredDocs } from "@/lib/bidpack";
 import { filingKit, emdOnFiling } from "@/lib/filing";
 import FilingPanel from "../FilingPanel";
+import AwardPanel from "../AwardPanel";
+import { performanceSecurity, completionLetter } from "@/lib/afterAward";
 import { ScoreRing } from "@/components/Charts";
 import Icon from "@/components/Icon";
 import BidPackForm from "../BidPackForm";
@@ -306,6 +308,14 @@ export default async function TenderDetail({ params, searchParams }) {
               <summary><strong>Result after opening</strong>{m.result_stage ? <span className="small muted"> — {OSTAGES[m.result_stage]}{m.our_rank ? `, L${m.our_rank}` : ""}</span> : null}</summary>
               <div style={{ marginTop: 8 }}><ResultForm m={m} /></div>
             </details>
+          )}
+          {m.status === "won" && (
+            <div className="panel stack-sm" id="after-award">
+              <div className="panel-head" style={{ marginBottom: 0 }}><h3>After the award</h3><span className="chip ok">Won</span></div>
+              <AwardPanel m={m} canEdit={canMake}
+                ps={performanceSecurity({ pct: read?.fields?.performance_security_pct, epbgPct: read?.fields?.gem?.epbg_pct, months: read?.fields?.gem?.epbg_months, value: m.contract_value || m.quoted_price || t.value_inr, loaDate: m.loa_date })}
+                letter={completionLetter({ company: c, tender: t, match: m })} />
+            </div>
           )}
           {filing && (
             <div className="panel stack-sm" id="file-it">
