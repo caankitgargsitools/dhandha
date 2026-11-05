@@ -16,7 +16,7 @@ export default async function Dashboard() {
     supabase.from("brand_assets").select("kind").eq("company_id", company.id),
     // the latest 60 entries (newest first, turned round below) — not the oldest ones
     supabase.from("credit_ledger").select("delta, balance_after, created_at, reason").eq("tenant_id", tenant.id).order("created_at", { ascending: false }).limit(60),
-    supabase.from("tender_matches").select("score, status, eligible, unfit, ai_fit, tenders(title, authority, value_inr, due_at)").eq("company_id", company.id).order("score", { ascending: false }),
+    supabase.from("tender_matches").select("id, score, status, eligible, unfit, ai_fit, tenders(title, authority, value_inr, due_at)").eq("company_id", company.id).order("score", { ascending: false }),
     supabase.from("deals").select("id, stage, value_inr, title, next_action, next_action_at").eq("company_id", company.id),
   ]);
   const fieldsDone = CORE_FIELDS.filter((f) => c?.[f]).length;
@@ -55,30 +55,37 @@ export default async function Dashboard() {
           <div className="kpi num">{openTenders.length}</div>
           <div className="faint small">worth {lakh(openTenders.reduce((s, m) => s + Number(m.tenders.value_inr || 0), 0))} in total</div>
         </div>
-        <div className="panel ledger">
-          <div className="kpi-label">Credits left</div>
-          <div className="kpi num">{inr(wallet?.balance)}</div>
-          <Sparkline points={(ledger || []).slice().reverse().map((l) => Number(l.balance_after))} height={38} label="Credit balance over time" />
-        </div>
+        {(() => {
+          // bids in hand closing within 7 days (the credit balance is already in the top bar)
+          const inHand = (matches || []).filter((m) => ["shortlisted", "preparing"].includes(m.status) && m.tenders?.due_at && new Date(m.tenders.due_at) > new Date() && daysLeft(m.tenders.due_at) <= 7);
+          const soon = inHand.filter((m) => new Date(m.tenders.due_at) - new Date() < 48 * 3600000).length;
+          return (
+            <Link href="/app/tenders/closing" className="panel ledger" style={{ color: "inherit" }}>
+              <div className="kpi-label">Bids closing in 7 days</div>
+              <div className="kpi num" style={soon ? { color: "var(--blood)" } : undefined}>{inHand.length}</div>
+              <div className="faint small">{soon ? `${soon} within 48 hours — open the countdown` : "Countdown and readiness →"}</div>
+            </Link>
+          );
+        })()}
       </div>
 
       <div className="grid-2">
         <div className="panel flush">
           <div className="panel-head" style={{ padding: "18px 22px 0" }}><h3>Best tender matches</h3><Link href="/app/tenders" className="small">All tenders</Link></div>
           {openTenders.slice(0, 4).map((m, i) => (
-            <div key={i} className="row" style={{ padding: "12px 22px", borderTop: "1px solid var(--line-soft)", flexWrap: "nowrap" }}>
+            <Link key={i} href={`/app/tenders/${m.id}`} className="row" style={{ padding: "12px 22px", borderTop: "1px solid var(--line-soft)", flexWrap: "nowrap", color: "inherit" }}>
               <ScoreRing score={m.score} size={44} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.tenders.title}</div>
                 <div className="small muted">{m.tenders.authority} · {lakh(m.tenders.value_inr)}</div>
               </div>
               <span className={`chip ${daysLeft(m.tenders.due_at) <= 7 ? "bad" : "warn"}`}>{daysLeft(m.tenders.due_at)} days</span>
-            </div>
+            </Link>
           ))}
-          {!openTenders.length && <p className="muted small" style={{ padding: "0 22px 18px" }}>No open matches yet.</p>}
+          {!openTenders.length && <p className="muted small" style={{ padding: "0 22px 18px" }}>No open matches yet — tell Dhandha what you do in <Link href="/app/tenders/preferences">What we do</Link>, and matching tenders appear here.</p>}
         </div>
         <div className="panel" style={{ display: "grid", justifyItems: "center", alignContent: "start" }}>
-          <div className="panel-head" style={{ width: "100%" }}><h3>Vault readiness</h3><Link href="/app/vault/profile" className="small">Complete</Link></div>
+          <div className="panel-head" style={{ width: "100%" }}><h3>Vault readiness</h3><Link href="/app/vault/masters" className="small">Complete</Link></div>
           <Gauge value={pct} label="ready for bids" />
           <div style={{ width: "100%", display: "grid", gap: 8, marginTop: 6 }} className="small">
             {[["Profile fields", fieldsDone, CORE_FIELDS.length], ["Core documents", docsDone, CORE_DOCS.length], ["Letterhead, signature, seal", brandDone, 3]].map(([l, a, b]) => (
