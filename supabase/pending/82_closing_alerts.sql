@@ -26,3 +26,7 @@ begin
 end $$;
 revoke all on function private.closing_alerts() from public, anon, authenticated;
 select cron.schedule('closing_alerts', '*/30 * * * *', 'select private.closing_alerts()');
+
+-- §3.2 File it (5 Nov): upload ticks, bid id / receipt and filing time on the match
+alter table public.tender_matches add column if not exists submitted_at timestamptz, add column if not exists submission_ref text,
+  add column if not exists upload_ticks jsonb not null default '{}'::jsonb;

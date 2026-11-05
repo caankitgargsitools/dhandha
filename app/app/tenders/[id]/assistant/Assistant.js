@@ -229,7 +229,7 @@ export default function Assistant({ matchId, tenderId, portal, files = [], histo
             {current.quote && <div className="tiny faint" style={{ marginTop: 6 }}>Tender says{current.page ? ` (p. ${current.page})` : ""}: “{current.quote}”</div>}
           </Bubble>
         ) : (
-          <Bubble>{waiting.length ? `That's all for now. You skipped ${waiting.length} question${waiting.length === 1 ? "" : "s"}; open this page again to answer ${waiting.length === 1 ? "it" : "them"}.` : "All done for this tender. Download the pack from the tender page, check it, and sign it when ready."}</Bubble>
+          <Bubble>{waiting.length ? `That's all for now. You skipped ${waiting.length} question${waiting.length === 1 ? "" : "s"}; open this page again to answer ${waiting.length === 1 ? "it" : "them"}.` : <>All done for this tender. Make and sign the bid file on the tender page, then work through <Link href={`/app/tenders/${matchId}#file-it`}>File it</Link> — the upload checklist, the DSC check and “We have filed it” with the portal&apos;s bid id.</>}</Bubble>
         )}
         </div>
         {(working || asking) && (
