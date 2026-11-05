@@ -13,6 +13,8 @@ import { mandatoryUnmet } from "@/lib/conditions";
 import { notFound } from "next/navigation";
 import { getContext, daysLeft, lakh, fmtDate } from "@/lib/session";
 import { requiredDocs } from "@/lib/bidpack";
+import { filingKit, emdOnFiling } from "@/lib/filing";
+import FilingPanel from "../FilingPanel";
 import { ScoreRing } from "@/components/Charts";
 import Icon from "@/components/Icon";
 import BidPackForm from "../BidPackForm";
@@ -47,7 +49,7 @@ export default async function TenderDetail({ params, searchParams }) {
   const t = m.tenders;
   const [{ data: c }, { data: docs }, { data: types }, { data: facts }, { data: brand }, { data: packs }, { data: changes }, { data: wallet }] = await Promise.all([
     supabase.from("companies").select("*").eq("id", company.id).single(),
-    supabase.from("documents").select("type_code, number, period, valid_until, title, drive_url").eq("company_id", company.id).eq("status", "active"),
+    supabase.from("documents").select("id, type_code, number, period, valid_until, title, drive_url, storage_path").eq("company_id", company.id).eq("status", "active"),
     supabase.from("document_types").select("code, name"),
     supabase.from("company_facts").select("key, period, value").eq("company_id", company.id).in("key", ["fin.turnover", "fin.net_worth", "fin.profit_after_tax"]),
     supabase.from("brand_assets").select("kind").eq("company_id", company.id),
@@ -91,6 +93,19 @@ export default async function TenderDetail({ params, searchParams }) {
   ];
   const kinds = new Set((brand || []).map((b) => b.kind));
   const signed = await Promise.all((packs || []).map(async (p) => ({ ...p, url: (await supabase.storage.from("bids").createSignedUrl(p.storage_path, 3600)).data?.signedUrl })));
+  // "File it" (brief §3.2): the upload kit — the signed bid file and each Vault document the tender asks for
+  const filing = ["shortlisted", "preparing", "submitted"].includes(m.status)
+    ? filingKit({ required: requiredDocs(t.industry_pack, msme, t.req_docs), docs: docs || [], docTypes: types || [], dueAt: t.due_at, packs: packs || [], ticks: m.upload_ticks || {} })
+    : null;
+  const filingUrls = {};
+  if (filing) {
+    const fin = signed.find((p) => p.kind === "final") || signed[0];
+    if (fin?.url) filingUrls.pack = fin.url;
+    await Promise.all(filing.slots.filter((x) => x.doc).map(async (x) => {
+      if (x.doc.storage_path) filingUrls[x.key] = (await supabase.storage.from("vault-docs").createSignedUrl(x.doc.storage_path, 3600)).data?.signedUrl;
+      else if (x.doc.drive_url) filingUrls[x.key] = x.doc.drive_url;
+    }));
+  }
   const left = daysLeft(t.due_at);
   const ready = checklist.filter((x) => x.state === "ok").length;
   const canMake = ["admin", "manager", "bid_preparer"].includes(role);
@@ -291,6 +306,14 @@ export default async function TenderDetail({ params, searchParams }) {
               <summary><strong>Result after opening</strong>{m.result_stage ? <span className="small muted"> — {OSTAGES[m.result_stage]}{m.our_rank ? `, L${m.our_rank}` : ""}</span> : null}</summary>
               <div style={{ marginTop: 8 }}><ResultForm m={m} /></div>
             </details>
+          )}
+          {filing && (
+            <div className="panel stack-sm" id="file-it">
+              <div className="panel-head" style={{ marginBottom: 0 }}><h3>File it</h3><span className="small faint">{filing.ticked} / {filing.slots.length} uploaded</span></div>
+              <FilingPanel matchId={m.id} kit={filing} urls={filingUrls} canFile={canMake}
+                filed={m.status === "submitted" && m.submission_ref ? { ref: m.submission_ref, at: m.submitted_at } : null}
+                emd={emdOnFiling({ emd: t.emd_inr, msme: !!msme, mseExempt: !!t.mse_emd_exempt })} />
+            </div>
           )}
           <div className="panel stack-sm">
             <div className="panel-head" style={{ marginBottom: 0 }}><h3>EMD &amp; deposits</h3><Link className="small" href="/app/tenders/deposits">All deposits</Link></div>
