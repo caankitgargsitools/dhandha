@@ -19,6 +19,7 @@ import AwardPanel from "../AwardPanel";
 import TenderComments from "../TenderComments";
 import CloneBid from "../CloneBid";
 import { likeness } from "@/lib/cloneBid";
+import { readDiff } from "@/lib/readDiff";
 import { performanceSecurity, completionLetter } from "@/lib/afterAward";
 import { ScoreRing } from "@/components/Charts";
 import Icon from "@/components/Icon";
@@ -64,7 +65,7 @@ export default async function TenderDetail({ params, searchParams }) {
   ]);
   const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }, { data: deposits }, { data: board }, { data: team }, { data: outcomes }, { data: oemFacts }, { count: worksDone }, { data: myWorks }, { data: comments }, { data: pastBids }] = await Promise.all([
     supabase.from("tender_files").select("*").eq("tender_id", t.id).order("created_at"),
-    supabase.from("tender_reads").select("*").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
+    supabase.from("tender_reads").select("*").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(2),
     supabase.rpc("similar_awards", { p_tender: t.id, p_limit: 8 }),
     supabase.from("rivals").select("name_norm").eq("company_id", company.id).is("archived_at", null),
     supabase.from("bid_deposits").select("id, kind, amount, mode, reference, status, valid_until, refund_expected_on").eq("match_id", m.id).order("created_at"),
@@ -280,7 +281,24 @@ export default async function TenderDetail({ params, searchParams }) {
             <div className="panel">
               <h3>Changes since published (corrigenda)</h3>
               {changes.filter(realChange).map((ch) => <div key={ch.id} className="small row between" style={{ padding: "4px 0" }}><span>{changeText(ch)}</span><span className="faint">{ago(ch.seen_at)}</span></div>)}
-              <p className="tiny faint" style={{ margin: "6px 0 0" }}>Shortlist a tender (or start preparing it) and Dhandha alerts your phone when it changes.</p>
+              <p className="tiny faint" style={{ margin: "6px 0 0" }}>Shortlist a tender (or start preparing it) and Dhandha alerts your phone when it changes, fetches the corrigendum and reads it again.</p>
+              {(() => {
+                // brief §3.5: the documents read again after a change — what moved in them, and what to look at again
+                const older = reads?.[1], newer = reads?.[0];
+                if (!older || !newer || new Date(newer.created_at) < new Date(changes[0]?.seen_at || 0)) return null;
+                const d = readDiff(older, newer);
+                if (!d.any) return null;
+                return (
+                  <div className="stack-sm" style={{ marginTop: 10, borderTop: "1px solid var(--line-soft)", paddingTop: 10 }}>
+                    <strong className="small">What changed in the documents (read again {fmtDate(newer.created_at)})</strong>
+                    {d.changes.map((x) => <div key={x.key} className="small">{x.label}: <span className="faint">{x.from}</span> → <strong>{x.to}</strong></div>)}
+                    {d.formatsAdded.length > 0 && <div className="small">New formats: {d.formatsAdded.join(", ")}</div>}
+                    {d.formatsGone.length > 0 && <div className="small">Formats no longer listed: {d.formatsGone.join(", ")}</div>}
+                    {d.docsAdded.length > 0 && <div className="small">Documents now asked: {d.docsAdded.join(", ")}</div>}
+                    {d.recheck.length > 0 && <div className="notice small" style={{ margin: 0 }}>Look again at: {d.recheck.join(", ")}.</div>}
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>
