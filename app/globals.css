@@ -308,3 +308,5 @@ button[aria-busy="true"]::before { content: ""; position: absolute; left: 12px; 
 .comment-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
 .comment-list li { border-left: 3px solid var(--line); padding-left: 10px; }
 button.linkish { background: none; border: 0; padding: 0; color: var(--primary); cursor: pointer; text-decoration: underline; min-height: 0; }
+.compare-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 6px 14px; max-height: 320px; overflow-y: auto; }
+.compare-table th { text-align: left; min-width: 180px; }
