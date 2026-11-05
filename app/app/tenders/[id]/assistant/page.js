@@ -19,6 +19,7 @@ import { summarise, adviceLine, priceToWin } from "@/lib/pastResults";
 import TenderBrief from "../../TenderBrief";
 import { evalFromPoints } from "@/lib/evaluation";
 import { pointsRows } from "@/lib/firmPoints";
+import { canFetchDocs } from "@/lib/fetchable";
 
 // AI steps (reading, filling, marking) can take a few minutes; lib/ai.js keeps the whole chain inside this
 export const maxDuration = 300;
@@ -84,7 +85,11 @@ export default async function TenderAssistant({ params }) {
   else {
     // the last fetch finished without a PDF: ask for an upload instead of queuing another fetch on every visit
     const noPdf = job?.status === "collected";
-    steps.push({ id: "fetch", kind: "fetch", job: job && ["queued", "running", "captcha", "fetched", "failed", "collected"].includes(job.status) ? job : null, portal: t.portal, aiReady: aiTiers().length > 0, typer: isPlatformAdmin, canRead: canPrepare,
+    // a portal the fetcher cannot open yet: say so up front and ask for an upload (no fetch that is bound to fail)
+    const noFetch = !canFetchDocs(t.portal);
+    if (noFetch) steps.push({ id: "fetch", kind: "fetch", noFetch: true, job: null, portal: t.portal, url: t.url || null, canRead: canPrepare,
+      say: `Dhandha cannot fetch documents from ${t.portal} yet. Download the tender's PDF (NIT and annexures) from the portal and upload it below — I'll read it straight away.` });
+    else steps.push({ id: "fetch", kind: "fetch", job: job && ["queued", "running", "captcha", "fetched", "failed", "collected"].includes(job.status) ? job : null, portal: t.portal, aiReady: aiTiers().length > 0, typer: isPlatformAdmin, canRead: canPrepare,
       say: noPdf ? `I fetched ${files?.length ? files.map((x) => x.file_name).join(", ") : "the tender's files"} from ${t.portal}, but there was no PDF I can read. Please upload the tender's PDF (NIT) below, or try fetching again.`
         : files?.length ? `I have ${files.map((x) => x.file_name).join(", ")} but not the tender's PDF yet, so I'll fetch again from ${t.portal}.` : `First I'll fetch the tender documents from ${t.portal}. This usually takes a few minutes — you can leave this page; I'll notify you when they're in.` });
   }

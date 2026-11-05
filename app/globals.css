@@ -305,3 +305,6 @@ button[aria-busy="true"]::before { content: ""; position: absolute; left: 12px; 
 @media (max-width: 600px) { .closing-row { flex-wrap: wrap; } .closing-side { flex-direction: row; flex-wrap: wrap; align-items: center; width: 100%; } }
 .filing-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .filing-list input[type="checkbox"] { width: 18px; height: 18px; flex-shrink: 0; }
+.comment-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.comment-list li { border-left: 3px solid var(--line); padding-left: 10px; }
+button.linkish { background: none; border: 0; padding: 0; color: var(--primary); cursor: pointer; text-decoration: underline; min-height: 0; }

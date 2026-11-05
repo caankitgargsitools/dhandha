@@ -16,6 +16,7 @@ import { requiredDocs } from "@/lib/bidpack";
 import { filingKit, emdOnFiling } from "@/lib/filing";
 import FilingPanel from "../FilingPanel";
 import AwardPanel from "../AwardPanel";
+import TenderComments from "../TenderComments";
 import { performanceSecurity, completionLetter } from "@/lib/afterAward";
 import { ScoreRing } from "@/components/Charts";
 import Icon from "@/components/Icon";
@@ -45,7 +46,7 @@ const PROFILE_NEEDED = [["legal_name", "Legal name"], ["pan", "PAN"], ["gstin", 
 export default async function TenderDetail({ params, searchParams }) {
   const { id } = await params;
   const sp = await searchParams;
-  const { supabase, company, role, isAdmin, has2fa } = await getContext();
+  const { supabase, company, role, isAdmin, has2fa, user } = await getContext();
   const { data: m } = await supabase.from("tender_matches").select("*, tenders(*)").eq("id", id).eq("company_id", company.id).maybeSingle();
   if (!m) notFound();
   const t = m.tenders;
@@ -59,7 +60,7 @@ export default async function TenderDetail({ params, searchParams }) {
     supabase.from("tender_changes").select("*").eq("tender_id", t.id).order("seen_at", { ascending: false }),
     supabase.from("wallets").select("balance").eq("tenant_id", m.tenant_id).maybeSingle(),
   ]);
-  const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }, { data: deposits }, { data: board }, { data: team }, { data: outcomes }, { data: oemFacts }, { count: worksDone }, { data: myWorks }] = await Promise.all([
+  const [{ data: files }, { data: reads }, { data: similar }, { data: rivalRows }, { data: deposits }, { data: board }, { data: team }, { data: outcomes }, { data: oemFacts }, { count: worksDone }, { data: myWorks }, { data: comments }] = await Promise.all([
     supabase.from("tender_files").select("*").eq("tender_id", t.id).order("created_at"),
     supabase.from("tender_reads").select("*").eq("tender_id", t.id).order("created_at", { ascending: false }).limit(1),
     supabase.rpc("similar_awards", { p_tender: t.id, p_limit: 8 }),
@@ -71,6 +72,7 @@ export default async function TenderDetail({ params, searchParams }) {
     supabase.from("company_facts").select("key, period, value, valid_until").eq("company_id", company.id).or("key.like.oem.%,key.like.supply.%,key.like.cred.%,key.like.presence.office.%"),
     supabase.from("experience_items").select("id", { count: "exact", head: true }).eq("company_id", company.id).eq("status", "completed"),
     supabase.from("experience_items").select("work_name, client, category, scope, value_inr, end_date, status, people_deployed").eq("company_id", company.id),
+    supabase.from("tender_comments").select("id, author, body, mentions, created_at").eq("match_id", m.id).is("archived_at", null).order("created_at").limit(200),
   ]);
   const record = bidChance((outcomes || []).filter((o) => o.match_id !== m.id), t);
   const members = (team || []).map((x) => ({ user_id: x.user_id, name: x.profiles?.full_name || x.profiles?.email || "Member" }));
@@ -309,6 +311,10 @@ export default async function TenderDetail({ params, searchParams }) {
               <div style={{ marginTop: 8 }}><ResultForm m={m} /></div>
             </details>
           )}
+          <div className="panel stack-sm" id="comments">
+            <div className="panel-head" style={{ marginBottom: 0 }}><h3>Team notes</h3><span className="small faint">{(comments || []).length || ""}</span></div>
+            <TenderComments matchId={m.id} comments={comments || []} team={members} me={user.id} canPost={!["viewer", "disabled"].includes(role)} />
+          </div>
           {m.status === "won" && (
             <div className="panel stack-sm" id="after-award">
               <div className="panel-head" style={{ marginBottom: 0 }}><h3>After the award</h3><span className="chip ok">Won</span></div>
