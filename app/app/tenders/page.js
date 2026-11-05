@@ -4,6 +4,7 @@ import { getContext, daysLeft, lakh, fmtDate } from "@/lib/session";
 import { ScoreRing, Donut } from "@/components/Charts";
 import Icon from "@/components/Icon";
 import StageButton from "./StageButton";
+import { groupDuplicates } from "@/lib/dupes";
 import { rescore, muteTenderWord, aiCheckNow, setAiFit } from "./bidActions";
 import { muteSuggestions } from "@/lib/matchLearning";
 import QuestionCards from "./QuestionCards";
@@ -41,7 +42,8 @@ export default async function Tenders({ searchParams }) {
     : tab === "open" ? live(m) && !["skipped", "won", "lost"].includes(m.status)
     : tab === "shortlisted" ? ["shortlisted", "preparing"].includes(m.status)
     : tab === "done" ? ["won", "lost", "submitted"].includes(m.status) : true);
-  const list = applyFilters(tabbed.map((m) => ({ ...m, unmet: mandatoryUnmet(m.reasons).length > 0 })), f);
+  // the same notice on two portals shows once, with "Also on: …" (brief §3.6)
+  const list = groupDuplicates(applyFilters(tabbed.map((m) => ({ ...m, unmet: mandatoryUnmet(m.reasons).length > 0 })), f));
   const fc = facets(rows);
   const byPack = ["construction", "it_services", "ca_audit", "goods_supply"].map((p, i) => ({
     label: { construction: "Construction", it_services: "IT / services", ca_audit: "CA / audit", goods_supply: "Goods supply" }[p],
@@ -160,7 +162,7 @@ export default async function Tenders({ searchParams }) {
                     : ["queued", "running"].includes(jobOf[t.id]) ? <span className="chip info plain">Pre-check: fetching documents…</span>
                     : jobOf[t.id] === "captcha" ? <span className="chip warn plain">Pre-check: waiting for the portal's captcha</span> : null}
                   {changesOf[t.id] && <Link href={`/app/tenders/${m.id}`} className="chip warn plain" title={changesOf[t.id].map(changeText).join("; ")}>Changed: {changeText(changesOf[t.id][0])}</Link>}
-                  <span className="tiny faint">{t.portal} · {t.tender_ref}</span>
+                  <span className="tiny faint">{t.portal} · {t.tender_ref}{m.also?.length ? <> · also on {m.also.map((x, i) => <span key={x.id}>{i ? ", " : ""}<Link href={`/app/tenders/${x.id}`}>{x.portal}</Link></span>)}</> : null}</span>
                 </div>
                 <h4><Link href={`/app/tenders/${m.id}`} style={{ color: "inherit" }}>{t.title}</Link></h4>
                 <div className="small muted">{t.authority}{t.district ? `, ${t.district}` : ""} · value {t.value_inr ? lakh(t.value_inr) : "not stated"} · EMD {t.emd_inr ? lakh(t.emd_inr) : "nil"}</div>

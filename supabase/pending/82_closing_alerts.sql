@@ -63,3 +63,9 @@ create policy tc_insert on public.tender_comments for insert with check (public.
   and exists (select 1 from public.tender_matches m where m.id = match_id and m.company_id = tender_comments.company_id and m.tenant_id = tender_comments.tenant_id));
 create policy tc_archive on public.tender_comments for update using (author = auth.uid()) with check (author = auth.uid());
 -- private.tender_comment_push() + trigger t_tender_comment_push: "X mentioned you" to each ticked member (not the author)
+
+-- §3.5 corrigendum re-read (5 Nov; both edited in place with pg_get_functiondef + replace):
+--   private.on_tender_change: a change on a shortlisted / preparing / submitted bid on a fetchable portal queues an auto
+--   tender_doc_jobs row (detail {"purpose":"corrigendum","field":…}), at most once in 6 hours per tender
+--   public.precheck_claim: also claims fetched corrigendum jobs although the tender was read before, so the free reader
+--   reads the new documents (a new tender_reads row); the tender page shows readDiff(previous, newest)
