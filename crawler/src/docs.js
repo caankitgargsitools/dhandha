@@ -340,9 +340,18 @@ async function winnersPass() {
 // reading or sending failed, a later session that day tries again only where the page does not ask again.
 const winnersDone = new Map(); // portal -> India date
 const winnersAsked = new Map(); // portal -> India date the results captcha was typed
+const winnersTried = new Map(); // portal -> India date the winners step last ran
+// The queue lives in memory and the worker restarts (hourly image update), so during the morning session hours
+// (09:30–13:00 IST, when the admin is at the captcha desk) every live portal not yet tried today goes back on it.
+function refillWinners() {
+  const ist = new Date(Date.now() + 330 * 60000), mins = ist.getUTCHours() * 60 + ist.getUTCMinutes(), today = ist.toISOString().slice(0, 10);
+  if (mins < 570 || mins > 780) return;
+  for (const [portal, s] of sessions) if (s.live && winnersTried.get(portal) !== today && winnersDone.get(portal) !== today) winnersQueue.add(portal);
+}
 async function winnersInSession(site, s, ch, say) {
   const portal = site.portal, today = new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10);
-  if (winnersDone.get(portal) === today) return;
+  if (winnersDone.get(portal) === today || winnersTried.get(portal) === today) return;
+  winnersTried.set(portal, today); // one try a portal a day, so an unanswered results captcha is not asked again and again
   try {
     await say("Tender winners: opening the results page");
     await s.page.goto(site.base + RESULTS_LIST, { waitUntil: "domcontentloaded", timeout: 60000 });
@@ -549,7 +558,7 @@ for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, async () => {
 });
 try {
   const start = Date.now();
-  let did = 0, lastPortal = null, lastSessionCheck = 0, afterSession = false, errors = 0;
+  let did = 0, lastPortal = null, lastSessionCheck = 0, afterSession = false, errors = 0, lastWinners = 0;
   for (;;) {
     try {
       // the admin's captcha session comes first: open each portal that was asked for — but after each portal, one
@@ -570,6 +579,14 @@ try {
       }
       const between = afterSession;
       afterSession = false;
+      // tender winners: with hundreds of pre-check fetches queued there is always a job waiting, so the winners pages
+      // (asked while the admin is at the captcha session) never got a turn (6 Nov: none from GePNIC since 2 Nov).
+      // Now one portal's winners at most once a minute between jobs, once every session portal is open.
+      if (!between && Date.now() - lastWinners > 60000) refillWinners();
+      if (!between && winnersQueue.size && Date.now() - lastWinners > 60000) {
+        lastWinners = Date.now();
+        if (await winnersPass()) continue;
+      }
       // jobs people wait for come first; otherwise stay on the portal whose session is already open
       const job = await rpc("doc_job_claim", { p_runner: RUNNER, p_portal: lastPortal });
       errors = 0;

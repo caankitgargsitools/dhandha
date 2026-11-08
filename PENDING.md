@@ -2,7 +2,7 @@
 
 Checked and sent to the owner every morning (09:23 IST) by the Dhandha development session. Items move to
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
-Last checked: 6 Nov 2026 (09:23 IST).
+Last checked: 8 Nov 2026 (09:23 IST).
 
 ## The queue — one by one, in this order
 
@@ -77,7 +77,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 52 | **Pricing of Dhandha** — set plans and credits against competitors (notes in CLAUDE.md "Competitors"); suggestion: free tier + ~₹999/mo or ₹9,999/yr all-in + credits | Both | Built and working | To do — one by one, in the order you choose |
 
 ## Claude is fixing
-- **Tender winners from GePNIC portals never arrive (6 Nov):** all 30 winners so far came from GeM (1–3 a run); the morning session's "Tender winners" step on the GePNIC portals has sent none. Claude is checking the crawler's winners step (`winnersInSession` in `crawler/src/docs.js`) with a probe of a live results page.
+- **Tender winners from GePNIC portals — cause found and fixed 8 Nov:** the winners step only ran when no document job was waiting, and with hundreds of pre-check fetches queued that never happened (and a server restart forgot the queue). Now one portal's winners run at most once a minute between jobs, and during the morning session hours (09:30–13:00 IST) every live portal not yet tried that day is queued again — one try per portal a day. Watch for "Tender winners: …" captchas in Monday's session.
 - ~~Database slow again (3 Nov)~~ **Recovered** (4 and 5 Nov speed test 0.56 s, normal). Study harvests back on at a small size on 5 Nov (GeM 5, formats 4 a run). Old note: **Database slow / unreachable again (3 Nov, from ≈07:30 IST):** connections time out and the 2-million-row speed test takes 15.7 s (normal 0.5 s), the same throttling as on 1 Nov (the server's disk-read allowance runs out). Done: study harvests paused (`gem_harvest_per_run` / `format_harvest_per_run` = 0); a pre-check bug that retried the same tenders 36 times overnight is fixed (PDFs with a NUL character, which Postgres refuses). **You:** Supabase → Project settings → restart the project (as on 2 Nov). If it keeps coming back, the lasting fix is a bigger database size (Compute add-on, about $25 → $60 a month more); I'll measure what uses the disk once it is back and cut it first.
 - **Database overload (1 Nov evening) — resolved 2 Nov (you restarted the project):** statement timeouts everywhere from 12:16 UTC (the study's big text searches plus the GeM harvest used up the database's disk allowance; crawler retries piled on). Fixed `ingest_tenders` (no re-matching of unchanged tenders; no queue on the crawler key), paused the study harvests and cut the GeM study to 10 a run. Turn the harvests back on once timeouts stop; keep study text searches small (by tender, not over all texts). From 14:25 to 14:34 UTC the database API itself was down (503): replacing functions under load made PostgREST reload its schema, and the reload kept timing out; it came back once the load fell and the schema was reloaded (`notify pgrst, 'reload schema'`). Lesson: no function changes while the database is overloaded.
 - ~~Security follow-ups (review 1 Nov)~~ **Done 2 Nov:** a workspace's reading only fills gaps in the shared tender figures and only adds conditions (never overwrites other firms'); tender documents readable only by workspaces matched to that tender (`supabase/pending/78`).
@@ -93,6 +93,8 @@ Running list in `TENDER_STUDY.md`: findings from reading tenders across industri
 - **Intelligent master page — built 2 Nov:** Vault → Tender-ready checklist (`/app/vault/masters`): from your services and the kinds of buyers you sell to, every detail, document, licence and registration your tenders need, asked one at a time, with uploads (read automatically). Try it and tell me what to add.
 
 ## Done (recent)
+- 7–8 Nov: **815 tenders pre-checked** in two days; 98 leads for ₹196; 13 new matches; 28 portal sessions live. 66 fetches failed in two days, almost all for an untyped captcha after the morning session. Tender winners still 30 (fix above). No owner items done.
+
 - 6 Nov (morning): all portals live (thank you) — **339 tenders pre-checked** yesterday (was 0–2 a day); 49 leads for ₹98; 19 new matches; crawler running. 24 fetches failed for an untyped captcha (later in the day, after the morning session's captchas) and 1 GeM bid gave no document. No owner items done since yesterday apart from the captcha session.
 
 - 5 Nov (later): brief **section 3 finished** — Compare tenders with a go / no-go suggestion, "Start from a past bid" (copies formats and costs with the new tender's references), Skip asks why (and "not our work" teaches the AI check), Team notes on each tender with phone alerts to the people you tick, an upload step for portals Dhandha cannot fetch from, the corrigendum fetched and read again with "what changed in the documents", and the same tender on two portals shown once. Next: section 4 (Today call list, one-tap outcomes, stage-aware WhatsApp…).
