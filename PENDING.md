@@ -2,7 +2,7 @@
 
 Checked and sent to the owner every morning (09:23 IST) by the Dhandha development session. Items move to
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
-Last checked: 8 Nov 2026 (09:23 IST).
+Last checked: 9 Nov 2026 (09:23 IST).
 
 ## The queue — one by one, in this order
 
@@ -93,6 +93,8 @@ Running list in `TENDER_STUDY.md`: findings from reading tenders across industri
 - **Intelligent master page — built 2 Nov:** Vault → Tender-ready checklist (`/app/vault/masters`): from your services and the kinds of buyers you sell to, every detail, document, licence and registration your tenders need, asked one at a time, with uploads (read automatically). Try it and tell me what to add.
 
 ## Done (recent)
+- 9 Nov (morning): 266 tenders pre-checked; 49 leads for ₹98; 28 portal sessions live. 39 fetches failed (untyped captchas later in the day). Tender winners: the fix reached the server — today's session (09:31 IST) is its first test. No owner items done.
+
 - 7–8 Nov: **815 tenders pre-checked** in two days; 98 leads for ₹196; 13 new matches; 28 portal sessions live. 66 fetches failed in two days, almost all for an untyped captcha after the morning session. Tender winners still 30 (fix above). No owner items done.
 
 - 6 Nov (morning): all portals live (thank you) — **339 tenders pre-checked** yesterday (was 0–2 a day); 49 leads for ₹98; 19 new matches; crawler running. 24 fetches failed for an untyped captcha (later in the day, after the morning session's captchas) and 1 GeM bid gave no document. No owner items done since yesterday apart from the captcha session.
