@@ -321,11 +321,16 @@ async function openSession(browser, req) {
 // waiting 2 minutes at most — so the session itself is not held up and an unattended one does not block fetching.
 const winnersQueue = new Set();
 const SESSION_PARALLEL = Math.max(1, Math.min(5, Number(env.SESSION_PARALLEL || 2)));
-async function winnersPass() {
+async function winnersPass(browser) {
   for (const portal of winnersQueue) {
     winnersQueue.delete(portal);
-    const s = sessions.get(portal), site = GEPNIC.find((x) => x.portal === portal);
-    if (!s || !s.live || !site || s.page.isClosed()) continue;
+    const site = GEPNIC.find((x) => x.portal === portal);
+    if (!site || site.skip) continue;
+    // at most 5 portal pages stay open (memory), so a live portal is often put away with its cookies saved:
+    // reopen it from those cookies (10 Nov: only 3 of 28 live portals ever reached the winners step)
+    let s = sessions.get(portal);
+    if ((!s || s.page.isClosed()) && browser) s = await sessionFor(browser, portal).catch(() => null);
+    if (!s || !s.live || s.page.isClosed()) { winnersTried.set(portal, new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10)); continue; }
     const say = (step) => rpc("session_update", { p_portal: portal, p_step: step }).catch(() => {});
     await winnersInSession(site, s, sessionChannel(portal), say);
     return true; // one portal per turn: waiting jobs and new session requests go first
@@ -346,7 +351,8 @@ const winnersTried = new Map(); // portal -> India date the winners step last ra
 function refillWinners() {
   const ist = new Date(Date.now() + 330 * 60000), mins = ist.getUTCHours() * 60 + ist.getUTCMinutes(), today = ist.toISOString().slice(0, 10);
   if (mins < 570 || mins > 780) return;
-  for (const [portal, s] of sessions) if (s.live && winnersTried.get(portal) !== today && winnersDone.get(portal) !== today) winnersQueue.add(portal);
+  // every GePNIC portal, not only the pages open now: one with no saved session is skipped (and marked tried) in winnersPass
+  for (const site of GEPNIC) if (!site.skip && winnersTried.get(site.portal) !== today && winnersDone.get(site.portal) !== today) winnersQueue.add(site.portal);
 }
 async function winnersInSession(site, s, ch, say) {
   const portal = site.portal, today = new Date(Date.now() + 330 * 60000).toISOString().slice(0, 10);
@@ -585,14 +591,14 @@ try {
       if (!between && Date.now() - lastWinners > 60000) refillWinners();
       if (!between && winnersQueue.size && Date.now() - lastWinners > 60000) {
         lastWinners = Date.now();
-        if (await winnersPass()) continue;
+        if (await winnersPass(browser)) continue;
       }
       // jobs people wait for come first; otherwise stay on the portal whose session is already open
       const job = await rpc("doc_job_claim", { p_runner: RUNNER, p_portal: lastPortal });
       errors = 0;
       if (job) { await runJob(browser, job); did++; lastPortal = job.portal; continue; }
       if (between) continue; // back to the next captcha-session portal
-      if (await winnersPass()) continue;
+      if (await winnersPass(browser)) continue;
       if (!did && Date.now() - start < waitFirst * 1000) { await sleep(5000); continue; }
       if (args.includes("--forever") && Date.now() < stopAt) { await keepAlive(); await sleep(3000); continue; }
       break;
