@@ -377,13 +377,18 @@ async function winnersInSession(site, s, ch, say) {
     }
     await rpc("session_update", { p_portal: portal, p_state: "live", p_step: "Live — reading tender winners" });
     const rows = await readResults(s.page, site, { maxPages: 10, maxAwards: 200, log });
+    if (!rows.length) { // nothing read: say what the page showed, so the reader can be fixed
+      const seen = await s.page.evaluate(() => (document.title + " | " + (document.body?.innerText || "").replace(/\s+/g, " ")).slice(0, 140)).catch(() => "");
+      await rpc("session_update", { p_portal: portal, p_state: "live", p_step: `Live — 0 tender winners on the results page (${seen})` }).catch(() => {});
+    }
     const sent = rows.length ? await sendAwards(`Results: ${portal}`, rows) : null;
     winnersDone.set(portal, today);
     log(`winners ${portal}: ${rows.length} award(s)`, sent ? JSON.stringify(sent) : "");
-    await rpc("session_update", { p_portal: portal, p_state: "live", p_step: `Live — ${rows.length} tender winner${rows.length === 1 ? "" : "s"} read today` });
+    if (rows.length) await rpc("session_update", { p_portal: portal, p_state: "live", p_step: `Live — ${rows.length} tender winner${rows.length === 1 ? "" : "s"} read today` });
   } catch (e) {
     log(`winners ${portal}: ${e.message}`);
-    await rpc("session_update", { p_portal: portal, p_state: "live", p_step: e.message === "Nobody typed the captcha in time" ? "Live — tender winners skipped today (captcha not typed)" : "Live — tender winners could not be read today" }).catch(() => {});
+    // the reason goes on the session row too (11 Nov: 15 portals said only "could not be read"; the cause sat in the server log)
+    await rpc("session_update", { p_portal: portal, p_state: "live", p_step: e.message === "Nobody typed the captcha in time" ? "Live — tender winners skipped today (captcha not typed)" : `Live — tender winners could not be read today: ${String(e.message).split("\n")[0].slice(0, 160)}` }).catch(() => {});
   }
   s.last = Date.now();
 }
