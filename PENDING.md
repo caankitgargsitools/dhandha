@@ -93,6 +93,7 @@ Running list in `TENDER_STUDY.md`: findings from reading tenders across industri
 - **Intelligent master page — built 2 Nov:** Vault → Tender-ready checklist (`/app/vault/masters`): from your services and the kinds of buyers you sell to, every detail, document, licence and registration your tenders need, asked one at a time, with uploads (read automatically). Try it and tell me what to add.
 
 ## Done (recent)
+- 11 Nov: **Business map** (`/app/map`, menu under Dashboard) — your business on one screen: nine parts around the Vault with 8-day trends, Agents (what runs by itself, last run), Live activity (48 h), Needs your call, Always-on connections, tender → payment flow with stuck counts and the sales funnel, drift alerts, Learn mode and "Pause all automation". Next: items 6–10 (customer score, work in hand, posts calendar, knowledge base, back office).
 - 11 Nov (morning): 187 tenders pre-checked; 47 leads; 4 fetches failed. Tender winners: the step ran on 22 portals for the first time (see "Claude is fixing"). No owner items done.
 
 - 10 Nov (morning): 1 new tender winner (31 in all, GeM); see the winners fix under "Claude is fixing". No owner items done.

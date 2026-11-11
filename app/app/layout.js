@@ -13,7 +13,7 @@ export default async function AppLayout({ children }) {
   const balance = Number(wallet?.balance || 0);
   const trialLeft = daysLeft(tenant.trial_ends_at);
   const sections = [
-    { items: [{ href: "/app", label: "Dashboard", icon: "home" }, { href: "/app/tasks", label: "Tasks", icon: "check" }] },
+    { items: [{ href: "/app", label: "Dashboard", icon: "home" }, { href: "/app/map", label: "Business map", icon: "map" }, { href: "/app/tasks", label: "Tasks", icon: "check" }] },
     { items: [{ href: "/app/source", label: "Source new business", icon: "leads", match: ["/app/source", "/app/tenders", "/app/leads", "/app/settings/facebook"], exclude: ["/app/tenders/preferences", "/app/leads/playbook"], children: [
       { href: "/app/tenders", label: "Tenders", icon: "tender", exclude: ["/app/tenders/preferences"] },
       { href: "/app/leads/generate", label: "Generate leads", icon: "leads", match: ["/app/leads", "/app/settings/facebook"], exclude: ["/app/leads/playbook"] },
