@@ -4,6 +4,8 @@
 insert into storage.buckets (id, name, public, file_size_limit) values ('work-photos', 'work-photos', false, 10485760) on conflict (id) do nothing;
 do $$ begin
   create policy "work-photos read members" on storage.objects for select using (bucket_id = 'work-photos' and public.is_tenant_member(((storage.foldername(name))[1])::uuid));
+exception when duplicate_object then null; end $$;
+do $$ begin
   create policy "work-photos write members" on storage.objects for insert with check (bucket_id = 'work-photos' and coalesce(public.tenant_role(((storage.foldername(name))[1])::uuid), '') in ('admin','manager','bid_preparer','telecaller','field'));
 exception when duplicate_object then null; end $$;
 
@@ -51,5 +53,6 @@ begin
   end loop;
   return new;
 end $$;
-drop trigger if exists t_work_issue on public.work_updates;
-create trigger t_work_issue after insert on public.work_updates for each row execute function private.on_work_issue();
+do $$ begin
+  create trigger t_work_issue after insert on public.work_updates for each row execute function private.on_work_issue();
+exception when duplicate_object then null; end $$;
