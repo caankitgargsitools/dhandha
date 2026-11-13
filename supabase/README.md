@@ -132,3 +132,4 @@ Social lead sources:
 109. `pending/86_posts_calendar.sql` (13 Nov, execute_sql) — posts calendar: `brand_voice` (per company), `content_posts` (RLS: members read, admins / managers write; archive not delete), price_book `post_ai` (1 credit, only when a paid AI tier wrote it).
 110. `pending/87_knowledge_base.sql` (13 Nov, execute_sql) — knowledge base: `kb_articles` (RLS: members read; admins / managers / bid preparers write; archive not delete), price_book `kb_ask` (2 credits).
 111. `pending/88_bank_reconciliation.sql` (13 Nov, execute_sql) — `bank_lines` (statement lines per company, unique company + hash, status unmatched / matched / ignored, matched_kind invoice / refund / deposit / other; RLS admins / managers only; nothing deleted).
+112. `pending/89_staff_payroll.sql` (13 Nov, execute_sql) — `staff` and `payroll_runs` (RLS: workspace admin only; final pay months cannot be updated).

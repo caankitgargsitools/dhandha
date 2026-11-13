@@ -28,6 +28,7 @@ export default async function AppLayout({ children }) {
       { href: "/app/crm/quotes", label: "Quotations", icon: "doc" },
       { href: "/app/crm/invoices", label: "Invoices", icon: "rupee" },
       ...(["admin", "manager"].includes(role) ? [{ href: "/app/bank", label: "Bank reconciliation", icon: "rupee" }] : []),
+      ...(isAdmin ? [{ href: "/app/staff", label: "Staff & payroll", icon: "people" }] : []),
       { href: "/app/crm/catalog", label: "Price list", icon: "doc" },
       { href: "/app/outreach", label: "Outreach", icon: "mail" },
       { href: "/app/posts", label: "Posts calendar", icon: "calendar" },
