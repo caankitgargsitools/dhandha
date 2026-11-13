@@ -567,10 +567,25 @@ for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, async () => {
   await browser.close().catch(() => {});
   process.exit(0);
 });
+// Self-watchdog (13 Nov): on 12 Nov 05:02 UTC the loop stopped on a browser call that never returned (the process stayed
+// up, so server.js never restarted it, and jobs sat queued for 23 hours). If the loop has not come round for 45 minutes
+// — longer than any real job (three 9-minute captchas plus downloads) — the job in hand is given back with a note and
+// the process exits; server.js starts a fresh one in 30 s, and the portal sessions come back from their saved cookies.
+let beat = Date.now();
+const STALL_MS = Number(env.DOCS_STALL_MIN || 45) * 60000;
+setInterval(async () => {
+  if (stopping || Date.now() - beat < STALL_MS) return;
+  stopping = true;
+  log(`stalled for ${Math.round((Date.now() - beat) / 60000)} min${current ? ` in job ${current.id}` : ""}; exiting so it restarts`);
+  if (current) await Promise.race([update(current, { status: "failed", error: "The document fetcher got stuck and restarted. Please ask for the documents again." }), sleep(10000)]).catch(() => {});
+  await Promise.race([browser.close(), sleep(5000)]).catch(() => {});
+  process.exit(1);
+}, 60000).unref();
 try {
   const start = Date.now();
   let did = 0, lastPortal = null, lastSessionCheck = 0, afterSession = false, errors = 0, lastWinners = 0;
   for (;;) {
+    beat = Date.now();
     try {
       // the admin's captcha session comes first: open each portal that was asked for — but after each portal, one
       // waiting job (people's jobs are claimed first) runs, so customers are not held up for the whole session
