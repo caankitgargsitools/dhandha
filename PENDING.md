@@ -2,7 +2,7 @@
 
 Checked and sent to the owner every morning (09:23 IST) by the Dhandha development session. Items move to
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
-Last checked: 12 Nov 2026 (09:23 IST).
+Last checked: 13 Nov 2026 (09:23 IST).
 
 ## The queue — one by one, in this order
 
@@ -77,6 +77,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 52 | **Pricing of Dhandha** — set plans and credits against competitors (notes in CLAUDE.md "Competitors"); suggestion: free tier + ~₹999/mo or ₹9,999/yr all-in + credits | Both | Built and working | To do — one by one, in the order you choose |
 
 ## Claude is fixing
+- **Document fetcher stuck 12 Nov 10:32 IST → 13 Nov (fixed 13 Nov):** the fetcher's loop stopped on a browser call that never returned; the process stayed up, so it was never restarted — no pre-checks for 23 hours, 18 jobs queued (the watchdog alerted at 05:30 IST). Fix: the fetcher now restarts itself if its loop has not moved for 45 minutes; the server picks up the new image within the hour and the queue resumes.
 - **Tender winners from GePNIC portals — the reader now reaches every portal; it waits on you (12 Nov):** yesterday all 25 live GePNIC portals opened their results page and asked one captcha each ("Tender winners: …") during the morning session, but none was typed, so each was skipped ("captcha not typed"). Fix needed from you: in the morning captcha session, also type the "Tender winners" captchas that follow each portal. The 42 document fetches that failed yesterday had the same cause ("nobody typed the captcha in time").
 - ~~Database slow again (3 Nov)~~ **Recovered** (4 and 5 Nov speed test 0.56 s, normal). Study harvests back on at a small size on 5 Nov (GeM 5, formats 4 a run). Old note: **Database slow / unreachable again (3 Nov, from ≈07:30 IST):** connections time out and the 2-million-row speed test takes 15.7 s (normal 0.5 s), the same throttling as on 1 Nov (the server's disk-read allowance runs out). Done: study harvests paused (`gem_harvest_per_run` / `format_harvest_per_run` = 0); a pre-check bug that retried the same tenders 36 times overnight is fixed (PDFs with a NUL character, which Postgres refuses). **You:** Supabase → Project settings → restart the project (as on 2 Nov). If it keeps coming back, the lasting fix is a bigger database size (Compute add-on, about $25 → $60 a month more); I'll measure what uses the disk once it is back and cut it first.
 - **Database overload (1 Nov evening) — resolved 2 Nov (you restarted the project):** statement timeouts everywhere from 12:16 UTC (the study's big text searches plus the GeM harvest used up the database's disk allowance; crawler retries piled on). Fixed `ingest_tenders` (no re-matching of unchanged tenders; no queue on the crawler key), paused the study harvests and cut the GeM study to 10 a run. Turn the harvests back on once timeouts stop; keep study text searches small (by tender, not over all texts). From 14:25 to 14:34 UTC the database API itself was down (503): replacing functions under load made PostgREST reload its schema, and the reload kept timing out; it came back once the load fell and the schema was reloaded (`notify pgrst, 'reload schema'`). Lesson: no function changes while the database is overloaded.
@@ -93,6 +94,7 @@ Running list in `TENDER_STUDY.md`: findings from reading tenders across industri
 - **Intelligent master page — built 2 Nov:** Vault → Tender-ready checklist (`/app/vault/masters`): from your services and the kinds of buyers you sell to, every detail, document, licence and registration your tenders need, asked one at a time, with uploads (read automatically). Try it and tell me what to add.
 
 ## Done (recent)
+- 13 Nov (morning): 0 tenders pre-checked (fetcher stuck — fixed, see above); 49 leads; 3 new GeM winners (40 in all). GePNIC winners: 27 portals skipped again (captcha not typed). No owner items done.
 - 12 Nov (morning): 178 tenders pre-checked; 49 leads; 6 new tender winners (37 in all, GeM). Customers page (customer score) live. Work in hand (map item 7): database ready, page being built today. No owner items done.
 - 11 Nov: **Business map** (`/app/map`, menu under Dashboard) — your business on one screen: nine parts around the Vault with 8-day trends, Agents (what runs by itself, last run), Live activity (48 h), Needs your call, Always-on connections, tender → payment flow with stuck counts and the sales funnel, drift alerts, Learn mode and "Pause all automation". Next: items 6–10 (customer score, work in hand, posts calendar, knowledge base, back office).
 - 11 Nov (morning): 187 tenders pre-checked; 47 leads; 4 fetches failed. Tender winners: the step ran on 22 portals for the first time (see "Claude is fixing"). No owner items done.
