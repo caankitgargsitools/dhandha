@@ -361,3 +361,18 @@ button.linkish { background: none; border: 0; padding: 0; color: var(--primary);
 .work-bar .done { display: block; height: 100%; background: linear-gradient(90deg, var(--primary), var(--violet)); border-radius: 999px; }
 .work-bar .due { position: absolute; top: -3px; width: 2px; height: 16px; background: var(--ink-2); border-radius: 1px; }
 .work-photo { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+
+/* Posts calendar (/app/posts, 13 Nov) */
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.cal-head { font-size: 12px; font-weight: 600; color: var(--ink-2); text-align: center; }
+.cal-day { min-height: 92px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 6px 7px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cal-day.empty { background: transparent; border-style: dashed; border-color: var(--line-soft); }
+.cal-post { display: flex; flex-direction: column; gap: 2px; padding: 4px 6px; border-radius: 7px; background: var(--primary-soft); color: var(--ink); text-decoration: none; min-width: 0; }
+.cal-post.s-posted { background: var(--leaf-soft); }
+.cal-post.s-skipped { opacity: .5; }
+.cal-post-t { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 780px) {
+  .cal { grid-template-columns: minmax(0, 1fr); }
+  .cal-head, .cal-day.empty { display: none; }
+  .cal-day { min-height: 0; }
+}
