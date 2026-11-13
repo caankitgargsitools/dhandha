@@ -29,6 +29,7 @@ export default async function AppLayout({ children }) {
       { href: "/app/crm/invoices", label: "Invoices", icon: "rupee" },
       { href: "/app/crm/catalog", label: "Price list", icon: "doc" },
       { href: "/app/outreach", label: "Outreach", icon: "mail" },
+      { href: "/app/posts", label: "Posts calendar", icon: "calendar" },
       { href: "/app/sales", label: "Sales team", icon: "calendar" },
     ] },
     { items: [{ href: "/app/vault", label: "Business Vault", icon: "vault", match: ["/app/vault", "/app/brand", "/app/tenders/preferences"] }, { href: "/app/schemes", label: "Government schemes", icon: "rupee" }] },
