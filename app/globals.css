@@ -355,3 +355,9 @@ button.linkish { background: none; border: 0; padding: 0; color: var(--primary);
 .conn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; }
 .conn { display: grid; grid-template-columns: 14px 1fr; column-gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); text-decoration: none; }
 .conn .agent-dot { margin-top: 0; grid-row: span 2; }
+
+/* Work in hand (/app/work, 12 Nov) */
+.work-bar { position: relative; height: 10px; background: var(--line-soft); border-radius: 999px; overflow: visible; }
+.work-bar .done { display: block; height: 100%; background: linear-gradient(90deg, var(--primary), var(--violet)); border-radius: 999px; }
+.work-bar .due { position: absolute; top: -3px; width: 2px; height: 16px; background: var(--ink-2); border-radius: 1px; }
+.work-photo { width: 72px; height: 72px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
