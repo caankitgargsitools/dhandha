@@ -23,6 +23,7 @@ export default async function AppLayout({ children }) {
       { href: "/app/leads/playbook", label: "Lead Playbook", icon: "check" },
       { href: "/app/crm", label: "CRM pipeline", icon: "crm", exclude: ["/app/crm/quotes", "/app/crm/customers", "/app/crm/targets", "/app/crm/invoices", "/app/crm/catalog"] },
       { href: "/app/crm/customers", label: "Customers", icon: "people" },
+      { href: "/app/work", label: "Work in hand", icon: "briefcase" },
       { href: "/app/crm/targets", label: "Targets & leaderboard", icon: "rupee" },
       { href: "/app/crm/quotes", label: "Quotations", icon: "doc" },
       { href: "/app/crm/invoices", label: "Invoices", icon: "rupee" },
