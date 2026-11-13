@@ -583,7 +583,7 @@ setInterval(async () => {
 }, 60000).unref();
 try {
   const start = Date.now();
-  let did = 0, lastPortal = null, lastSessionCheck = 0, afterSession = false, errors = 0, lastWinners = 0;
+  let did = 0, lastPortal = null, lastSessionCheck = 0, afterSession = false, errors = 0, lastWinners = 0, winnersJobNext = false;
   for (;;) {
     beat = Date.now();
     try {
@@ -609,16 +609,20 @@ try {
       // (asked while the admin is at the captcha session) never got a turn (6 Nov: none from GePNIC since 2 Nov).
       // Now one portal's winners at most once a minute between jobs, once every session portal is open.
       if (!between && Date.now() - lastWinners > 60000) refillWinners();
-      if (!between && winnersQueue.size && Date.now() - lastWinners > 60000) {
+      if (!between && !winnersJobNext && winnersQueue.size && Date.now() - lastWinners > 60000) {
+        const ran = await winnersPass(browser);
+        // counted from when the step ENDS: its captcha waits up to 2 minutes, and counting from the start let it run
+        // portal after portal with no job in between (13 Nov: 28 jobs waited an hour behind unanswered winners captchas)
         lastWinners = Date.now();
-        if (await winnersPass(browser)) continue;
+        if (ran) { winnersJobNext = true; continue; }
       }
       // jobs people wait for come first; otherwise stay on the portal whose session is already open
       const job = await rpc("doc_job_claim", { p_runner: RUNNER, p_portal: lastPortal });
       errors = 0;
+      winnersJobNext = false; // a job had its turn (or none was waiting)
       if (job) { await runJob(browser, job); did++; lastPortal = job.portal; continue; }
       if (between) continue; // back to the next captcha-session portal
-      if (await winnersPass(browser)) continue;
+      if (Date.now() - lastWinners > 60000 && await winnersPass(browser)) { lastWinners = Date.now(); continue; }
       if (!did && Date.now() - start < waitFirst * 1000) { await sleep(5000); continue; }
       if (args.includes("--forever") && Date.now() < stopAt) { await keepAlive(); await sleep(3000); continue; }
       break;
