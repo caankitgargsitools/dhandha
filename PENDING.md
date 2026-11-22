@@ -2,7 +2,7 @@
 
 Checked and sent to the owner every morning (09:23 IST) by the Dhandha development session. Items move to
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
-Last checked: 18 Nov 2026 (09:23 IST).
+Last checked: 22 Nov 2026 (09:23 IST) — database not checked: Claude's Supabase queries now wait for your approval each time (since 19 Nov).
 
 ## The queue — one by one, in this order
 
@@ -95,6 +95,7 @@ Running list in `TENDER_STUDY.md`: findings from reading tenders across industri
 - **Intelligent master page — built 2 Nov:** Vault → Tender-ready checklist (`/app/vault/masters`): from your services and the kinds of buyers you sell to, every detail, document, licence and registration your tenders need, asked one at a time, with uploads (read automatically). Try it and tell me what to add.
 
 ## Done (recent)
+- 19–22 Nov: the morning checks could not read the database — every Supabase query from Claude now asks for your approval and none came. The live site answers (login page 200 in 2.2 s). Last verified state (18 Nov): database healthy after the UNLOGGED fix, harvests back on, 10 fetches queued on live portals.
 - 18 Nov (morning): database healthy again (0 of 53 jobs failed in the last hour); 47 leads; no pre-checks 16–17 Nov (prefetch could not start) — resumes 10:07 IST; 59 tender winners.
 - 16 Nov (morning): database throttled — see "Claude is fixing". 100 fetches yesterday before it slowed; 0 leads today (the 08:47 run could not start). 59 tender winners in all.
 - 15 Nov (morning): 450 tenders pre-checked (you typed the session captchas — thank you); 47 leads; 59 tender winners in all (19 new in 2 days, GeM). GePNIC winners: still none — the "Tender winners" captchas after each portal were not typed. 14 Nov: the Google Maps part of the lead autopilot did not run once (0 leads that day); it ran normally today — watching. The new pages (Work in hand, Posts calendar, Knowledge base, Bank reconciliation, Staff & payroll) are not used yet.
