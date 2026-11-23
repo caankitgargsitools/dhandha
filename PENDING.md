@@ -2,7 +2,7 @@
 
 Checked and sent to the owner every morning (09:23 IST) by the Dhandha development session. Items move to
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
-Last checked: 22 Nov 2026 (09:23 IST) — database not checked: Claude's Supabase queries now wait for your approval each time (since 19 Nov).
+Last checked: 23 Nov 2026 (09:23 IST) — database not checked: Claude's Supabase queries now wait for your approval each time (since 19 Nov).
 
 ## The queue — one by one, in this order
 
