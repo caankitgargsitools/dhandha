@@ -2,7 +2,7 @@
 
 Checked and sent to the owner every morning (09:23 IST) by the Dhandha development session. Items move to
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
-Last checked: 23 Nov 2026 (09:23 IST) — database not checked: Claude's Supabase queries now wait for your approval each time (since 19 Nov).
+Last checked: 25 Nov 2026 (09:23 IST).
 
 ## The queue — one by one, in this order
 
@@ -95,6 +95,7 @@ Running list in `TENDER_STUDY.md`: findings from reading tenders across industri
 - **Intelligent master page — built 2 Nov:** Vault → Tender-ready checklist (`/app/vault/masters`): from your services and the kinds of buyers you sell to, every detail, document, licence and registration your tenders need, asked one at a time, with uploads (read automatically). Try it and tell me what to add.
 
 ## Done (recent)
+- 25 Nov (morning): database checks work again. 202 tenders pre-checked in 24 h (1,842 in 7 days); 45 leads; 76 tender winners — the first 8 from state (GePNIC) portals (you typed the winners captchas — thank you); 0 of 2,629 scheduled jobs failed in 24 h. AI tender check: mostly Gemini Flash-Lite (free), one Claude Haiku 5.5 call on 23 Nov. Found: `ai_usage` has logged nothing since 2 Nov although AI calls run — the log write from worker routes is being refused; Claude is fixing it so spend per call is visible again.
 - 19–22 Nov: the morning checks could not read the database — every Supabase query from Claude now asks for your approval and none came. The live site answers (login page 200 in 2.2 s). Last verified state (18 Nov): database healthy after the UNLOGGED fix, harvests back on, 10 fetches queued on live portals.
 - 18 Nov (morning): database healthy again (0 of 53 jobs failed in the last hour); 47 leads; no pre-checks 16–17 Nov (prefetch could not start) — resumes 10:07 IST; 59 tender winners.
 - 16 Nov (morning): database throttled — see "Claude is fixing". 100 fetches yesterday before it slowed; 0 leads today (the 08:47 run could not start). 59 tender winners in all.
