@@ -14,7 +14,7 @@ export async function POST(request) {
   const supabase = anonClient();
   const { data: s, error } = await supabase.rpc("voice_session_get", { p_key: key, p_token: body.token });
   if (error || !s) return new Response("forbidden", { status: 403 });
-  const ai = await runJson({
+  const ai = await runJson({ workerKey: key, 
     supabase, tenantId: s.tenant_id, task: "voice_call", private: true, maxTokens: 400, budgetMs: 20000,
     prompt: voicePrompt({ config: s.config, lead: s.lead, history: body.history || [], heard: String(body.heard || "").slice(0, 1000), lessons: s.lessons || [] }),
     validate: (d) => (!normaliseTurn(d) ? "no reply" : null),

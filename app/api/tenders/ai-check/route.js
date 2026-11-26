@@ -25,7 +25,7 @@ export async function POST(request) {
     const { data: examples } = await supabase.rpc("ai_check_examples", { p_key: key, p_company: c.company_id });
     for (let i = 0; i < c.items.length && Date.now() < until - 30000; i += 20) {
       const items = c.items.slice(i, i + 20);
-      const r = await runJson({
+      const r = await runJson({ workerKey: key, 
         supabase, tenantId: c.tenant_id, task: "tender_ai_check", private: false, maxTokens: 2500, fast: true, freeWaitMs: 60000,
         prompt: buildPrompt(profile, items, examples || {}), validate: (d) => validateAnswer(d, items.length),
         budgetMs: Math.min(120000, until - Date.now() - 10000),
