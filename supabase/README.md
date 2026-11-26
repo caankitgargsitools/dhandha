@@ -134,3 +134,4 @@ Social lead sources:
 111. `pending/88_bank_reconciliation.sql` (13 Nov, execute_sql) — `bank_lines` (statement lines per company, unique company + hash, status unmatched / matched / ignored, matched_kind invoice / refund / deposit / other; RLS admins / managers only; nothing deleted).
 112. `pending/89_staff_payroll.sql` (13 Nov, execute_sql) — `staff` and `payroll_runs` (RLS: workspace admin only; final pay months cannot be updated).
 113. `pending/90_doc_chunks_unlogged.sql` (18 Nov, one-off pg_cron job) — `tender_doc_chunks` set UNLOGGED: the file hand-over buffer no longer writes the WAL (its churn throttled the database on 1–3 and 16–17 Nov).
+114. `pending/91_ai_usage_log.sql` (26 Nov, execute_sql) — `ai_usage_log(key, row)`: worker routes (AI tender check, voice turns) log AI spend with their worker / ingest key; the anonymous client was refused by the `ai_usage` insert policy, so nothing was logged 2–26 Nov.
