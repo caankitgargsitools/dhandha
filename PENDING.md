@@ -2,7 +2,7 @@
 
 Checked and sent to the owner every morning (09:23 IST) by the Dhandha development session. Items move to
 "Done" when the session can see them done (database, GitHub, live checks) or the owner says so.
-Last checked: 26 Nov 2026 (09:23 IST).
+Last checked: 27 Nov 2026 (09:23 IST).
 
 ## The queue — one by one, in this order
 
@@ -77,6 +77,7 @@ Old item numbers (#) are kept in brackets so earlier messages still make sense.
 | 52 | **Pricing of Dhandha** — set plans and credits against competitors (notes in CLAUDE.md "Competitors"); suggestion: free tier + ~₹999/mo or ₹9,999/yr all-in + credits | Both | Built and working | To do — one by one, in the order you choose |
 
 ## Claude is fixing
+- **Database throttled again (27 Nov, after a restart at 04:30 IST):** statement timeouts up to 270 an hour; only tiny queries get through. Cause: a 3 GB database on Supabase's smallest compute (1 GB memory) — after each restart everything is read from disk and the disk allowance runs out (also 2–3 and 16–17 Nov). Done: harvests and the re-score queue paused again (`paused_for_load`). Lasting fix = bigger compute (Supabase → Project Settings → Compute and Disk → Small, ≈$15/mo instead of $10 — check the price there); **you parked this on 27 Nov (pending list)**. Until then Claude keeps the load low.
 - **Database throttled 16–17 Nov — recovered 18 Nov; root cause found:** the hand-over table for fetched tender files (`tender_doc_chunks`) carried megabytes per fetch through the database log; 350–450 fetches a day used up the disk allowance (same as 1–3 Nov). Fix: the table is switched to UNLOGGED (a transfer buffer — no data kept there; a crash only means a re-fetch) so it no longer writes the log; the re-score queue is back on; the study harvests stay paused until the fix is confirmed (`private.app_config.paused_for_load`). The document fetcher was idle because the morning prefetch batch could not start while throttled — it queues again from 10:07 IST today.
 - **Document fetcher stuck 12 Nov (resolved — 450 pre-checks on 15 Nov) 10:32 IST → 13 Nov (fixed 13 Nov):** the fetcher's loop stopped on a browser call that never returned; the process stayed up, so it was never restarted — no pre-checks for 23 hours, 18 jobs queued (the watchdog alerted at 05:30 IST). Fix: the fetcher now restarts itself if its loop has not moved for 45 minutes; the server picks up the new image within the hour and the queue resumes.
 - **Tender winners from GePNIC portals — the reader now reaches every portal; it waits on you (12 Nov):** yesterday all 25 live GePNIC portals opened their results page and asked one captcha each ("Tender winners: …") during the morning session, but none was typed, so each was skipped ("captcha not typed"). Fix needed from you: in the morning captcha session, also type the "Tender winners" captchas that follow each portal. The 42 document fetches that failed yesterday had the same cause ("nobody typed the captcha in time").
@@ -95,6 +96,7 @@ Running list in `TENDER_STUDY.md`: findings from reading tenders across industri
 - **Intelligent master page — built 2 Nov:** Vault → Tender-ready checklist (`/app/vault/masters`): from your services and the kinds of buyers you sell to, every detail, document, licence and registration your tenders need, asked one at a time, with uploads (read automatically). Try it and tell me what to add.
 
 ## Done (recent)
+- 27 Nov (morning): database throttled since 04:30 IST — today's figures could not be read; site up (login 200 in 1.6 s).
 - 26 Nov (morning): 240 tenders pre-checked; 41 leads; 85 tender winners (8 from state portals); 5 of 2,629 jobs failed. Fixed: AI spend is logged again (worker routes log through `ai_usage_log` with their key). Next.js upgraded 16.4.2 → 16.4.6 (a known security issue; local builds refused to run).
 - 25 Nov (morning): database checks work again. 202 tenders pre-checked in 24 h (1,842 in 7 days); 45 leads; 76 tender winners — the first 8 from state (GePNIC) portals (you typed the winners captchas — thank you); 0 of 2,629 scheduled jobs failed in 24 h. AI tender check: mostly Gemini Flash-Lite (free), one Claude Haiku 5.5 call on 23 Nov. Found: `ai_usage` has logged nothing since 2 Nov although AI calls run — the log write from worker routes is being refused; Claude is fixing it so spend per call is visible again.
 - 19–22 Nov: the morning checks could not read the database — every Supabase query from Claude now asks for your approval and none came. The live site answers (login page 200 in 2.2 s). Last verified state (18 Nov): database healthy after the UNLOGGED fix, harvests back on, 10 fetches queued on live portals.
